@@ -18,6 +18,7 @@ const WorldBG := preload("res://scenes/chapter1/world_background.gd")
 const Widget := preload("res://scenes/chapter1/hud_widgets.gd")
 const TITLE_SCENE := "res://scenes/title/title_screen.tscn"
 const STAGE_SCENE := "res://scenes/chapter1/stage1.tscn"
+const CHAPTER2_SCENE := "res://scenes/chapter2/stage2.tscn"
 
 const SPAWN_GAP := 1.2
 const CREAM := Color(0.996, 0.949, 0.851)
@@ -480,7 +481,8 @@ func _show_win_result(stars: int, unlocked: Dictionary) -> void:
 
 ## 다음 장 예고 (제안): 왕관을 쓴 똥 왕자가 칼을 들고 다짐해요.
 func _show_teaser() -> void:
-	_show_panel("다음 이야기", "왕관을 쓴 똥 왕자가 칼을 들고 다짐해요.\n\"똥 드래곤, 꼭 물리칠 거야!\"\n\n2장 '준비'로 이어져요. (2장은 아직 만드는 중이에요)", [
+	_show_panel("다음 이야기", "왕관을 쓴 똥 왕자가 칼을 들고 다짐해요.\n\"똥 드래곤, 꼭 물리칠 거야!\"\n\n2장 '준비'로 이어져요.", [
+		["2장으로", func() -> void: _change_scene(CHAPTER2_SCENE)],
 		["처음으로", _go_title],
 	])
 
