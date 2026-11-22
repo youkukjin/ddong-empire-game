@@ -8,6 +8,7 @@ static var checkpoint_time_left := 0.0
 static var checkpoint_score := 0
 static var has_checkpoint := false
 static var fail_streak := 0        # 연속 실패 횟수
+static var chapter_checkpoint := {} # 2장부터: 장 번호 -> 중간부터 시작할 곳 (예: 5장 "boss")
 
 
 ## 새 판을 처음부터 할 때 불러요.

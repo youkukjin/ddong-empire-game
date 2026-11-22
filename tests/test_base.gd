@@ -88,3 +88,47 @@ func press_button(stage: Node, text: String) -> bool:
 		return false
 	b.pressed.emit()
 	return true
+
+
+## 싸움 자동 플레이 한 걸음 (5~7장 확인용): 맞을 공격은 직전에 구르고, 닿으면 검, 아니면 다가가요.
+## 사슬 무기는 쓰지 않아요 (가장 단순한 플레이로도 이길 수 있는지 봐요).
+func bot_step(stage: Node, delta: float) -> void:
+	var b = stage.battle
+	var danger := false
+	for e in b.enemies:
+		if e.state != "windup":
+			continue
+		var left: float = b.warn_time(e.attack) - e.t
+		if left < 0.12 and b.would_hit_hero(e) and not b.is_invulnerable():
+			var away := -1.0 if e.x > b.hero_x else 1.0
+			if e.attack.type == "charge":
+				away = signf(e.target_x - e.x)  # 돌진은 구르면서 통과해요
+			if b.hero_x < 200.0:
+				away = 1.0
+			elif b.hero_x > 1080.0:
+				away = -1.0
+			stage.do_roll(away)
+			danger = true
+		elif left < 0.6 and b.would_hit_hero(e):
+			danger = true
+	if not danger and b.pause_left <= 0.0:
+		if not b.sword_target().is_empty():
+			stage.do_sword()
+		else:
+			var near = null
+			for e in b.enemies:
+				if b.targetable(e) and (near == null or absf(e.x - b.hero_x) < absf(near.x - b.hero_x)):
+					near = e
+			if near != null:
+				b.walk_to(near.x - signf(near.x - b.hero_x) * (near.radius + 60.0))
+	stage._play_process(delta)
+
+
+func bot_fight(stage: Node, max_seconds: float) -> void:
+	var steps := int(max_seconds * 30.0)
+	for i in steps:
+		if stage.phase != stage.Phase.PLAY:
+			return
+		bot_step(stage, 1.0 / 30.0)
+		if i % 60 == 0:
+			await process_frame
