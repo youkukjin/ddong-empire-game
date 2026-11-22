@@ -94,6 +94,11 @@ func _on_gauge_used() -> void:
 	pass
 
 
+## 게이지 버튼을 지금 쓸 수 있는지 (7장: 드래곤이 충분히 약해져야 각성)
+func _gauge_ready() -> bool:
+	return true
+
+
 # ------------------------------------------------------------------ 진행
 
 func _on_paused() -> void:
@@ -236,7 +241,7 @@ var _chain_fx := {}
 
 
 func use_gauge() -> void:
-	if phase != Phase.PLAY or paused:
+	if phase != Phase.PLAY or paused or not _gauge_ready():
 		return
 	if gauge_mode == "fist":
 		var e := battle.fist()
@@ -284,7 +289,7 @@ func _update_hud() -> void:
 		_boss_fill.size.x = 460.0 * b.hp / b.max_hp
 	if _gauge_fill:
 		_gauge_fill.size.x = 260.0 * battle.gauge
-		_gauge_button.visible = battle.gauge >= 1.0 and phase == Phase.PLAY
+		_gauge_button.visible = battle.gauge >= 1.0 and phase == Phase.PLAY and _gauge_ready()
 	_info_label.text = _info_text()
 
 

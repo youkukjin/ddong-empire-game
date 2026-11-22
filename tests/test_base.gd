@@ -111,7 +111,7 @@ func bot_step(stage: Node, delta: float) -> void:
 			danger = true
 		elif left < 0.6 and b.would_hit_hero(e):
 			danger = true
-	if b.gauge >= 1.0 and stage.gauge_mode == "fist":
+	if b.gauge >= 1.0 and stage.gauge_mode != "none":
 		stage.use_gauge()
 	if not danger and b.pause_left <= 0.0:
 		if not b.sword_target().is_empty():
