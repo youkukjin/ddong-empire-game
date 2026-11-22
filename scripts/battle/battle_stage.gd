@@ -193,6 +193,9 @@ func do_sword() -> bool:
 	if e.is_empty():
 		return false
 	prince.play_pose(Prince.Pose.SWING, 0.18)
+	if e.blocked:
+		float_text(Vector2(e.x - 60, GROUND_Y - 260), "팅! 틈을 노려요", Color(0.8, 0.8, 0.9), 26)
+		return true
 	_flash[e.id] = 0.12
 	float_text(Vector2(e.x - 20, GROUND_Y - 260), str(int(round(float(battle.stats.sword) * battle.damage_mult()))), Color(1, 1, 0.8), 30)
 	if e.state == "dead":
@@ -218,6 +221,9 @@ func release_chain(p: Vector2, held: float) -> void:
 	if r.blocked:
 		float_text(Vector2(battle.hero_x - 70, GROUND_Y - 260), "꼬리를 막았어요!", Color(0.6, 1, 0.6), 32)
 	for e in r.hit:
+		if e.blocked:
+			float_text(Vector2(e.x - 60, GROUND_Y - 300), "팅! 틈을 노려요", Color(0.8, 0.8, 0.9), 28)
+			continue
 		_flash[e.id] = 0.15
 		float_text(Vector2(e.x - 60, GROUND_Y - 300), "콰지직!", Color(0.5, 1, 0.5), 40)
 		if e.state == "dead":
@@ -428,6 +434,8 @@ func _draw_dragon(n: Node2D, e: Dictionary, flash: bool) -> void:
 	n.draw_rect(Rect2(head + Vector2(f * 10 - 30, 14), Vector2(60, 30 if open else 10)), Color(0.25, 0.05, 0.12))
 	if e.state == "down":
 		n.draw_string(ThemeDB.fallback_font, head + Vector2(-30, -70), "@_@", HORIZONTAL_ALIGNMENT_LEFT, -1, 36, Color.WHITE)
+	elif e.state == "recover" and not battle.is_guarded(e):
+		n.draw_string(ThemeDB.fallback_font, base + Vector2(-60, -200), "지금이야!", HORIZONTAL_ALIGNMENT_LEFT, -1, 32, Color(1, 1, 0.5))
 
 
 func _ellipse(n: Node2D, c: Vector2, r: Vector2, col: Color) -> void:

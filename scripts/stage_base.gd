@@ -333,6 +333,7 @@ func next_page() -> void:
 	_page_index += 1
 	if _page_index >= _pages.size():
 		_pages = []
+		clear_overlay()
 		_pages_done.call()
 	else:
 		_show_page()

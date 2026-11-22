@@ -49,9 +49,14 @@ func _run() -> void:
 	d.hero_x = 300.0
 	d.facing = 1.0
 	d.chain()
+	check(dr.hp == 1500 and dr.blocked, "드래곤은 공격 틈이 아니면 막아요 (팅!)")
+	dr.state = "recover"
+	dr.wait = 99.0
+	d.chain()
 	check(dr.hp == 1480, "꿰뚫는 사슬은 멀리(900)까지 닿아요")
 	dr.hp = 400
 	d.tick(0.01)
+	dr.state = "recover"
 	check(dr.phase == 3, "체력 450 아래면 3단계")
 	d.chain()
 	check(dr.hp == 360, "3단계 가슴 비늘: 꿰뚫는 사슬 2배 (40)")
