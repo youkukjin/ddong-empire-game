@@ -82,7 +82,7 @@ func spawn(kind: String, x: float) -> Dictionary:
 		"id": _next_id, "kind": kind, "name": cfg.name, "x": x,
 		"hp": int(cfg.hp), "max_hp": int(cfg.hp), "radius": float(cfg.radius), "speed": float(cfg.speed), "boss": cfg.boss,
 		"state": "approach", "t": 0.0, "wait": 1.0 + rng.randf() * 0.6, "attack": {},
-		"target_x": x, "facing": -1.0, "airborne": false, "phase": 1, "count": 0, "summon_cd": 6.0,
+		"target_x": x, "facing": -1.0, "airborne": false, "blocked": false, "phase": 1, "count": 0, "summon_cd": 6.0,
 	}
 	_next_id += 1
 	enemies.append(e)
@@ -212,7 +212,8 @@ func sword() -> Dictionary:
 	sword_cd = float(stats.sword_cd)
 	pause_left = float(stats.sword_pause)
 	_hurt_enemy(e, int(round(float(stats.sword) * damage_mult())))
-	_add_gauge(FIST_PER_HIT)
+	if not e.blocked:
+		_add_gauge(FIST_PER_HIT)
 	return e
 
 
@@ -255,6 +256,8 @@ func chain() -> Dictionary:
 		if e.kind.begins_with("dragon") and (e.phase == 3 or e.kind == "dragon_final"):
 			dmg *= 2.0 if kind == "pierce" else 1.5
 		_hurt_enemy(e, int(round(dmg * damage_mult())))
+		if e.blocked:
+			continue
 		_add_gauge(FIST_PER_HIT)
 		# 무사는 뒤로 밀리고 하던 공격이 끊겨요
 		if not e.boss and e.state != "dead":
@@ -278,7 +281,7 @@ func fist() -> Dictionary:
 		e = list[0]
 	gauge = 0.0
 	e.airborne = false
-	_hurt_enemy(e, int(stats.str) * 10)
+	_hurt_enemy(e, int(stats.str) * 10, true)
 	if e.state != "dead":
 		e.state = "down"
 		e.t = 0.0
@@ -301,7 +304,18 @@ func _add_gauge(v: float) -> void:
 		gauge = minf(gauge + v, 1.0)
 
 
-func _hurt_enemy(e: Dictionary, dmg: int) -> void:
+## 드래곤은 공격이 끝난 틈(쉬는 중)이나 쓰러졌을 때만 다쳐요 (6장 설계: "공격 후 2초 동안 틈").
+## 각성한 똥의 신은 언제든 때릴 수 있어요.
+func is_guarded(e: Dictionary) -> bool:
+	if not e.kind.begins_with("dragon") or god_left > 0.0:
+		return false
+	return e.state != "recover" and e.state != "down"
+
+
+func _hurt_enemy(e: Dictionary, dmg: int, force := false) -> void:
+	e.blocked = not force and is_guarded(e)
+	if e.blocked:
+		return
 	e.hp = maxi(int(e.hp) - dmg, 0)
 	hits_landed += 1
 	if e.hp <= 0:
@@ -360,7 +374,7 @@ func _enemy_step(e: Dictionary, delta: float, events: Array) -> void:
 			if e.t >= e.wait:
 				e.state = "approach"
 				e.t = 0.0
-				e.wait = 0.3 + rng.randf() * 0.5
+				e.wait = (0.8 + rng.randf() * 0.6) if e.kind.begins_with("dragon") else (0.3 + rng.randf() * 0.5)
 
 
 func _start_attack(e: Dictionary, events: Array) -> void:
