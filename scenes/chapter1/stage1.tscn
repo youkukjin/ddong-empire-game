@@ -1,0 +1,48 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scenes/chapter1/stage1.gd" id="1_stage"]
+[ext_resource type="Script" path="res://scenes/chapter1/world_background.gd" id="2_bg"]
+[ext_resource type="Script" path="res://scenes/chapter1/dragon.gd" id="3_dragon"]
+
+[node name="Stage1" type="Node2D"]
+script = ExtResource("1_stage")
+
+[node name="World" type="Node2D" parent="."]
+
+[node name="Background" type="Node2D" parent="World"]
+script = ExtResource("2_bg")
+
+[node name="Fires" type="Node2D" parent="World"]
+
+[node name="Dragon" type="Node2D" parent="World"]
+script = ExtResource("3_dragon")
+
+[node name="Citizens" type="Node2D" parent="World"]
+
+[node name="Beams" type="Node2D" parent="World"]
+
+[node name="Effects" type="Node2D" parent="World"]
+
+[node name="HUD" type="CanvasLayer" parent="."]
+
+[node name="Root" type="Control" parent="HUD"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Overlay" type="CanvasLayer" parent="."]
+process_mode = 3
+layer = 2
+
+[node name="Root" type="Control" parent="Overlay"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
