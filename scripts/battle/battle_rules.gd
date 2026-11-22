@@ -317,6 +317,9 @@ func _hurt_enemy(e: Dictionary, dmg: int, force := false) -> void:
 	if e.blocked:
 		return
 	e.hp = maxi(int(e.hp) - dmg, 0)
+	# 7장: 마지막 드래곤은 각성한 똥의 신만 끝낼 수 있어요 (제안)
+	if e.kind == "dragon_final" and e.hp <= 0 and god_left <= 0.0:
+		e.hp = 1
 	hits_landed += 1
 	if e.hp <= 0:
 		e.state = "dead"
