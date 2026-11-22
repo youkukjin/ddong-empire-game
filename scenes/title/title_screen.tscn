@@ -1,0 +1,96 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scenes/title/title_screen.gd" id="1_title"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_title"]
+font_size = 96
+font_color = Color(0.4, 0.239, 0.11, 1)
+outline_size = 18
+outline_color = Color(1, 1, 1, 1)
+shadow_size = 8
+shadow_color = Color(0.4, 0.239, 0.11, 0.35)
+shadow_offset = Vector2(0, 8)
+
+[sub_resource type="StyleBoxFlat" id="StyleBox_normal"]
+bg_color = Color(0.71, 0.482, 0.278, 1)
+corner_radius_top_left = 48
+corner_radius_top_right = 48
+corner_radius_bottom_right = 48
+corner_radius_bottom_left = 48
+shadow_color = Color(0.4, 0.239, 0.11, 0.6)
+shadow_size = 1
+shadow_offset = Vector2(0, 10)
+
+[sub_resource type="StyleBoxFlat" id="StyleBox_hover"]
+bg_color = Color(0.78, 0.553, 0.341, 1)
+corner_radius_top_left = 48
+corner_radius_top_right = 48
+corner_radius_bottom_right = 48
+corner_radius_bottom_left = 48
+shadow_color = Color(0.4, 0.239, 0.11, 0.6)
+shadow_size = 1
+shadow_offset = Vector2(0, 10)
+
+[sub_resource type="StyleBoxFlat" id="StyleBox_pressed"]
+bg_color = Color(0.588, 0.38, 0.2, 1)
+corner_radius_top_left = 48
+corner_radius_top_right = 48
+corner_radius_bottom_right = 48
+corner_radius_bottom_left = 48
+
+[node name="TitleScreen" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_title")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.996, 0.949, 0.851, 1)
+
+[node name="Center" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 40.0
+offset_top = 80.0
+offset_right = -40.0
+offset_bottom = -80.0
+grow_horizontal = 2
+grow_vertical = 2
+alignment = 1
+theme_override_constants/separation = 160
+
+[node name="TitleLabel" type="Label" parent="Center"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "똥제국의
+위기"
+label_settings = SubResource("LabelSettings_title")
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="StartButton" type="Button" parent="Center"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(420, 140)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_colors/font_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/font_focus_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 56
+theme_override_styles/focus = SubResource("StyleBox_hover")
+theme_override_styles/hover = SubResource("StyleBox_hover")
+theme_override_styles/pressed = SubResource("StyleBox_pressed")
+theme_override_styles/normal = SubResource("StyleBox_normal")
+text = "시작하기"

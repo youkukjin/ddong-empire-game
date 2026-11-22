@@ -1,0 +1,39 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[application]
+
+config/name="똥제국의 위기"
+config/description="동화책을 바탕으로 한 어린이용 모바일 게임"
+config/version="0.1.0"
+run/main_scene="res://scenes/title/title_screen.tscn"
+config/features=PackedStringArray("4.3", "GL Compatibility")
+boot_splash/bg_color=Color(0.996, 0.949, 0.851, 1)
+config/icon="res://icon.svg"
+
+[display]
+
+window/size/viewport_width=720
+window/size/viewport_height=1280
+window/size/window_width_override=405
+window/size/window_height_override=720
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+window/handheld/orientation=1
+
+[input_devices]
+
+pointing/emulate_touch_from_mouse=true
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+textures/vram_compression/import_etc2_astc=true
