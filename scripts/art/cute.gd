@@ -3,6 +3,9 @@ extends RefCounted
 ## 색, 둥근 젤리 버튼, 창, 귀여운 눈·볼터치·구름 그리기를 여기서 가져다 써요.
 ## 색을 바꾸고 싶으면 이 파일의 숫자만 고치면 게임 전체가 같이 바뀌어요.
 ##
+## 2차 (제안): 깔끔하게. 버튼·창은 테두리를 줄이고 그림자로 떠 있는 느낌을 줘요.
+## 3D 화면에서도 버튼·창·글자는 이 파일의 2D 모양을 그대로 써요.
+##
 ## 원작 인물 설정(똥 왕자의 왕관·검·사슬 무기, 보라색 가시 드래곤 등)은 그대로 두고
 ## 색감과 모양만 부드럽게 바꿨어요.
 
@@ -44,8 +47,11 @@ static func style_button(btn: Button, color: Color, font_size := 0) -> void:
 		btn.add_theme_font_size_override("font_size", font_size)
 	for s in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_disabled_color"]:
 		btn.add_theme_color_override(s, Color.WHITE)
-	btn.add_theme_color_override("font_outline_color", color.darkened(0.45))
-	btn.add_theme_constant_override("outline_size", 7)
+	btn.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0))
+	btn.add_theme_constant_override("outline_size", 0)
+	btn.add_theme_color_override("font_shadow_color", Color(color.darkened(0.5), 0.55))
+	btn.add_theme_constant_override("shadow_offset_x", 0)
+	btn.add_theme_constant_override("shadow_offset_y", 2)
 	var r := int(clampf(btn.custom_minimum_size.y * 0.5, 18, 48))
 	btn.add_theme_stylebox_override("normal", _jelly(color, r, false))
 	btn.add_theme_stylebox_override("hover", _jelly(color.lightened(0.08), r, false))
@@ -58,15 +64,16 @@ static func _jelly(color: Color, radius: int, pressed: bool) -> StyleBoxFlat:
 	var s := StyleBoxFlat.new()
 	s.bg_color = color
 	s.set_corner_radius_all(radius)
-	s.border_color = color.darkened(0.28)
-	s.border_width_left = 3
-	s.border_width_right = 3
-	s.border_width_top = 3
-	s.border_width_bottom = 4 if pressed else 10
+	s.border_color = color.darkened(0.22)
+	s.border_width_bottom = 3 if pressed else 8
+	s.shadow_color = Color(0.2, 0.1, 0.15, 0.18 if pressed else 0.28)
+	s.shadow_size = 4 if pressed else 10
+	s.shadow_offset = Vector2(0, 3 if pressed else 8)
 	s.content_margin_left = 14
 	s.content_margin_right = 14
-	s.content_margin_top = 12 if pressed else 6
-	s.content_margin_bottom = 2 if pressed else 8
+	s.content_margin_top = 10 if pressed else 5
+	s.content_margin_bottom = 3 if pressed else 8
+	s.expand_margin_top = -2.0 if pressed else 0.0
 	s.anti_aliasing = true
 	return s
 
@@ -75,26 +82,30 @@ static func _jelly(color: Color, radius: int, pressed: bool) -> StyleBoxFlat:
 static func panel_style() -> StyleBoxFlat:
 	var s := StyleBoxFlat.new()
 	s.bg_color = CREAM
-	s.set_corner_radius_all(44)
-	s.set_border_width_all(8)
-	s.border_color = PINK
-	s.set_content_margin_all(34)
-	s.shadow_color = Color(0.3, 0.1, 0.15, 0.3)
-	s.shadow_size = 18
-	s.shadow_offset = Vector2(0, 10)
+	s.set_corner_radius_all(40)
+	s.set_border_width_all(2)
+	s.border_width_bottom = 8
+	s.border_color = Color(0.93, 0.85, 0.8)
+	s.set_content_margin_all(36)
+	s.shadow_color = Color(0.2, 0.08, 0.15, 0.35)
+	s.shadow_size = 30
+	s.shadow_offset = Vector2(0, 16)
 	return s
 
 
 ## 창 뒤를 살짝 어둡게 (검정 대신 포근한 자주색)
-const DIM := Color(0.25, 0.12, 0.22, 0.5)
+const DIM := Color(0.2, 0.12, 0.2, 0.45)
 
 
 ## 화면 위 표시줄 바탕: 아래가 둥근 반투명 띠.
 static func hud_style() -> StyleBoxFlat:
 	var s := StyleBoxFlat.new()
-	s.bg_color = Color(0.32, 0.18, 0.28, 0.5)
+	s.bg_color = Color(0.25, 0.15, 0.25, 0.42)
 	s.corner_radius_bottom_left = 30
 	s.corner_radius_bottom_right = 30
+	s.shadow_color = Color(0, 0, 0, 0.12)
+	s.shadow_size = 8
+	s.shadow_offset = Vector2(0, 4)
 	return s
 
 
@@ -228,13 +239,13 @@ class Paper extends Control:
 
 	func _draw() -> void:
 		draw_rect(Rect2(Vector2.ZERO, size), color)
-		var step := 90.0
+		var step := 120.0
 		var row := 0
 		var y := 30.0
 		while y < size.y + step:
 			var x := 30.0 + (step * 0.5 if row % 2 == 1 else 0.0)
 			while x < size.x + step:
-				draw_circle(Vector2(x, y), 9, CREAM_DOT)
+				draw_circle(Vector2(x, y), 6, Color(CREAM_DOT, 0.55))
 				x += step
 			y += step * 0.8
 			row += 1

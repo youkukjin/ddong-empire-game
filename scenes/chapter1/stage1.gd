@@ -17,6 +17,7 @@ const BeamScript := preload("res://scenes/chapter1/beam.gd")
 const WorldBG := preload("res://scenes/chapter1/world_background.gd")
 const Widget := preload("res://scenes/chapter1/hud_widgets.gd")
 const Cute := preload("res://scripts/art/cute.gd")
+const View3D := preload("res://scenes/chapter1/view3d_ch1.gd")
 const TITLE_SCENE := "res://scenes/title/title_screen.tscn"
 const STAGE_SCENE := "res://scenes/chapter1/stage1.tscn"
 const CHAPTER2_SCENE := "res://scenes/chapter2/stage2.tscn"
@@ -49,6 +50,7 @@ var _touches := {}            # 손가락 번호 -> 끌기/쓸기 정보
 var _pages: Array[String] = []
 var _page_index := 0
 
+var view3d: Node3D            # 3D 화면 (제안). 규칙과 터치는 2D 좌표 그대로예요.
 var _moon: Widget
 var _hearts: Widget
 var _time_label: Label
@@ -65,6 +67,7 @@ func _ready() -> void:
 		rules.start_from_checkpoint(Session.checkpoint_time_left, Session.checkpoint_score)
 		_mouth_timer = 6.0
 	Session.resume_checkpoint = false
+	_build_3d()
 	dragon.nose_pressed.connect(_on_nose_pressed)
 	dragon.nose_missed.connect(_on_nose_missed)
 	_build_hud()
@@ -76,6 +79,20 @@ func _ready() -> void:
 		_pages = _intro_pages()
 	_page_index = 0
 	_show_page()
+
+
+## 3D 화면을 깔고, 2D 그림은 숨겨요 (2D 노드는 규칙·터치 계산용으로 그대로 움직여요).
+## 떠오르는 글자와 쓸기 자국(Effects)은 2D로 위에 보여요.
+func _build_3d() -> void:
+	if not View3D.can_show():
+		return
+	view3d = View3D.new()
+	view3d.name = "View3D"
+	view3d.stage = self
+	add_child(view3d)
+	move_child(view3d, 0)
+	for n in [background, fires_root, citizens_root, dragon, beams_root]:
+		n.visible = false
 
 
 func _intro_pages() -> Array[String]:
@@ -631,6 +648,8 @@ func _float_text(p: Vector2, text: String, color: Color, font_size := 34) -> voi
 
 
 func _shake() -> void:
+	if view3d:
+		view3d.shake()
 	var world: Node2D = $World
 	var tw := create_tween()
 	for i in 4:
