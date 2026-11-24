@@ -50,3 +50,8 @@ func _draw() -> void:
 		Vector2(-RADIUS * 0.4, 6), Vector2(-RADIUS * 0.1, -RADIUS * 0.6 + f),
 		Vector2(RADIUS * 0.4, 6),
 	]), Color(1.0, 0.85, 0.3))
+	# 심술 난 불꽃 얼굴 (제안)
+	var ink := Color(0.45, 0.1, 0.05)
+	draw_circle(Vector2(-RADIUS * 0.22, -RADIUS * 0.1), 3.2, ink)
+	draw_circle(Vector2(RADIUS * 0.22, -RADIUS * 0.1), 3.2, ink)
+	draw_arc(Vector2(0, RADIUS * 0.12), 4.0, PI + 0.5, TAU - 0.5, 6, ink, 2.0)

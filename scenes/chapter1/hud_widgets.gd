@@ -4,6 +4,8 @@ extends Control
 ## - HEARTS: 하트 개수
 ## - STARS: 결과 화면의 별 개수
 
+const Cute := preload("res://scripts/art/cute.gd")
+
 enum Kind { MOON, HEARTS, STARS }
 
 var kind := Kind.MOON
@@ -41,7 +43,7 @@ func _draw() -> void:
 func _draw_moon() -> void:
 	var c := size / 2.0
 	var r := minf(size.x, size.y) / 2.0 - 4.0
-	draw_circle(c, r, Color(0.2, 0.2, 0.35))
+	draw_circle(c, r, Color(0.45, 0.4, 0.62))
 	if ratio > 0.0:
 		var pts := PackedVector2Array([c])
 		var steps := 40
@@ -50,23 +52,19 @@ func _draw_moon() -> void:
 			pts.append(c + Vector2(cos(a), sin(a)) * r)
 		var col := Color(1, 0.95, 0.6) if ratio > 0.25 else Color(1, 0.6, 0.4)
 		draw_colored_polygon(pts, col)
-	draw_arc(c, r, 0, TAU, 48, Color(1, 1, 1, 0.8), 3.0)
+	draw_arc(c, r, 0, TAU, 48, Color(1, 1, 1, 0.9), 4.0)
+	# 달님 얼굴 (제안)
+	Cute.happy_eye(self, c + Vector2(-r * 0.3, -r * 0.1), r * 0.16, Cute.COCOA)
+	Cute.happy_eye(self, c + Vector2(r * 0.3, -r * 0.1), r * 0.16, Cute.COCOA)
+	Cute.blush(self, c + Vector2(-r * 0.5, r * 0.22), r * 0.14)
+	Cute.blush(self, c + Vector2(r * 0.5, r * 0.22), r * 0.14)
+	Cute.smile(self, c + Vector2(0, r * 0.12), r * 0.15, Cute.COCOA)
 
 
 func _draw_heart(c: Vector2, s: float, filled: bool) -> void:
-	var col := Color(0.95, 0.3, 0.4) if filled else Color(0.4, 0.35, 0.45)
-	draw_circle(c + Vector2(-s * 0.45, -s * 0.2), s * 0.52, col)
-	draw_circle(c + Vector2(s * 0.45, -s * 0.2), s * 0.52, col)
-	draw_colored_polygon(PackedVector2Array([
-		c + Vector2(-s * 0.95, -s * 0.05), c + Vector2(s * 0.95, -s * 0.05), c + Vector2(0, s * 0.9)]), col)
+	Cute.heart(self, c + Vector2(2, 3), s * 1.08, Color(0.36, 0.16, 0.26, 0.5), false)
+	Cute.heart(self, c, s, Cute.PINK.darkened(0.05) if filled else Color(0.75, 0.7, 0.8), filled)
 
 
 func _draw_star(c: Vector2, r: float, filled: bool) -> void:
-	var pts := PackedVector2Array()
-	for i in 10:
-		var a := -PI / 2.0 + i * PI / 5.0
-		var rr := r if i % 2 == 0 else r * 0.45
-		pts.append(c + Vector2(cos(a), sin(a)) * rr)
-	draw_colored_polygon(pts, Color(1, 0.82, 0.2) if filled else Color(0.75, 0.7, 0.62))
-	pts.append(pts[0])
-	draw_polyline(pts, Color(0.4, 0.24, 0.11), 3.0)
+	Cute.star(self, c, r, filled)

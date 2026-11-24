@@ -8,8 +8,8 @@ const Backdrop := preload("res://scripts/art/backdrop.gd")
 const Gesture := preload("res://scripts/gesture.gd")
 
 const GROUND_Y := 600.0
-const PURPLE := Color(0.5, 0.25, 0.72)
-const PURPLE_DARK := Color(0.33, 0.14, 0.5)
+const PURPLE := Color(0.62, 0.42, 0.86)       # 귀여운 디자인 (제안): 연보라
+const PURPLE_DARK := Color(0.42, 0.25, 0.64)
 
 var battle: Battle
 var prince: Node2D
@@ -22,12 +22,12 @@ var _hp_label: Label
 var _boss_label: Label
 var _info_label: Label
 var _gauge_button: Button
-var _hp_bar: ColorRect
-var _hp_fill: ColorRect
-var _boss_bar: ColorRect
-var _boss_fill: ColorRect
-var _gauge_fill: ColorRect
-var _gauge_bar: ColorRect
+var _hp_bar: Panel
+var _hp_fill: Panel
+var _boss_bar: Panel
+var _boss_fill: Panel
+var _gauge_fill: Panel
+var _gauge_bar: Panel
 var _flash := {}                  # 적 id -> 맞아서 하얗게 빛나는 시간
 
 
@@ -46,18 +46,18 @@ func _setup() -> void:
 	fx.draw.connect(_draw_warnings.bind(fx))
 	world.add_child(fx)
 	hud_bar(Vector2(0, 0), Vector2(1280, 96))
-	_hp_bar = _bar(Vector2(24, 52), Vector2(300, 26), Color(0.25, 0.1, 0.1))
-	_hp_fill = _bar(Vector2(24, 52), Vector2(300, 26), Color(0.4, 0.85, 0.45))
+	_hp_bar = _bar(Vector2(24, 52), Vector2(300, 26), Color(0.3, 0.16, 0.24))
+	_hp_fill = _bar(Vector2(24, 52), Vector2(300, 26), Cute.MINT)
 	_hp_label = hud_label(Vector2(24, 8), 30)
 	_boss_bar = _bar(Vector2(400, 52), Vector2(460, 26), Color(0.2, 0.1, 0.2))
-	_boss_fill = _bar(Vector2(400, 52), Vector2(460, 26), Color(0.85, 0.35, 0.6))
+	_boss_fill = _bar(Vector2(400, 52), Vector2(460, 26), Cute.PINK)
 	_boss_label = hud_label(Vector2(400, 8), 30)
 	_info_label = hud_label(Vector2(24, 104), 24)
 	if gauge_mode != "none":
 		_gauge_bar = _bar(Vector2(900, 60), Vector2(260, 20), Color(0.2, 0.15, 0.1))
-		_gauge_fill = _bar(Vector2(900, 60), Vector2(0, 20), Color(1, 0.75, 0.3))
+		_gauge_fill = _bar(Vector2(900, 60), Vector2(0, 20), Cute.LEMON)
 		hud_label(Vector2(900, 14), 26).text = "근육 주먹" if gauge_mode == "fist" else "각성 게이지"
-		_gauge_button = make_button("근육 주먹!" if gauge_mode == "fist" else "각성!", Vector2(240, 110), 40, Color(0.9, 0.55, 0.15))
+		_gauge_button = make_button("근육 주먹!" if gauge_mode == "fist" else "각성!", Vector2(240, 110), 40, Cute.LEMON.darkened(0.1))
 		_gauge_button.name = "GaugeButton"
 		_gauge_button.position = Vector2(1010, 560)
 		_gauge_button.visible = false
@@ -262,11 +262,13 @@ func _on_enemy_defeated(e: Dictionary) -> void:
 
 # ------------------------------------------------------------------ 화면 위 표시
 
-func _bar(pos: Vector2, size: Vector2, color: Color) -> ColorRect:
-	var r := ColorRect.new()
+## 둥근 막대 (귀여운 디자인 제안)
+func _bar(pos: Vector2, size: Vector2, color: Color) -> Panel:
+	var r := Panel.new()
+	var dark := color.get_luminance() < 0.3
+	r.add_theme_stylebox_override("panel", Cute.round_box(color, int(size.y / 2), Color.WHITE, 3 if dark else 0))
 	r.position = pos
 	r.size = size
-	r.color = color
 	r.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hud_root.add_child(r)
 	return r
@@ -314,9 +316,12 @@ func _draw_battle() -> void:
 				_draw_dragon(n, e, flash)
 		# 적 체력 (무사만 머리 위에)
 		if not e.boss:
-			var w := 70.0
-			n.draw_rect(Rect2(e.x - w / 2, GROUND_Y - 150, w, 8), Color(0.2, 0.1, 0.1))
-			n.draw_rect(Rect2(e.x - w / 2, GROUND_Y - 150, w * e.hp / e.max_hp, 8), Color(1, 0.4, 0.4))
+			var w := 76.0
+			var y := GROUND_Y - 156
+			n.draw_line(Vector2(e.x - w / 2, y), Vector2(e.x + w / 2, y), Color(0.36, 0.16, 0.26), 14)
+			if e.hp > 0:
+				n.draw_line(Vector2(e.x - w / 2, y), Vector2(e.x - w / 2 + w * e.hp / e.max_hp, y), Cute.PINK, 8)
+			Cute.heart(n, Vector2(e.x - w / 2 - 6, y), 9, Cute.PINK)
 
 
 func _draw_warnings(n: Node2D) -> void:
@@ -367,37 +372,69 @@ func _body_color(base: Color, flash: bool) -> Color:
 func _draw_warrior(n: Node2D, e: Dictionary, flash: bool) -> void:
 	var x: float = e.x
 	var f: float = e.facing
-	var col := _body_color(Color(0.42, 0.27, 0.13), flash)
-	_ellipse(n, Vector2(x, GROUND_Y - 24), Vector2(42, 24), col)
-	_ellipse(n, Vector2(x, GROUND_Y - 58), Vector2(32, 19), col.lightened(0.08))
-	_ellipse(n, Vector2(x, GROUND_Y - 86), Vector2(20, 13), col.lightened(0.15))
+	var col := _body_color(Color(0.62, 0.42, 0.26), flash)
+	var dark := _body_color(Color(0.42, 0.27, 0.15), flash)
+	_ellipse(n, Vector2(x, GROUND_Y - 24), Vector2(45, 27), dark)
+	_ellipse(n, Vector2(x, GROUND_Y - 26), Vector2(42, 24), col)
+	_ellipse(n, Vector2(x, GROUND_Y - 58), Vector2(35, 22), dark)
+	_ellipse(n, Vector2(x, GROUND_Y - 60), Vector2(32, 19), col.lightened(0.06))
+	_ellipse(n, Vector2(x, GROUND_Y - 86), Vector2(23, 16), dark)
+	_ellipse(n, Vector2(x, GROUND_Y - 88), Vector2(20, 13), col.lightened(0.12))
+	_ellipse(n, Vector2(x - 16, GROUND_Y - 36), Vector2(9, 5), Color(1, 1, 1, 0.3))
 	# 투구 (제안: 무사 모습은 원작 그림을 보고 임시로)
-	n.draw_rect(Rect2(x - 26, GROUND_Y - 112, 52, 14), Color(0.45, 0.45, 0.5))
-	n.draw_colored_polygon(PackedVector2Array([Vector2(x - 6, GROUND_Y - 112), Vector2(x + 6, GROUND_Y - 112), Vector2(x, GROUND_Y - 134)]), Color(0.75, 0.2, 0.2))
-	n.draw_circle(Vector2(x + 10 * f, GROUND_Y - 62), 6, Color.WHITE)
-	n.draw_circle(Vector2(x + 12 * f, GROUND_Y - 62), 3, Color.BLACK)
+	var helm := PackedVector2Array()
+	for i in 13:
+		var a := PI + PI * i / 12.0
+		helm.append(Vector2(x, GROUND_Y - 100) + Vector2(cos(a) * 28, sin(a) * 18))
+	n.draw_colored_polygon(helm, Color(0.66, 0.68, 0.8))
+	n.draw_rect(Rect2(x - 30, GROUND_Y - 104, 60, 8), Color(0.5, 0.52, 0.66))
+	n.draw_circle(Vector2(x, GROUND_Y - 124), 8, Cute.PINK)
+	# 똘망한 눈 (조금 심술 난 눈썹)
+	for s in [-1.0, 1.0]:
+		var ec := Vector2(x + 8 * f + s * 11, GROUND_Y - 64)
+		Cute.eye(n, ec, 7.5, Vector2(f, 0))
+		n.draw_line(ec + Vector2(-7, -12 + s * f * 3), ec + Vector2(7, -12 - s * f * 3), Cute.INK, 3)
+	Cute.blush(n, Vector2(x + 8 * f - 22, GROUND_Y - 50), 5)
+	Cute.blush(n, Vector2(x + 8 * f + 22, GROUND_Y - 50), 5)
 	var raised: bool = e.state == "windup"
 	var hand := Vector2(x + 34 * f, GROUND_Y - 60)
 	var tip := hand + (Vector2(10 * f, -70) if raised else Vector2(60 * f, -20))
-	n.draw_line(hand, tip, Color(0.85, 0.85, 0.9), 6)
+	n.draw_line(hand, tip, Color(0.5, 0.5, 0.62), 10)
+	n.draw_line(hand, tip, Color(0.92, 0.94, 1.0), 6)
+	n.draw_circle(hand, 7, Color(0.62, 0.42, 0.26))
 
 
 func _draw_demon(n: Node2D, e: Dictionary, flash: bool) -> void:
 	var x: float = e.x
 	var f: float = e.facing
-	var col := _body_color(Color(0.3, 0.16, 0.1), flash)
+	var col := _body_color(Color(0.48, 0.3, 0.22), flash)
 	if e.state == "windup":
-		col = col.lerp(Color(0.8, 0.2, 0.1), 0.25)
+		col = col.lerp(Color(0.9, 0.3, 0.3), 0.3)
+	var dark := col.darkened(0.35)
+	_ellipse(n, Vector2(x, GROUND_Y - 38), Vector2(86, 46), dark)
 	_ellipse(n, Vector2(x, GROUND_Y - 40), Vector2(82, 42), col)
+	_ellipse(n, Vector2(x, GROUND_Y - 98), Vector2(66, 38), dark)
 	_ellipse(n, Vector2(x, GROUND_Y - 100), Vector2(62, 34), col.lightened(0.06))
+	_ellipse(n, Vector2(x, GROUND_Y - 148), Vector2(46, 30), dark)
 	_ellipse(n, Vector2(x, GROUND_Y - 150), Vector2(42, 26), col.lightened(0.12))
+	_ellipse(n, Vector2(x - 34, GROUND_Y - 56), Vector2(16, 8), Color(1, 1, 1, 0.25))
+	# 망토 깃 (제안)
+	n.draw_colored_polygon(PackedVector2Array([Vector2(x - 60, GROUND_Y - 120), Vector2(x - 80, GROUND_Y - 150), Vector2(x - 40, GROUND_Y - 128)]), Color(0.75, 0.3, 0.45))
+	n.draw_colored_polygon(PackedVector2Array([Vector2(x + 60, GROUND_Y - 120), Vector2(x + 80, GROUND_Y - 150), Vector2(x + 40, GROUND_Y - 128)]), Color(0.75, 0.3, 0.45))
 	# 뿔 (원작 그림: 뿔 달린 대마왕)
 	for s in [-1.0, 1.0]:
 		n.draw_colored_polygon(PackedVector2Array([
 			Vector2(x + s * 18, GROUND_Y - 168), Vector2(x + s * 36, GROUND_Y - 166), Vector2(x + s * 52, GROUND_Y - 222)]), Color(0.92, 0.88, 0.78))
-	for s in [-14.0, 14.0]:
-		n.draw_circle(Vector2(x + s + 10 * f, GROUND_Y - 110), 9, Color(1, 0.3, 0.2))
-	n.draw_line(Vector2(x - 20, GROUND_Y - 84), Vector2(x + 20, GROUND_Y - 84), Color(0.1, 0.05, 0.05), 4)
+	for s in [-16.0, 16.0]:
+		var ec := Vector2(x + s + 10 * f, GROUND_Y - 110)
+		n.draw_circle(ec, 13, Color(1, 0.9, 0.5))
+		n.draw_circle(ec + Vector2(2 * f, 1), 8, Color(0.85, 0.2, 0.25))
+		n.draw_circle(ec + Vector2(2 * f - 3, -3), 3, Color.WHITE)
+		n.draw_line(ec + Vector2(-12, -16 - s * 0.25), ec + Vector2(12, -16 + s * 0.25), Cute.INK, 5)
+	# 심술 입과 작은 송곳니
+	n.draw_arc(Vector2(x + 10 * f, GROUND_Y - 76), 16, PI + 0.5, TAU - 0.5, 10, Cute.INK, 4)
+	n.draw_colored_polygon(PackedVector2Array([Vector2(x + 10 * f - 12, GROUND_Y - 84), Vector2(x + 10 * f - 4, GROUND_Y - 84), Vector2(x + 10 * f - 8, GROUND_Y - 74)]), Color.WHITE)
+	n.draw_colored_polygon(PackedVector2Array([Vector2(x + 10 * f + 4, GROUND_Y - 84), Vector2(x + 10 * f + 12, GROUND_Y - 84), Vector2(x + 10 * f + 8, GROUND_Y - 74)]), Color.WHITE)
 
 
 func _draw_dragon(n: Node2D, e: Dictionary, flash: bool) -> void:
@@ -413,6 +450,7 @@ func _draw_dragon(n: Node2D, e: Dictionary, flash: bool) -> void:
 	var dark := _body_color(PURPLE_DARK, flash)
 	# 꼬리
 	n.draw_line(base + Vector2(-f * 90, -50), base + Vector2(-f * 200, -10), dark, 30)
+	n.draw_circle(base + Vector2(-f * 200, -10), 15, dark)
 	# 몸통
 	_ellipse(n, base + Vector2(0, -90), Vector2(120, 80), dark)
 	_ellipse(n, base + Vector2(0, -92), Vector2(112, 72), body)
@@ -432,11 +470,21 @@ func _draw_dragon(n: Node2D, e: Dictionary, flash: bool) -> void:
 		var a := -2.6 + i * 0.32
 		var dir := Vector2(cos(a) * -f, sin(a))
 		n.draw_colored_polygon(PackedVector2Array([head + dir * 40 + dir.orthogonal() * 10, head + dir * 80, head + dir * 40 - dir.orthogonal() * 10]), dark)
+	n.draw_circle(head, 52, dark)
 	n.draw_circle(head, 48, body)
-	n.draw_circle(head + Vector2(f * 6, -16), 10, Color(1, 0.95, 0.4))
-	n.draw_circle(head + Vector2(f * 9, -16), 5, Color.BLACK)
+	n.draw_circle(head + Vector2(-f * 18, -22), 10, Color(1, 1, 1, 0.25))
+	n.draw_circle(head + Vector2(f * 8, -14), 16, Color(1, 0.93, 0.45))
+	Cute.eye(n, head + Vector2(f * 11, -14), 9, Vector2(f, 0), false)
+	Cute.blush(n, head + Vector2(-f * 14, 12), 9)
 	var open: bool = e.state == "windup"
-	n.draw_rect(Rect2(head + Vector2(f * 10 - 30, 14), Vector2(60, 30 if open else 10)), Color(0.25, 0.05, 0.12))
+	var mc := head + Vector2(f * 14, 18)
+	var mouth := PackedVector2Array()
+	for i in 13:
+		var t := PI * i / 12.0
+		mouth.append(mc + Vector2(cos(t) * 26, sin(t) * (26.0 if open else 9.0)))
+	n.draw_colored_polygon(mouth, Color(0.45, 0.1, 0.22))
+	n.draw_colored_polygon(PackedVector2Array([mc + Vector2(-16, 0), mc + Vector2(-6, 0), mc + Vector2(-11, 10)]), Color.WHITE)
+	n.draw_colored_polygon(PackedVector2Array([mc + Vector2(6, 0), mc + Vector2(16, 0), mc + Vector2(11, 10)]), Color.WHITE)
 	if e.state == "down":
 		n.draw_string(ThemeDB.fallback_font, head + Vector2(-30, -70), "@_@", HORIZONTAL_ALIGNMENT_LEFT, -1, 36, Color.WHITE)
 	elif e.state == "recover" and not battle.is_guarded(e):

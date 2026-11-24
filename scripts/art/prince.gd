@@ -3,10 +3,12 @@ extends Node2D
 ## 팔에는 사슬로 이어진 무기가 있어요 (원작 성벽·무사 장면). 임시 도형이라 그림이 나오면 바꿔요.
 ## position은 발 밑이에요.
 
+const Cute := preload("res://scripts/art/cute.gd")
+
 enum Pose { IDLE, SWING, CHARGE, ROLL, HURT, CHEER }
 
-const BROWN := Color(0.55, 0.34, 0.16)
-const BROWN_DARK := Color(0.38, 0.22, 0.09)
+const BROWN := Color(0.71, 0.45, 0.25)       # 귀여운 디자인 (제안): 밀크초코색
+const BROWN_DARK := Color(0.45, 0.27, 0.15)
 const GOLD := Color(1, 0.82, 0.25)
 const HEIGHT := 130.0
 
@@ -64,22 +66,39 @@ func _draw() -> void:
 	_ellipse(Vector2(0, -70), Vector2(38, 20), body)
 	_ellipse(Vector2(0, -100), Vector2(26, 16), dark)
 	_ellipse(Vector2(0, -103), Vector2(23, 14), body)
-	# 눈
-	var eye_y := -70.0
-	for ex in [-14.0, 14.0]:
-		draw_circle(Vector2(ex + 6 * f, eye_y), 9, Color.WHITE)
-		draw_circle(Vector2(ex + 9 * f, eye_y), 4.5, Color(0.1, 0.05, 0.05))
+	# 몸 반짝임 (제안)
+	var shine := Color(1, 1, 1, 0.35)
+	_ellipse(Vector2(-26, -40), Vector2(12, 6), shine)
+	_ellipse(Vector2(-18, -78), Vector2(9, 5), shine)
+	_ellipse(Vector2(-10, -108), Vector2(6, 4), shine)
+	# 눈: 반짝이는 큰 눈 (제안)
+	var eye_y := -72.0
+	for ex in [-15.0, 15.0]:
+		if pose == Pose.CHEER:
+			Cute.happy_eye(self, Vector2(ex + 5 * f, eye_y), 11)
+		elif pose == Pose.HURT:
+			draw_line(Vector2(ex + 5 * f - 8, eye_y - 6), Vector2(ex + 5 * f + 8, eye_y + 6), Cute.INK, 4)
+			draw_line(Vector2(ex + 5 * f - 8, eye_y + 6), Vector2(ex + 5 * f + 8, eye_y - 6), Cute.INK, 4)
+		else:
+			Cute.eye(self, Vector2(ex + 5 * f, eye_y), 12, Vector2(f, 0))
+	Cute.blush(self, Vector2(-26 + 5 * f, -56), 8)
+	Cute.blush(self, Vector2(26 + 5 * f, -56), 8)
 	if pose == Pose.HURT:
-		draw_line(Vector2(-10, -50), Vector2(10, -50), Color(0.2, 0.1, 0.05), 3)
+		draw_arc(Vector2(5 * f, -46), 7, PI + 0.4, TAU - 0.4, 8, Cute.INK, 3)
 	else:
-		draw_arc(Vector2(4 * f, -54), 9, 0.2, PI - 0.2, 8, Color(0.2, 0.1, 0.05), 3)
+		Cute.smile(self, Vector2(5 * f, -56), 7, Cute.INK, pose == Pose.SWING or pose == Pose.CHEER)
 	# 왕관
 	var crown_y := -118.0
 	var crown := PackedVector2Array([
 		Vector2(-20, crown_y), Vector2(-24, crown_y - 22), Vector2(-10, crown_y - 10),
 		Vector2(0, crown_y - 26), Vector2(10, crown_y - 10), Vector2(24, crown_y - 22), Vector2(20, crown_y)])
+	var crown_line := crown.duplicate()
+	crown_line.append(crown[0])
+	draw_polyline(crown_line, Color(0.85, 0.55, 0.1), 5, true)
 	draw_colored_polygon(crown, GOLD)
-	draw_circle(Vector2(0, crown_y - 26), 4, Color(0.9, 0.2, 0.3))
+	draw_circle(Vector2(0, crown_y - 27), 5, Cute.PINK)
+	draw_circle(Vector2(-24, crown_y - 22), 3.5, Cute.SKY)
+	draw_circle(Vector2(24, crown_y - 22), 3.5, Cute.SKY)
 	# 팔 (근육 단계에 따라 굵어져요)
 	var arm_w := 9.0 + arm_level * 6.0
 	var shoulder := Vector2(30 * f, -64)
@@ -100,7 +119,10 @@ func _draw() -> void:
 	if pose == Pose.SWING:
 		blade_dir = Vector2(f, 0.15).normalized()
 	var blade_col := Color(0.85, 0.9, 0.95) if sword_level < 5 else GOLD
+	draw_line(hand, hand + blade_dir * 70, Color(0.45, 0.5, 0.62), 12)
+	draw_circle(hand + blade_dir * 70, 6, Color(0.45, 0.5, 0.62))
 	draw_line(hand, hand + blade_dir * 70, blade_col, 8)
+	draw_circle(hand + blade_dir * 70, 4, blade_col)
 	draw_line(hand - blade_dir.orthogonal() * 12, hand + blade_dir.orthogonal() * 12, dark, 6)
 	if sword_level >= 1:
 		draw_circle(hand + blade_dir * 70, 5, Color(1, 1, 0.8, 0.8))

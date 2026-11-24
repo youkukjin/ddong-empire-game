@@ -9,10 +9,11 @@ const Session := preload("res://scripts/game_session.gd")
 const Save := preload("res://scripts/save_data.gd")
 const Chapters := preload("res://scripts/chapters.gd")
 const TITLE_SCENE := "res://scenes/title/title_screen.tscn"
+const Cute := preload("res://scripts/art/cute.gd")
 
-const CREAM := Color(0.996, 0.949, 0.851)
-const BROWN := Color(0.4, 0.239, 0.11)
-const BUTTON_BROWN := Color(0.71, 0.482, 0.278)
+const CREAM := Cute.CREAM
+const BROWN := Cute.COCOA
+const BUTTON_BROWN := Cute.CARAMEL
 
 enum Phase { INTRO, PLAY, OUTRO, RESULT }
 
@@ -49,7 +50,7 @@ func _ready() -> void:
 	overlay_root = _full_control()
 	overlay.add_child(overlay_root)
 	_setup()
-	pause_button = make_button("II", Vector2(84, 76), 36)
+	pause_button = make_button("II", Vector2(84, 76), 36, Cute.PINK)
 	pause_button.position = Vector2(1186, 10)
 	pause_button.pressed.connect(toggle_pause)
 	hud_root.add_child(pause_button)
@@ -231,16 +232,16 @@ func hud_label(pos: Vector2, font_size: int, color := Color(1, 0.97, 0.88)) -> L
 	l.position = pos
 	l.add_theme_font_size_override("font_size", font_size)
 	l.add_theme_color_override("font_color", color)
-	l.add_theme_color_override("font_outline_color", Color(0.15, 0.08, 0.05))
-	l.add_theme_constant_override("outline_size", 6)
+	l.add_theme_color_override("font_outline_color", Color(0.36, 0.16, 0.26))
+	l.add_theme_constant_override("outline_size", 9)
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hud_root.add_child(l)
 	return l
 
 
-func hud_bar(pos: Vector2, size: Vector2) -> ColorRect:
-	var bar := ColorRect.new()
-	bar.color = Color(0, 0, 0, 0.35)
+func hud_bar(pos: Vector2, size: Vector2) -> Panel:
+	var bar := Panel.new()
+	bar.add_theme_stylebox_override("panel", Cute.hud_style())
 	bar.position = pos
 	bar.size = size
 	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -254,8 +255,8 @@ func float_text(p: Vector2, text: String, color: Color, font_size := 34) -> void
 	l.position = p
 	l.add_theme_font_size_override("font_size", font_size)
 	l.add_theme_color_override("font_color", color)
-	l.add_theme_color_override("font_outline_color", Color(0.15, 0.05, 0.2))
-	l.add_theme_constant_override("outline_size", 8)
+	l.add_theme_color_override("font_outline_color", Color.WHITE)
+	l.add_theme_constant_override("outline_size", 10)
 	world.add_child(l)
 	var tw := l.create_tween().set_parallel()
 	tw.tween_property(l, "position:y", p.y - 50.0, 1.0)
@@ -295,10 +296,10 @@ func _show_page() -> void:
 	page.set_anchors_preset(Control.PRESET_FULL_RECT)
 	page.focus_mode = Control.FOCUS_NONE
 	page.pressed.connect(next_page)
-	var bg := StyleBoxFlat.new()
-	bg.bg_color = CREAM
+	var bg := StyleBoxEmpty.new()
 	for s in ["normal", "hover", "pressed", "focus"]:
 		page.add_theme_stylebox_override(s, bg)
+	page.add_child(Cute.Paper.new())
 	overlay_root.add_child(page)
 
 	var body: String = _pages[_page_index]
@@ -342,17 +343,13 @@ func next_page() -> void:
 func show_panel(title: String, body: String, buttons: Array, extra: Control = null) -> void:
 	clear_overlay()
 	var dim := ColorRect.new()
-	dim.color = Color(0, 0, 0, 0.55)
+	dim.color = Cute.DIM
 	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
 	dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	overlay_root.add_child(dim)
 
 	var panel := PanelContainer.new()
-	var style := StyleBoxFlat.new()
-	style.bg_color = CREAM
-	style.set_corner_radius_all(36)
-	style.set_content_margin_all(32)
-	panel.add_theme_stylebox_override("panel", style)
+	panel.add_theme_stylebox_override("panel", Cute.panel_style())
 	panel.custom_minimum_size = Vector2(820, 0)
 	var center := CenterContainer.new()
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -367,8 +364,7 @@ func show_panel(title: String, body: String, buttons: Array, extra: Control = nu
 	var t := Label.new()
 	t.text = title
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	t.add_theme_font_size_override("font_size", 48)
-	t.add_theme_color_override("font_color", BROWN)
+	Cute.style_label(t, 54, Cute.PINK.darkened(0.15), Color.WHITE, 10)
 	box.add_child(t)
 	if extra:
 		extra.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -387,8 +383,10 @@ func show_panel(title: String, body: String, buttons: Array, extra: Control = nu
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", 16)
 	box.add_child(row)
-	for entry in buttons:
-		var btn := make_button(entry[0], Vector2(170, 72), 26)
+	var colors := [Cute.MINT, Cute.PEACH, Cute.SKY, Cute.LILAC]
+	for i in buttons.size():
+		var entry: Array = buttons[i]
+		var btn := make_button(entry[0], Vector2(180, 80), 28, colors[i % colors.size()])
 		btn.name = "Btn_" + String(entry[0]).replace(" ", "_")
 		btn.pressed.connect(entry[1])
 		row.add_child(btn)
@@ -406,26 +404,7 @@ func find_overlay_button(text: String) -> Button:
 
 
 func make_button(text: String, min_size: Vector2, font_size: int, color := BUTTON_BROWN) -> Button:
-	var btn := Button.new()
-	btn.text = text
-	btn.custom_minimum_size = min_size
-	btn.focus_mode = Control.FOCUS_NONE
-	btn.add_theme_font_size_override("font_size", font_size)
-	for s in ["font_color", "font_hover_color", "font_pressed_color", "font_disabled_color"]:
-		btn.add_theme_color_override(s, Color.WHITE)
-	var normal := StyleBoxFlat.new()
-	normal.bg_color = color
-	normal.set_corner_radius_all(26)
-	normal.set_content_margin_all(8)
-	var pressed := normal.duplicate()
-	pressed.bg_color = color.darkened(0.2)
-	var disabled := normal.duplicate()
-	disabled.bg_color = Color(0.6, 0.56, 0.5)
-	btn.add_theme_stylebox_override("normal", normal)
-	btn.add_theme_stylebox_override("hover", normal)
-	btn.add_theme_stylebox_override("pressed", pressed)
-	btn.add_theme_stylebox_override("disabled", disabled)
-	return btn
+	return Cute.button(text, min_size, font_size, color)
 
 
 func _full_control() -> Control:
@@ -441,12 +420,5 @@ class StarRow extends Control:
 
 	func _draw() -> void:
 		for i in 3:
-			var c := Vector2(size.x / 2.0 + (i - 1) * 110, size.y / 2.0)
-			var pts := PackedVector2Array()
-			for k in 10:
-				var a := -PI / 2.0 + k * PI / 5.0
-				var rr := 46.0 if k % 2 == 0 else 46.0 * 0.45
-				pts.append(c + Vector2(cos(a), sin(a)) * rr)
-			draw_colored_polygon(pts, Color(1, 0.82, 0.2) if i < stars else Color(0.75, 0.7, 0.62))
-			pts.append(pts[0])
-			draw_polyline(pts, Color(0.4, 0.24, 0.11), 3.0)
+			var c := Vector2(size.x / 2.0 + (i - 1) * 110, size.y / 2.0 + (-8.0 if i == 1 else 4.0))
+			Cute.star(self, c, 50.0 if i == 1 else 44.0, i < stars)

@@ -16,14 +16,15 @@ const FireScript := preload("res://scenes/chapter1/fire.gd")
 const BeamScript := preload("res://scenes/chapter1/beam.gd")
 const WorldBG := preload("res://scenes/chapter1/world_background.gd")
 const Widget := preload("res://scenes/chapter1/hud_widgets.gd")
+const Cute := preload("res://scripts/art/cute.gd")
 const TITLE_SCENE := "res://scenes/title/title_screen.tscn"
 const STAGE_SCENE := "res://scenes/chapter1/stage1.tscn"
 const CHAPTER2_SCENE := "res://scenes/chapter2/stage2.tscn"
 
 const SPAWN_GAP := 1.2
-const CREAM := Color(0.996, 0.949, 0.851)
-const BROWN := Color(0.4, 0.239, 0.11)
-const BUTTON_BROWN := Color(0.71, 0.482, 0.278)
+const CREAM := Cute.CREAM
+const BROWN := Cute.COCOA
+const BUTTON_BROWN := Cute.CARAMEL
 
 enum Phase { INTRO, PLAY, OUTRO, RESULT }
 
@@ -556,8 +557,10 @@ func _notification(what: int) -> void:
 # ------------------------------------------------------------------ 화면 위 표시
 
 func _build_hud() -> void:
-	var bar := ColorRect.new()
-	bar.color = Color(0, 0, 0, 0.35)
+	var bar := Panel.new()
+	var bar_style := Cute.hud_style()
+	bar_style.corner_radius_bottom_left = 40
+	bar.add_theme_stylebox_override("panel", bar_style)
 	bar.position = Vector2(560, 0)
 	bar.size = Vector2(720, 96)
 	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -578,7 +581,7 @@ func _build_hud() -> void:
 	_rescued_label = _hud_label(Vector2(940, 10), 30)
 	_score_label = _hud_label(Vector2(940, 52), 24)
 
-	_pause_button = _make_button("II", Vector2(84, 76), 36)
+	_pause_button = _make_button("II", Vector2(84, 76), 36, Cute.PINK)
 	_pause_button.position = Vector2(1186, 10)
 	_pause_button.pressed.connect(_toggle_pause)
 	hud_root.add_child(_pause_button)
@@ -589,6 +592,8 @@ func _hud_label(pos: Vector2, font_size: int) -> Label:
 	l.position = pos
 	l.add_theme_font_size_override("font_size", font_size)
 	l.add_theme_color_override("font_color", Color(1, 0.97, 0.88))
+	l.add_theme_color_override("font_outline_color", Color(0.36, 0.16, 0.26))
+	l.add_theme_constant_override("outline_size", 9)
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hud_root.add_child(l)
 	return l
@@ -616,8 +621,8 @@ func _float_text(p: Vector2, text: String, color: Color, font_size := 34) -> voi
 	l.position = p
 	l.add_theme_font_size_override("font_size", font_size)
 	l.add_theme_color_override("font_color", color)
-	l.add_theme_color_override("font_outline_color", Color(0.15, 0.05, 0.2))
-	l.add_theme_constant_override("outline_size", 8)
+	l.add_theme_color_override("font_outline_color", Color.WHITE)
+	l.add_theme_constant_override("outline_size", 10)
 	effects_root.add_child(l)
 	var tw := l.create_tween().set_parallel()
 	tw.tween_property(l, "position:y", p.y - 50.0, 1.0)
@@ -642,10 +647,10 @@ func _show_page() -> void:
 	page.set_anchors_preset(Control.PRESET_FULL_RECT)
 	page.focus_mode = Control.FOCUS_NONE
 	page.pressed.connect(_next_page)
-	var bg := StyleBoxFlat.new()
-	bg.bg_color = CREAM
+	var bg := StyleBoxEmpty.new()
 	for s in ["normal", "hover", "pressed", "focus"]:
 		page.add_theme_stylebox_override(s, bg)
+	page.add_child(Cute.Paper.new())
 	overlay_root.add_child(page)
 
 	var text := Label.new()
@@ -692,17 +697,13 @@ func skip_intro() -> void:
 func _show_panel(title: String, body: String, buttons: Array, extra: Control = null) -> void:
 	_clear_overlay()
 	var dim := ColorRect.new()
-	dim.color = Color(0, 0, 0, 0.55)
+	dim.color = Cute.DIM
 	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
 	dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	overlay_root.add_child(dim)
 
 	var panel := PanelContainer.new()
-	var style := StyleBoxFlat.new()
-	style.bg_color = CREAM
-	style.set_corner_radius_all(36)
-	style.set_content_margin_all(36)
-	panel.add_theme_stylebox_override("panel", style)
+	panel.add_theme_stylebox_override("panel", Cute.panel_style())
 	panel.custom_minimum_size = Vector2(760, 0)
 	var center := CenterContainer.new()
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -717,8 +718,7 @@ func _show_panel(title: String, body: String, buttons: Array, extra: Control = n
 	var t := Label.new()
 	t.text = title
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	t.add_theme_font_size_override("font_size", 52)
-	t.add_theme_color_override("font_color", BROWN)
+	Cute.style_label(t, 56, Cute.PINK.darkened(0.15), Color.WHITE, 10)
 	box.add_child(t)
 	if extra:
 		extra.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -736,8 +736,10 @@ func _show_panel(title: String, body: String, buttons: Array, extra: Control = n
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", 20)
 	box.add_child(row)
-	for entry in buttons:
-		var btn := _make_button(entry[0], Vector2(170, 76), 28)
+	var colors := [Cute.MINT, Cute.PEACH, Cute.SKY, Cute.LILAC]
+	for i in buttons.size():
+		var entry: Array = buttons[i]
+		var btn := _make_button(entry[0], Vector2(180, 80), 28, colors[i % colors.size()])
 		btn.name = "Btn_" + String(entry[0]).replace(" ", "_")
 		btn.pressed.connect(entry[1])
 		row.add_child(btn)
@@ -754,20 +756,5 @@ func find_overlay_button(text: String) -> Button:
 	return overlay_root.find_child("Btn_" + text.replace(" ", "_"), true, false) as Button
 
 
-func _make_button(text: String, min_size: Vector2, font_size: int) -> Button:
-	var btn := Button.new()
-	btn.text = text
-	btn.custom_minimum_size = min_size
-	btn.focus_mode = Control.FOCUS_NONE
-	btn.add_theme_font_size_override("font_size", font_size)
-	for s in ["font_color", "font_hover_color", "font_pressed_color"]:
-		btn.add_theme_color_override(s, Color.WHITE)
-	var normal := StyleBoxFlat.new()
-	normal.bg_color = BUTTON_BROWN
-	normal.set_corner_radius_all(28)
-	var pressed := normal.duplicate()
-	pressed.bg_color = BUTTON_BROWN.darkened(0.2)
-	btn.add_theme_stylebox_override("normal", normal)
-	btn.add_theme_stylebox_override("hover", normal)
-	btn.add_theme_stylebox_override("pressed", pressed)
-	return btn
+func _make_button(text: String, min_size: Vector2, font_size: int, color := BUTTON_BROWN) -> Button:
+	return Cute.button(text, min_size, font_size, color)

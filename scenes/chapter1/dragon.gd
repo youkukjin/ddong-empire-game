@@ -16,8 +16,9 @@ const HEAD_BACK := Vector2(190, 140)
 const HEAD_RADIUS := 62.0
 const NOSE_OFFSET := Vector2(66, 6)
 const NOSE_TOUCH_RADIUS := 70.0
-const PURPLE := Color(0.5, 0.25, 0.72)
-const PURPLE_DARK := Color(0.33, 0.14, 0.5)
+const Cute := preload("res://scripts/art/cute.gd")
+const PURPLE := Color(0.62, 0.42, 0.86)        # 귀여운 디자인 (제안): 연보라
+const PURPLE_DARK := Color(0.42, 0.25, 0.64)
 
 var state := State.IDLE
 var head := HEAD_IDLE
@@ -115,23 +116,28 @@ func _draw() -> void:
 		var tip := h + Vector2(cos(a), sin(a)) * (HEAD_RADIUS + 34)
 		var side := Vector2(cos(a + 1.57), sin(a + 1.57)) * 12.0
 		draw_colored_polygon(PackedVector2Array([base - side, tip, base + side]), PURPLE_DARK)
+	draw_circle(h, HEAD_RADIUS + 5, PURPLE_DARK)
 	draw_circle(h, HEAD_RADIUS, PURPLE)
-	# 눈
-	draw_circle(h + Vector2(8, -22), 13.0, Color(1, 0.95, 0.4))
-	draw_circle(h + Vector2(12, -22), 6.0, Color(0.1, 0.05, 0.1))
+	draw_circle(h + Vector2(-22, -26), 12, Color(1, 1, 1, 0.25))
+	# 눈 (노란 눈에 반짝이, 제안)
+	draw_circle(h + Vector2(8, -20), 19.0, Color(1, 0.93, 0.45))
+	Cute.eye(self, h + Vector2(12, -20), 11.0, Vector2(1, 0), false)
+	Cute.blush(self, h + Vector2(-8, 14), 12)
 	# 입
 	var open := state == State.MOUTH_OPEN
 	var mouth_h := 46.0 if open else 12.0
 	var m := h + Vector2(34, 28)
-	draw_rect(Rect2(m - Vector2(44, 0), Vector2(78, mouth_h)), Color(0.25, 0.05, 0.12))
-	for i in 6:
-		var x := m.x - 40 + i * 13
+	# 동글한 입과 작은 송곳니 두 개 (제안)
+	var mouth := PackedVector2Array()
+	for i in 17:
+		var t := PI * i / 16.0
+		mouth.append(m + Vector2(-6 + cos(t) * 40, sin(t) * mouth_h))
+	draw_colored_polygon(mouth, Color(0.45, 0.1, 0.22))
+	if open:
+		Cute._oval(self, m + Vector2(-6, mouth_h * 0.65), Vector2(20, mouth_h * 0.25), Color(1, 0.5, 0.6))
+	for x in [m.x - 30, m.x + 10]:
 		draw_colored_polygon(PackedVector2Array([
-			Vector2(x, m.y), Vector2(x + 12, m.y), Vector2(x + 6, m.y + 12)]), Color.WHITE)
-		if open:
-			draw_colored_polygon(PackedVector2Array([
-				Vector2(x, m.y + mouth_h), Vector2(x + 12, m.y + mouth_h),
-				Vector2(x + 6, m.y + mouth_h - 12)]), Color.WHITE)
+			Vector2(x, m.y), Vector2(x + 14, m.y), Vector2(x + 7, m.y + 13)]), Color.WHITE)
 	# 코
 	var nose := h + NOSE_OFFSET
 	draw_circle(nose, 14.0, PURPLE_DARK)

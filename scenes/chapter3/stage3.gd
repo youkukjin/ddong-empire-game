@@ -173,37 +173,47 @@ func _draw_course() -> void:
 	var off := fmod(rules.distance, 160.0)
 	for i in 10:
 		var x := i * 160.0 - off
-		n.draw_circle(Vector2(x + 40, 160 + (i % 3) * 40), 18, Color(0.28, 0.2, 0.15))
-		n.draw_circle(Vector2(x + 110, 640 + (i % 2) * 30), 14, Color(0.4, 0.3, 0.2))
+		n.draw_circle(Vector2(x + 40, 180 + (i % 3) * 40), 18, Color(0.58, 0.43, 0.34))
+		n.draw_circle(Vector2(x + 110, 640 + (i % 2) * 30), 14, Color(0.76, 0.6, 0.46))
+		if i % 3 == 1:
+			n.draw_circle(Vector2(x + 90, 330), 8, Color(1, 0.9, 0.6, 0.35))
 	for it in rules.items:
 		var x := _sx(it.x)
 		if x < -100 or x > 1400:
 			continue
 		match it.kind:
 			Rules.Kind.ROCK:
-				n.draw_circle(Vector2(x, GROUND_Y - 30), 40, Color(0.5, 0.48, 0.45))
-				n.draw_circle(Vector2(x - 10, GROUND_Y - 42), 14, Color(0.62, 0.6, 0.56))
+				n.draw_circle(Vector2(x, GROUND_Y - 30), 43, Color(0.5, 0.48, 0.55))
+				n.draw_circle(Vector2(x, GROUND_Y - 30), 40, Color(0.72, 0.7, 0.78))
+				n.draw_circle(Vector2(x - 14, GROUND_Y - 46), 10, Color(1, 1, 1, 0.5))
+				n.draw_circle(Vector2(x - 10, GROUND_Y - 28), 3.5, Cute.INK)
+				n.draw_circle(Vector2(x + 10, GROUND_Y - 28), 3.5, Cute.INK)
+				n.draw_arc(Vector2(x, GROUND_Y - 18), 5, PI + 0.4, TAU - 0.4, 6, Cute.INK, 2)
 			Rules.Kind.PIT:
-				n.draw_rect(Rect2(x - 55, GROUND_Y, 110, 120), Color(0.05, 0.03, 0.02))
+				n.draw_rect(Rect2(x - 55, GROUND_Y, 110, 120), Color(0.2, 0.12, 0.14))
+				n.draw_rect(Rect2(x - 55, GROUND_Y, 110, 8), Color(0.5, 0.35, 0.3))
 			Rules.Kind.LOW:
-				n.draw_rect(Rect2(x - 70, 96, 140, 384), Color(0.36, 0.26, 0.18))
+				n.draw_rect(Rect2(x - 70, 96, 140, 384), Color(0.6, 0.44, 0.34))
 				for k in 4:
-					n.draw_colored_polygon(PackedVector2Array([Vector2(x - 70 + k * 35, 480), Vector2(x - 35 + k * 35, 480), Vector2(x - 52 + k * 35, 505)]), Color(0.36, 0.26, 0.18))
+					n.draw_circle(Vector2(x - 52 + k * 35, 480), 18, Color(0.6, 0.44, 0.34))
 			Rules.Kind.GEM, Rules.Kind.GEM_HIGH:
 				if it.done:
 					continue
 				var y := GROUND_Y - 50.0 if it.kind == Rules.Kind.GEM else GROUND_Y - 200.0
+				n.draw_circle(Vector2(x, y), 30, Color(0.7, 0.95, 1, 0.3))
 				n.draw_colored_polygon(PackedVector2Array([Vector2(x, y - 22), Vector2(x + 16, y), Vector2(x, y + 22), Vector2(x - 16, y)]), Color(0.6, 0.95, 1))
+				n.draw_colored_polygon(PackedVector2Array([Vector2(x, y - 22), Vector2(x + 16, y), Vector2(x, y)]), Color(0.85, 1, 1))
+				Cute.sparkle(n, Vector2(x + 18, y - 20), 7, Color(1, 1, 1, 0.9))
 	for f in rules.forks:
 		var x := _sx(f.x)
 		if x < -300 or x > 1500:
 			continue
 		# 갈림길: 바위벽에 굴 두 개 (위, 아래)
-		n.draw_rect(Rect2(x - 20, 96, 400, GROUND_Y - 96), Color(0.3, 0.2, 0.14))
+		n.draw_rect(Rect2(x - 20, 96, 400, GROUND_Y - 96), Color(0.56, 0.4, 0.31))
 		var up := Rect2(x - 10, 170, 220, 150)
 		var down := Rect2(x - 10, 420, 220, 180)
-		n.draw_rect(up, Color(0.06, 0.04, 0.04))
-		n.draw_rect(down, Color(0.06, 0.04, 0.04))
+		n.draw_rect(up, Color(0.22, 0.14, 0.16))
+		n.draw_rect(down, Color(0.22, 0.14, 0.16))
 		var good: Rect2 = up if f.correct == Rules.Side.UP else down
 		# 보라색 자국 (제안: 드래곤이 지나간 흔적)
 		for k in 4:
@@ -215,8 +225,8 @@ func _draw_course() -> void:
 	# 끝: 본거지 입구
 	var end_x := _sx(rules.total_length())
 	if end_x < 1500:
-		n.draw_rect(Rect2(end_x, 96, 600, GROUND_Y - 96), Color(0.18, 0.08, 0.22))
-		n.draw_circle(Vector2(end_x + 120, 380), 150, Color(0.35, 0.15, 0.45))
+		n.draw_rect(Rect2(end_x, 96, 600, GROUND_Y - 96), Color(0.4, 0.26, 0.5))
+		n.draw_circle(Vector2(end_x + 120, 380), 150, Color(0.58, 0.38, 0.7))
 		n.draw_string(ThemeDB.fallback_font, Vector2(end_x + 30, 250), "본거지", HORIZONTAL_ALIGNMENT_LEFT, -1, 44, Color(1, 0.85, 1))
 
 

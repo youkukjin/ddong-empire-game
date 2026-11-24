@@ -3,13 +3,13 @@
 [ext_resource type="Script" path="res://scenes/title/title_screen.gd" id="1_title"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_title"]
-font_size = 88
-font_color = Color(0.4, 0.239, 0.11, 1)
-outline_size = 18
+font_size = 104
+font_color = Color(0.56, 0.32, 0.2, 1)
+outline_size = 24
 outline_color = Color(1, 1, 1, 1)
-shadow_size = 8
-shadow_color = Color(0.4, 0.239, 0.11, 0.35)
-shadow_offset = Vector2(0, 8)
+shadow_size = 10
+shadow_color = Color(1, 0.6, 0.69, 0.8)
+shadow_offset = Vector2(0, 10)
 
 [sub_resource type="StyleBoxFlat" id="StyleBox_normal"]
 bg_color = Color(0.71, 0.482, 0.278, 1)
@@ -54,7 +54,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.996, 0.949, 0.851, 1)
+color = Color(1, 0.969, 0.91, 1)
 
 [node name="Center" type="VBoxContainer" parent="."]
 layout_mode = 1
