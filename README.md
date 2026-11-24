@@ -220,6 +220,20 @@
 godot --path . -s tests/screenshots.gd -- ./shots
 ```
 
+## 3D 화면 (제안, 진행 중)
+
+진짜 3D로 바꾸는 중이에요. **지금은 타이틀 화면과 1장이 3D**이고, 2~8장은 한 장씩 이어서 바꿔요.
+
+- 방식: 규칙과 터치는 지금까지처럼 화면 좌표(1280x720)로 계산하고, 3D 모양을 같은 자리에 보이게 놓아요.
+  그래서 조작과 자동 확인은 바뀌지 않아요. 카메라는 위에서 비스듬히 내려다봐요.
+- `scripts/view3d/stage_view.gd`: 카메라, 빛, 하늘, 화면 좌표 → 3D 위치 바꾸기
+- `scripts/view3d/kit3d.gd`: 공·상자·원기둥 같은 기본 도형과 귀여운 눈·볼터치
+- `scripts/view3d/prince_3d.gd`: 3D 똥 왕자 (왕관, 검, 사슬 무기)
+- `scenes/chapter1/view3d_ch1.gd`: 1장 3D (밤 마을, 초승달, 가로등, 돔 대피소, 보라색 가시 드래곤, 백성, 불, 줄기)
+- 모델은 기본 도형으로 만든 임시 모습이에요. 나중에 3D 모델 파일(.glb)이 생기면 바꾸면 돼요.
+- 버튼, 창, 화면 위 표시, 떠오르는 글자는 2D 그대로 3D 화면 위에 보여요.
+- 헤드리스 자동 확인에서는 3D를 만들지 않아요. 3D 모습은 `tests/screenshots.gd`(창 모드)로 확인해요.
+
 ## 폴더 구조
 
 ```
@@ -241,6 +255,7 @@ scripts/stage_base.gd         2장부터 함께 쓰는 스테이지 뼈대 (이�
 scripts/gesture.gd            탭 / 쓸기 / 길게 누르기 나누기
 scripts/chapters.gd           장 목록 (이름은 원작 챕터 구성표 그대로)
 scripts/art/                  임시 그림: 똥 왕자, 장마다 배경, 귀여운 디자인 모음(cute.gd)
+scripts/view3d/               3D 화면 도우미 (무대, 도형, 3D 똥 왕자)
 assets/fonts/                 둥근 한글 글꼴 주아(Jua)와 라이선스
 scripts/game_session.gd       실행 중에만 기억하는 것 (어려움 모드, 중간 지점, 도움 켜기)
 scripts/save_data.gd          기기에 남는 기록

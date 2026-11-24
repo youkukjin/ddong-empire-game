@@ -32,6 +32,26 @@ func _main() -> void:
 			stage.skip_intro()
 		await _frames(90)
 		await _save("%d장-플레이" % n)
+	# 1장: 드래곤이 입을 벌리고 줄기를 쏘는 순간
+	var s1 := await _open(Chapters.scene(1), 5)
+	s1.skip_intro()
+	await _frames(60)
+	s1._beam_timer = 999.0
+	s1._mouth_timer = 999.0
+	for b in s1.beams_root.get_children():
+		b.queue_free()
+	s1.dragon.state = s1.dragon.State.IDLE
+	await _frames(30)
+	Engine.time_scale = 0.01
+	s1.dragon.open_mouth(1.5)
+	s1._fire_beam()
+	await _frames(6)
+	await _save("1장-경고")
+	for bm in s1.beams_root.get_children():
+		bm.warning_left = 0.0
+	await _frames(4)
+	await _save("1장-줄기")
+	Engine.time_scale = 1.0
 	# 5장 대마왕
 	var s5 := await _open(Chapters.scene(5), 5)
 	s5.skip_intro()
