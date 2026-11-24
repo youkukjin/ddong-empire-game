@@ -174,17 +174,20 @@ func _draw_town() -> void:
 	for h in rules.houses:
 		var r := Rules.house_rect(h)
 		var fixed: bool = h.hp <= 0
-		var wall := Color(0.85, 0.72, 0.52) if fixed else Color(0.55, 0.45, 0.35)
+		var wall := Color(1.0, 0.88, 0.74) if fixed else Color(0.66, 0.58, 0.62)
 		n.draw_rect(r, wall)
 		var tilt: float = 0.0 if fixed else 18.0 * h.hp
 		n.draw_colored_polygon(PackedVector2Array([
-			r.position + Vector2(-14, tilt * 0.3), Vector2(r.get_center().x, r.position.y - 60 + tilt), r.position + Vector2(r.size.x + 14, 0)]), Color(0.65, 0.3, 0.2) if fixed else Color(0.4, 0.22, 0.16))
-		n.draw_rect(Rect2(r.get_center().x - 18, r.end.y - 50, 36, 50), Color(0.4, 0.25, 0.12))
+			r.position + Vector2(-14, tilt * 0.3), Vector2(r.get_center().x, r.position.y - 60 + tilt), r.position + Vector2(r.size.x + 14, 0)]), Cute.PINK if fixed else Color(0.5, 0.42, 0.5))
+		n.draw_rect(Rect2(r.get_center().x - 18, r.end.y - 40, 36, 40), Color(0.72, 0.48, 0.32))
+		n.draw_circle(Vector2(r.get_center().x, r.end.y - 40), 18, Color(0.72, 0.48, 0.32))
 		if fixed:
 			n.draw_rect(Rect2(r.position.x + 14, r.position.y + 20, 30, 26), Color(1, 0.9, 0.5))
+			Cute.heart(n, Vector2(r.end.x - 26, r.position.y + 32), 9, Cute.PINK)
 		else:
-			n.draw_line(r.position + Vector2(20, 20), r.position + Vector2(60, 70), Color(0.2, 0.12, 0.08), 4)
-			n.draw_string(font, r.position + Vector2(r.size.x / 2 - 30, -70), "톡 ×%d" % h.hp, HORIZONTAL_ALIGNMENT_LEFT, -1, 26, Color(1, 1, 0.7))
+			n.draw_line(r.position + Vector2(20, 20), r.position + Vector2(60, 70), Color(0.35, 0.25, 0.3), 4)
+			n.draw_string_outline(font, r.position + Vector2(r.size.x / 2 - 30, -70), "톡 ×%d" % h.hp, HORIZONTAL_ALIGNMENT_LEFT, -1, 28, 8, Color(0.36, 0.16, 0.26))
+			n.draw_string(font, r.position + Vector2(r.size.x / 2 - 30, -70), "톡 ×%d" % h.hp, HORIZONTAL_ALIGNMENT_LEFT, -1, 28, Color(1, 1, 0.7))
 	for e in rules.embers:
 		if e.out:
 			n.draw_circle(e.pos, 10, Color(0.3, 0.3, 0.3, 0.6))
@@ -192,8 +195,10 @@ func _draw_town() -> void:
 			var flick: float = 0.8 + 0.2 * sin(rules.elapsed * 10.0 + e.pos.x)
 			n.draw_circle(e.pos, 26 * flick, Color(1, 0.45, 0.1, 0.8))
 			n.draw_circle(e.pos, 13 * flick, Color(1, 0.85, 0.3))
+			n.draw_circle(e.pos + Vector2(-5, -2), 2.5, Color(0.45, 0.1, 0.05))
+			n.draw_circle(e.pos + Vector2(5, -2), 2.5, Color(0.45, 0.1, 0.05))
 	# 돔 대피소 (1장)
-	n.draw_arc(Rules.DOME_CENTER, Rules.DOME_RADIUS, PI, TAU, 32, Color(0.75, 0.85, 1, 0.9), 8)
+	n.draw_arc(Rules.DOME_CENTER, Rules.DOME_RADIUS, PI, TAU, 32, Color(1, 0.86, 0.92, 0.95), 10)
 	for i in rules.citizens_left:
 		var p := Rules.DOME_CENTER + Vector2(-80 + (i % 4) * 50, -20 - (i / 4) * 50)
 		_draw_citizen(n, p)
@@ -202,10 +207,17 @@ func _draw_town() -> void:
 
 
 func _draw_citizen(n: Node2D, p: Vector2) -> void:
-	n.draw_circle(p + Vector2(0, -36), 12, Color(0.55, 0.35, 0.18))
-	n.draw_line(p + Vector2(0, -24), p + Vector2(0, 4), Color(0.98, 0.93, 0.82), 5)
-	n.draw_line(p + Vector2(0, 4), p + Vector2(-8, 18), Color(0.98, 0.93, 0.82), 4)
-	n.draw_line(p + Vector2(0, 4), p + Vector2(8, 18), Color(0.98, 0.93, 0.82), 4)
+	var cream := Color(0.98, 0.93, 0.82)
+	n.draw_line(p + Vector2(0, -24), p + Vector2(0, 4), cream, 8)
+	n.draw_line(p + Vector2(0, 4), p + Vector2(-8, 18), cream, 6)
+	n.draw_line(p + Vector2(0, 4), p + Vector2(8, 18), cream, 6)
+	var hc := p + Vector2(0, -38)
+	n.draw_circle(hc, 15, Color(0.45, 0.28, 0.15))
+	n.draw_circle(hc, 13.5, Color(0.68, 0.45, 0.26))
+	Cute.happy_eye(n, hc + Vector2(-5, -1), 3.5, Color.WHITE)
+	Cute.happy_eye(n, hc + Vector2(5, -1), 3.5, Color.WHITE)
+	Cute.blush(n, hc + Vector2(-9, 6), 3)
+	Cute.blush(n, hc + Vector2(9, 6), 3)
 
 
 func _update_hud() -> void:

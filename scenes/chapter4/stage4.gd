@@ -178,19 +178,36 @@ func _outro_pages() -> Array:
 
 # ------------------------------------------------------------------ 그리기
 
+var _brick_box := {}
+
+
+## 둥근 벽돌 모양 (귀여운 디자인 제안)
+func _brick_style(col: Color) -> StyleBoxFlat:
+	var key := col.to_html()
+	if not _brick_box.has(key):
+		var sb := StyleBoxFlat.new()
+		sb.bg_color = col
+		sb.set_corner_radius_all(12)
+		sb.set_border_width_all(3)
+		sb.border_width_bottom = 6
+		sb.border_color = col.darkened(0.3)
+		_brick_box[key] = sb
+	return _brick_box[key]
+
+
 func _draw_wall() -> void:
 	var n := _draw_node
 	# 성벽 뒤 어둠
-	n.draw_rect(Rect2(Rules.WALL_LEFT, Rules.WALL_TOP, Rules.COLS * Rules.BRICK_W, Rules.ROWS * Rules.BRICK_H), Color(0.08, 0.04, 0.1))
+	n.draw_rect(Rect2(Rules.WALL_LEFT, Rules.WALL_TOP, Rules.COLS * Rules.BRICK_W, Rules.ROWS * Rules.BRICK_H), Color(0.3, 0.2, 0.36))
 	for c in Rules.COLS:
 		for r in Rules.ROWS:
 			var hp: int = rules.bricks[c][r]
 			if hp <= 0:
 				continue
 			var rect := Rules.brick_rect(c, r).grow(-3)
-			var base := Color(0.68, 0.32, 0.22) if r >= Rules.ROWS - Rules.SWORD_ROWS else Color(0.58, 0.27, 0.2)
-			n.draw_rect(rect, base)
-			n.draw_rect(rect, Color(0.35, 0.15, 0.1), false, 3)
+			var base := Color(0.95, 0.6, 0.5) if r >= Rules.ROWS - Rules.SWORD_ROWS else Color(0.86, 0.52, 0.46)
+			n.draw_style_box(_brick_style(base), rect)
+			n.draw_rect(Rect2(rect.position + Vector2(10, 8), Vector2(22, 6)), Color(1, 1, 1, 0.35))
 			if hp < Rules.BRICK_HP:
 				n.draw_line(rect.position + Vector2(20, 10), rect.get_center(), Color(0.2, 0.08, 0.05), 3)
 			if hp == 1:
@@ -199,11 +216,18 @@ func _draw_wall() -> void:
 	for c in Rules.CANNON_COLS:
 		var x := Rules.col_center_x(c)
 		if rules.cannons[c]:
-			n.draw_rect(Rect2(x - 40, Rules.WALL_TOP - 30, 80, 30), Color(0.4, 0.3, 0.25))
-			n.draw_circle(Vector2(x, Rules.WALL_TOP - 40), 26, Color(0.15, 0.15, 0.18))
-			n.draw_line(Vector2(x, Rules.WALL_TOP - 40), Vector2(x + 10, Rules.WALL_TOP - 90), Color(0.15, 0.15, 0.18), 22)
+			n.draw_rect(Rect2(x - 40, Rules.WALL_TOP - 30, 80, 30), Color(0.7, 0.52, 0.42))
+			n.draw_line(Vector2(x, Rules.WALL_TOP - 40), Vector2(x + 10, Rules.WALL_TOP - 90), Color(0.36, 0.34, 0.45), 24)
+			n.draw_circle(Vector2(x + 10, Rules.WALL_TOP - 90), 12, Color(0.36, 0.34, 0.45))
+			n.draw_circle(Vector2(x, Rules.WALL_TOP - 40), 28, Color(0.36, 0.34, 0.45))
+			n.draw_circle(Vector2(x - 9, Rules.WALL_TOP - 50), 7, Color(1, 1, 1, 0.3))
+			# 심술 난 대포 얼굴 (제안)
+			n.draw_line(Vector2(x - 14, Rules.WALL_TOP - 46), Vector2(x - 4, Rules.WALL_TOP - 42), Color.WHITE, 3)
+			n.draw_line(Vector2(x + 14, Rules.WALL_TOP - 46), Vector2(x + 4, Rules.WALL_TOP - 42), Color.WHITE, 3)
+			n.draw_circle(Vector2(x - 8, Rules.WALL_TOP - 37), 3.5, Color.WHITE)
+			n.draw_circle(Vector2(x + 8, Rules.WALL_TOP - 37), 3.5, Color.WHITE)
 		else:
-			n.draw_rect(Rect2(x - 40, Rules.WALL_TOP - 16, 80, 16), Color(0.3, 0.25, 0.22))
+			n.draw_rect(Rect2(x - 40, Rules.WALL_TOP - 16, 80, 16), Color(0.6, 0.45, 0.38))
 	# 대포알: 땅에 빨간 그림자, 위에서 떨어지는 알
 	for b in rules.balls:
 		var k: float = 1.0 - b.left / Rules.CANNON_WARN
@@ -211,7 +235,8 @@ func _draw_wall() -> void:
 		n.draw_arc(Vector2(b.x, GROUND_Y + 10), Rules.BALL_RADIUS, 0, TAU, 32, Color(1, 0.3, 0.2, 0.7), 3)
 		var from_x: float = Rules.col_center_x(b.from)
 		var bp := Vector2(lerpf(from_x, b.x, k), lerpf(Rules.WALL_TOP - 90, GROUND_Y - 20, k * k))
-		n.draw_circle(bp, 22, Color(0.12, 0.12, 0.14))
+		n.draw_circle(bp, 22, Color(0.36, 0.34, 0.45))
+		n.draw_circle(bp + Vector2(-7, -7), 6, Color(1, 1, 1, 0.35))
 	# 초록 소용돌이
 	for fx in _vortex_fx:
 		var y: float = lerpf(GROUND_Y - 120, Rules.WALL_TOP - 60, clampf(fx.t / 0.4, 0, 1))

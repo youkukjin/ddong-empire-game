@@ -101,7 +101,7 @@ func show_hub() -> void:
 	_build_status_panel()
 	var x0 := 520.0
 	for i in Growth.ACTION_NAMES.size():
-		var b := make_button("%s\n%s" % [Growth.ACTION_NAMES[i], ACTION_INFO[i]], Vector2(360, 96), 22)
+		var b := make_button("%s\n%s" % [Growth.ACTION_NAMES[i], ACTION_INFO[i]], Vector2(360, 96), 22, [Cute.PEACH, Cute.MINT, Cute.SKY, Cute.LILAC, Cute.PINK][i % 5])
 		b.name = "Action%d" % i
 		b.position = Vector2(x0 + (i % 2) * 380, 110 + (i / 2) * 112)
 		b.pressed.connect(_on_action.bind(i))
@@ -114,8 +114,8 @@ func show_hub() -> void:
 
 
 func _build_status_panel() -> void:
-	var bg := ColorRect.new()
-	bg.color = Color(0, 0, 0, 0.45)
+	var bg := Panel.new()
+	bg.add_theme_stylebox_override("panel", Cute.round_box(Color(0.32, 0.18, 0.28, 0.6), 30, Color(1, 1, 1, 0.7), 4))
 	bg.position = Vector2(16, 100)
 	bg.size = Vector2(480, 420)
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -127,7 +127,7 @@ func _build_status_panel() -> void:
 	for row in [["str", "힘", growth.str_], ["vit", "체력", growth.vit], ["agi", "민첩", growth.agi]]:
 		_label(Vector2(32, y), "%s %d" % [row[1], row[2]], 28)
 		if growth.points > 0:
-			var plus := make_button("+", Vector2(56, 44), 28, Color(0.3, 0.6, 0.3))
+			var plus := make_button("+", Vector2(56, 44), 28, Cute.MINT)
 			plus.name = "Plus_" + row[0]
 			plus.position = Vector2(180, y - 2)
 			plus.pressed.connect(func() -> void:
@@ -333,7 +333,7 @@ func show_prefight() -> void:
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		l.size = Vector2(740, 90)
 		y += 100
-	var go := make_button("드래곤에게 출발!", Vector2(360, 100), 34, Color(0.75, 0.3, 0.35))
+	var go := make_button("드래곤에게 출발!", Vector2(360, 100), 34, Cute.PINK.darkened(0.1))
 	go.name = "GoButton"
 	go.position = Vector2(x, y)
 	go.pressed.connect(go_battle)
@@ -359,7 +359,7 @@ func show_prefight() -> void:
 			growth.help_mode = not growth.help_mode
 			show_prefight())
 		_ui.add_child(hm)
-	var reset := make_button("일주일 처음부터", Vector2(360, 70), 24, Color(0.55, 0.5, 0.45))
+	var reset := make_button("일주일 처음부터", Vector2(360, 70), 24, Cute.LOCKED.darkened(0.15))
 	reset.name = "ResetButton"
 	reset.position = Vector2(x + 380, y + 210)
 	reset.pressed.connect(func() -> void:
