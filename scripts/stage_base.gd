@@ -10,6 +10,9 @@ const Save := preload("res://scripts/save_data.gd")
 const Chapters := preload("res://scripts/chapters.gd")
 const TITLE_SCENE := "res://scenes/title/title_screen.tscn"
 const Cute := preload("res://scripts/art/cute.gd")
+const StageView := preload("res://scripts/view3d/stage_view.gd")
+const BackdropArt := preload("res://scripts/art/backdrop.gd")
+const PrinceArt := preload("res://scripts/art/prince.gd")
 
 const CREAM := Cute.CREAM
 const BROWN := Cute.COCOA
@@ -26,6 +29,8 @@ var world: Node2D
 var hud_root: Control
 var overlay_root: Control
 var pause_button: Button
+
+var view3d: Node3D = null       # 3D 화면 (제안). 규칙과 터치는 2D 화면 좌표 그대로예요.
 
 var _pages: Array = []
 var _page_index := 0
@@ -50,6 +55,11 @@ func _ready() -> void:
 	overlay_root = _full_control()
 	overlay.add_child(overlay_root)
 	_setup()
+	if view3d:
+		# 3D가 대신 그리는 2D 배경과 2D 왕자는 숨겨요 (규칙 계산용으로는 그대로 있어요)
+		for c in world.get_children():
+			if c.get_script() == BackdropArt or c.get_script() == PrinceArt:
+				c.visible = false
 	pause_button = make_button("II", Vector2(84, 76), 36, Cute.PINK)
 	pause_button.position = Vector2(1186, 10)
 	pause_button.pressed.connect(toggle_pause)
@@ -255,16 +265,46 @@ func float_text(p: Vector2, text: String, color: Color, font_size := 34) -> void
 	l.position = p
 	l.add_theme_font_size_override("font_size", font_size)
 	l.add_theme_color_override("font_color", color)
-	l.add_theme_color_override("font_outline_color", Color.WHITE)
-	l.add_theme_constant_override("outline_size", 10)
+	# 박력 (제안): 진한 먹색 테두리, 톡 튀어나오는 글자
+	l.add_theme_color_override("font_outline_color", Color(0.07, 0.035, 0.05))
+	l.add_theme_constant_override("outline_size", 12)
 	world.add_child(l)
+	l.pivot_offset = l.get_minimum_size() * 0.5
+	l.scale = Vector2.ONE * 1.6
+	l.create_tween().tween_property(l, "scale", Vector2.ONE, 0.12).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	var tw := l.create_tween().set_parallel()
 	tw.tween_property(l, "position:y", p.y - 50.0, 1.0)
 	tw.tween_property(l, "modulate:a", 0.0, 1.0).set_delay(0.4)
 	tw.chain().tween_callback(l.queue_free)
 
 
+## 3D 무대를 붙여요 (화면이 없는 자동 확인에서는 만들지 않아요).
+func add_view3d(script: Script, kind := "") -> Node3D:
+	if not StageView.can_show():
+		return null
+	var v: Node3D = script.new()
+	if kind != "":
+		v.kind = kind
+	v.name = "View3D"
+	v.stage = self
+	add_child(v)
+	move_child(v, 0)
+	view3d = v
+	return v
+
+
+## 한 방! 박력 연출 (제안): 3D 화면이면 번쩍임·의성어·파편, 아니면 흔들기만.
+func impact(p: Vector2, text := "", color := Color(1, 0.85, 0.2), power := 1.0) -> void:
+	if view3d:
+		view3d.impact(p, text, color, power)
+	elif text != "":
+		float_text(p + Vector2(-40, -60), text, color, int(36 + 12 * power))
+	shake(5.0 * power)
+
+
 func shake(strength := 8.0) -> void:
+	if view3d:
+		view3d.shake(strength * 0.012, 0.15 + strength * 0.01)
 	var tw := create_tween()
 	for i in 4:
 		tw.tween_property(world, "position", Vector2(rng.randf_range(-strength, strength), rng.randf_range(-strength, strength) * 0.75), 0.04)
