@@ -35,16 +35,16 @@ func _ready() -> void:
 	k = px_on_wall(0.0)
 	match kind:
 		"yard":
-			setup(Color(0.55, 0.12, 0.2), Color(1.0, 0.55, 0.2), Color(0.85, 0.55, 0.5), Color(1, 0.75, 0.5), 1.2)
+			setup(Color(0.45, 0.1, 0.2), Color(1.0, 0.55, 0.25), Color(0.65, 0.6, 0.7), Color(1, 0.88, 0.75), 1.0)
 			sun.rotation_degrees = Vector3(-25, -60, 0)
 		"tunnel":
-			setup(Color(0.05, 0.03, 0.04), Color(0.12, 0.06, 0.05), Color(0.5, 0.35, 0.3), Color(1, 0.7, 0.45), 0.5)
+			setup(Color(0.05, 0.03, 0.04), Color(0.12, 0.06, 0.05), Color(0.6, 0.5, 0.45), Color(1, 0.85, 0.65), 0.8)
 		"wall":
 			setup(Color(0.03, 0.02, 0.1), Color(0.35, 0.08, 0.15), Color(0.45, 0.35, 0.65), Color(0.75, 0.7, 1.0), 0.8)
 		"arena":
-			setup(Color(0.08, 0.03, 0.1), Color(0.4, 0.1, 0.12), Color(0.55, 0.38, 0.55), Color(1, 0.65, 0.5), 0.8)
+			setup(Color(0.08, 0.03, 0.1), Color(0.4, 0.1, 0.12), Color(0.5, 0.45, 0.6), Color(1, 0.92, 0.85), 0.9)
 		"lair":
-			setup(Color(0.04, 0.01, 0.06), Color(0.45, 0.08, 0.1), Color(0.5, 0.3, 0.6), Color(1, 0.45, 0.35), 0.7)
+			setup(Color(0.04, 0.01, 0.06), Color(0.45, 0.08, 0.1), Color(0.45, 0.4, 0.65), Color(0.85, 0.8, 1.0), 0.85)
 		_:
 			setup(Color(0.2, 0.2, 0.4), Color(0.5, 0.4, 0.6), Color(0.6, 0.6, 0.7))
 	_build_place()
@@ -109,7 +109,7 @@ func _build_place() -> void:
 	rng.seed = 11
 	match kind:
 		"yard":
-			_floor(Color(0.3, 0.42, 0.15), Color(0.22, 0.32, 0.1))
+			_floor(Color(0.25, 0.33, 0.14), Color(0.18, 0.24, 0.1))
 			# 해 지는 하늘의 큰 해 (제안: 결전을 앞둔 붉은 노을)
 			Kit.sphere(self, 3.0, Color(1, 0.55, 0.15), Vector3(9, 5.5, -40), Vector3.ONE, 2.2, false)
 			# 검은 산 실루엣
@@ -130,8 +130,8 @@ func _build_place() -> void:
 				add_child(d)
 				Kit.cylinder(d, 0.08, 0.1, 2.2, Color(0.4, 0.22, 0.1), Vector3(0, 1.1, 0))
 				Kit.box(d, Vector3(1.6, 0.14, 0.14), Color(0.4, 0.22, 0.1), Vector3(0, 1.6, 0))
-				Kit.sphere(d, 0.5, Color(0.9, 0.72, 0.3), Vector3(0, 1.4, 0), Vector3(1, 1.3, 1))
-				Kit.sphere(d, 0.32, Color(0.92, 0.78, 0.4), Vector3(0, 2.3, 0))
+				Kit.sphere(d, 0.5, Color(0.55, 0.4, 0.18), Vector3(0, 1.4, 0), Vector3(1, 1.3, 1))
+				Kit.sphere(d, 0.32, Color(0.6, 0.45, 0.2), Vector3(0, 2.3, 0))
 			for x in [-11.0, 3.0, 13.0]:
 				Kit.torch(self, Vector3(x, 0, -3.5), 1.1)
 		"tunnel":
@@ -149,7 +149,7 @@ func _build_place() -> void:
 				# 뒤 벽 바위
 				for i in 12:
 					var x := i * 2.0 + r2.randf_range(-0.5, 0.5)
-					Kit.ground_sphere(copy, r2.randf_range(1.5, 2.6), Color(0.3, 0.17, 0.1).lerp(Color(0.18, 0.1, 0.08), r2.randf()), Vector3(x, r2.randf_range(0.5, 5.0), -4.5 - r2.randf_range(0, 1.5)))
+					Kit.ground_sphere(copy, r2.randf_range(1.5, 2.6), Color(0.36, 0.24, 0.16).lerp(Color(0.24, 0.16, 0.11), r2.randf()), Vector3(x, r2.randf_range(0.5, 5.0), -4.5 - r2.randf_range(0, 1.5)))
 				# 천장 바위와 종유석
 				Kit.box(copy, Vector3(scroll_span + 0.5, 3, 10), Color(0.16, 0.09, 0.06), Vector3(scroll_span * 0.5, ceil_y + 1.5, -2)).material_override = Kit.matte(Color(0.16, 0.09, 0.06))
 				for i in 9:
@@ -164,7 +164,7 @@ func _build_place() -> void:
 					_flicker.append(t.get_child(t.get_child_count() - 1))
 				# 보라색 드래곤 자국 (빛나는 얼룩)
 				Kit.sphere(copy, 0.25, Color(0.7, 0.2, 1), Vector3(9.0, 2.5, -3.0), Vector3(1, 0.4, 0.2), 1.8, false)
-			_ambient_dark(0.35)
+			_ambient_dark(0.5)
 		"wall":
 			_floor(Color(0.2, 0.15, 0.18), Color(0.12, 0.08, 0.1))
 			# 붉은 달 (제안) 과 별
@@ -177,15 +177,15 @@ func _build_place() -> void:
 			for x in [-9.5, 9.5]:
 				_flicker.append(Kit.torch(self, Vector3(x, 0, 1.0), 1.1).get_child(4))
 		"arena":
-			_floor(Color(0.3, 0.24, 0.26), Color(0.2, 0.15, 0.17))
+			_floor(Color(0.26, 0.22, 0.24), Color(0.16, 0.13, 0.15))
 			# 돌바닥 줄
 			for i in 6:
 				Kit.box(self, Vector3(60, 0.02, 0.05), Color(0.18, 0.13, 0.15), Vector3(0, 0.01, 1.5 - i * 1.6), 0.0, false)
 			# 어두운 기둥과 붉은 깃발 (제안)
 			for i in 8:
 				var x := -14.0 + i * 4.0
-				Kit.cylinder(self, 0.6, 0.7, 9, Color(0.32, 0.2, 0.38), Vector3(x, 4.5, -5))
-				Kit.box(self, Vector3(1.7, 0.4, 1.7), Color(0.25, 0.15, 0.3), Vector3(x, 0.2, -5))
+				Kit.cylinder(self, 0.6, 0.7, 9, Color(0.28, 0.24, 0.3), Vector3(x, 4.5, -5))
+				Kit.box(self, Vector3(1.7, 0.4, 1.7), Color(0.2, 0.17, 0.22), Vector3(x, 0.2, -5))
 				if i % 2 == 0:
 					Kit.box(self, Vector3(1.3, 3.0, 0.06), Color(0.7, 0.05, 0.1), Vector3(x + 2.0, 5.5, -5.5))
 					Kit.spike(self, 0.65, 0.6, Color(0.7, 0.05, 0.1), Vector3(x + 2.0, 4.0, -5.5), Vector3.DOWN)
@@ -197,8 +197,8 @@ func _build_place() -> void:
 			for i in 9:
 				var lava := Kit.box(self, Vector3(rng.randf_range(1.5, 4.0), 0.03, 0.12), Color(1, 0.35, 0.05), Vector3(rng.randf_range(-14, 14), 0.02, rng.randf_range(-6, 2)), 3.0, false)
 				lava.rotation.y = rng.randf_range(-0.6, 0.6)
-			Kit.light(self, Vector3(-6, 0.5, -1), Color(1, 0.35, 0.1), 1.5, 9.0)
-			Kit.light(self, Vector3(7, 0.5, -2), Color(1, 0.35, 0.1), 1.5, 9.0)
+			Kit.light(self, Vector3(-6, 0.5, -1), Color(1, 0.4, 0.15), 0.9, 7.0)
+			Kit.light(self, Vector3(7, 0.5, -2), Color(1, 0.4, 0.15), 0.9, 7.0)
 			# 뒤 벽 바위와 보라 수정 (제안)
 			for i in 16:
 				Kit.ground_sphere(self, rng.randf_range(2.0, 3.5), Color(0.14, 0.06, 0.12).lerp(Color(0.22, 0.1, 0.18), rng.randf()), Vector3(-20 + i * 2.7, rng.randf_range(0.5, 7), -9 - rng.randf_range(0, 2)))

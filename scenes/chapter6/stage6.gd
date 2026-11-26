@@ -39,6 +39,7 @@ func _setup() -> void:
 	Session.chapter_checkpoint.erase(6)
 	if note.begins_with("lost:"):
 		_lost_summary = note.substr(5)
+	add_view3d(preload("res://scripts/view3d/side_view.gd"), "yard")
 	world.add_child(Backdrop.new("yard"))
 	_draw_node = Node2D.new()
 	_draw_node.draw.connect(_draw_mini)

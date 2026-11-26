@@ -61,7 +61,7 @@ func setup(sky_top: Color, sky_bottom: Color, ambient: Color, sun_color := Color
 	# 박력 (제안): 색을 진하게, 대비를 세게 (크레용처럼 꾹꾹 눌러 칠한 느낌)
 	env.adjustment_enabled = true
 	env.adjustment_contrast = 1.12
-	env.adjustment_saturation = 1.25
+	env.adjustment_saturation = 1.08
 	var we := WorldEnvironment.new()
 	we.environment = env
 	add_child(we)

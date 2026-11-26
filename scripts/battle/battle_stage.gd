@@ -6,6 +6,7 @@ const Battle := preload("res://scripts/battle/battle_rules.gd")
 const Prince := preload("res://scripts/art/prince.gd")
 const Backdrop := preload("res://scripts/art/backdrop.gd")
 const Gesture := preload("res://scripts/gesture.gd")
+const View3D := preload("res://scripts/battle/view3d_battle.gd")
 
 const GROUND_Y := 600.0
 const PURPLE := Color(0.62, 0.42, 0.86)       # 귀여운 디자인 (제안): 연보라
@@ -33,6 +34,7 @@ var _flash := {}                  # 적 id -> 맞아서 하얗게 빛나는 시�
 
 func _setup() -> void:
 	battle = _make_battle()
+	add_view3d(View3D, backdrop_kind)
 	world.add_child(Backdrop.new(backdrop_kind))
 	_draw_node = Node2D.new()
 	_draw_node.draw.connect(_draw_battle)
@@ -139,12 +141,14 @@ func _play_process(delta: float) -> void:
 
 
 func _show_event(e: Dictionary) -> void:
+	if view3d:
+		view3d.on_event(e)
 	match e.type:
 		"hurt":
 			prince.play_pose(Prince.Pose.HURT, 0.4)
 			prince.blink = Battle.HURT_INVULN
 			float_text(Vector2(battle.hero_x - 30, GROUND_Y - 230), "-%d" % int(e.dmg), Color(1, 0.5, 0.5), 38)
-			shake(9)
+			impact(Vector2(battle.hero_x, GROUND_Y - 90), "으윽!", Color(1, 0.35, 0.3), 1.1)
 		"dodge":
 			float_text(Vector2(battle.hero_x - 60, GROUND_Y - 230), "아슬아슬!", Color(0.7, 1, 1), 32)
 		"summon":
@@ -203,6 +207,7 @@ func do_sword() -> bool:
 		return true
 	_flash[e.id] = 0.12
 	float_text(Vector2(e.x - 20, GROUND_Y - 260), str(int(round(float(battle.stats.sword) * battle.damage_mult()))), Color(1, 1, 0.8), 30)
+	impact(Vector2(e.x, GROUND_Y - 100), ["퍽!", "챙!", "슉!"][randi() % 3], Color(1, 0.95, 0.5), 0.7 if not e.boss else 0.9)
 	if e.state == "dead":
 		_on_enemy_defeated(e)
 	return true
@@ -230,7 +235,7 @@ func release_chain(p: Vector2, held: float) -> void:
 			float_text(Vector2(e.x - 60, GROUND_Y - 300), "팅! 틈을 노려요", Color(0.8, 0.8, 0.9), 28)
 			continue
 		_flash[e.id] = 0.15
-		float_text(Vector2(e.x - 60, GROUND_Y - 300), "콰지직!", Color(0.5, 1, 0.5), 40)
+		impact(Vector2(e.x, GROUND_Y - 130), "콰지직!", Color(0.45, 1, 0.4), 1.4)
 		if e.state == "dead":
 			_on_enemy_defeated(e)
 	if not r.hit.is_empty():
@@ -249,8 +254,8 @@ func use_gauge() -> void:
 			return
 		_flash[e.id] = 0.3
 		prince.play_pose(Prince.Pose.SWING, 0.5)
-		float_text(Vector2(e.x - 120, 240), "근육 주먹! -%d" % (int(battle.stats.str) * 10), Color(1, 0.8, 0.3), 48)
-		shake(16)
+		float_text(Vector2(e.x - 120, 200), "-%d" % (int(battle.stats.str) * 10), Color(1, 0.8, 0.3), 48)
+		impact(Vector2(e.x, GROUND_Y - 200), "근육 주먹!!", Color(1, 0.6, 0.15), 2.2)
 		if e.state == "dead":
 			_on_enemy_defeated(e)
 	_on_gauge_used()
@@ -258,6 +263,7 @@ func use_gauge() -> void:
 
 func _on_enemy_defeated(e: Dictionary) -> void:
 	float_text(Vector2(e.x - 50, GROUND_Y - 200), "쓰러졌어요!", Color(1, 0.95, 0.6), 30)
+	impact(Vector2(e.x, GROUND_Y - 150), "쾅!!" if e.boss else "퍽!", Color(1, 0.8, 0.2), 1.8 if e.boss else 1.0)
 
 
 # ------------------------------------------------------------------ 화면 위 표시
@@ -307,13 +313,8 @@ func _draw_battle() -> void:
 		if e.state == "dead":
 			continue
 		var flash: bool = _flash.has(e.id)
-		match e.kind:
-			"warrior":
-				_draw_warrior(n, e, flash)
-			"demon":
-				_draw_demon(n, e, flash)
-			_:
-				_draw_dragon(n, e, flash)
+		if not view3d:      # 3D 화면에서는 3D가 적을 그려요
+			_draw_enemy(n, e, flash)
 		# 적 체력 (무사만 머리 위에)
 		if not e.boss:
 			var w := 76.0
@@ -322,6 +323,20 @@ func _draw_battle() -> void:
 			if e.hp > 0:
 				n.draw_line(Vector2(e.x - w / 2, y), Vector2(e.x - w / 2 + w * e.hp / e.max_hp, y), Cute.PINK, 8)
 			Cute.heart(n, Vector2(e.x - w / 2 - 6, y), 9, Cute.PINK)
+	if view3d:
+		for e in battle.enemies:
+			if e.kind.begins_with("dragon") and e.state == "recover" and not battle.is_guarded(e):
+				n.draw_string(ThemeDB.fallback_font, Vector2(e.x - 60, GROUND_Y - 330), "지금이야!", HORIZONTAL_ALIGNMENT_LEFT, -1, 40, Color(1, 1, 0.5))
+
+
+func _draw_enemy(n: Node2D, e: Dictionary, flash: bool) -> void:
+	match e.kind:
+		"warrior":
+			_draw_warrior(n, e, flash)
+		"demon":
+			_draw_demon(n, e, flash)
+		_:
+			_draw_dragon(n, e, flash)
 
 
 func _draw_warnings(n: Node2D) -> void:

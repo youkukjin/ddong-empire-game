@@ -6,11 +6,12 @@ extends "res://scripts/view3d/stage_view.gd"
 
 const Kit := preload("res://scripts/view3d/kit3d.gd")
 const WorldBG := preload("res://scenes/chapter1/world_background.gd")
+const Dragon3D := preload("res://scripts/view3d/dragon_3d.gd")
 
-const PURPLE := Color(0.62, 0.42, 0.88)
-const PURPLE_DARK := Color(0.45, 0.28, 0.68)
-const CITIZEN_HEAD := Color(0.68, 0.45, 0.26)
-const CITIZEN_BODY := Color(0.98, 0.93, 0.84)
+const PURPLE := Color(0.5, 0.2, 0.78)        # 박력 (제안): 원작 크레용처럼 진한 보라
+const PURPLE_DARK := Color(0.3, 0.1, 0.5)
+const CITIZEN_HEAD := Color(0.6, 0.36, 0.16)
+const CITIZEN_BODY := Color(0.95, 0.9, 0.8)
 
 var stage: Node2D
 
@@ -30,12 +31,13 @@ var _head: Node3D
 var _nose: MeshInstance3D
 var _nose_light: OmniLight3D
 var _nose_ring: MeshInstance3D
-var _mouth: MeshInstance3D
+var _jaw: Node3D
+var _head_mouth: Node3D
 var _say: Label3D
 
 
 func _ready() -> void:
-	setup(Color(0.1, 0.1, 0.3), Color(0.3, 0.25, 0.5), Color(0.55, 0.5, 0.8), Color(0.7, 0.75, 1.0), 0.7)
+	setup(Color(0.02, 0.02, 0.1), Color(0.25, 0.08, 0.2), Color(0.45, 0.4, 0.75), Color(0.7, 0.75, 1.0), 0.7)
 	_z_road_top = ground(Vector2(640, WorldBG.ROAD_TOP)).z
 	_z_dragon = _z_road_top - 0.4
 	_k_dragon = px_on_wall(_z_dragon)
@@ -51,9 +53,9 @@ func _build_town() -> void:
 	var zb := ground(Vector2(640, WorldBG.ROAD_BOTTOM)).z
 	var zfar := zt - 60.0
 	# 땅 (풀밭)
-	Kit.box(self, Vector3(200, 1, 200), Color(0.3, 0.4, 0.38), Vector3(0, -0.5, zt - 40)).material_override = Kit.matte(Color(0.3, 0.4, 0.38))
-	# 도로
-	Kit.box(self, Vector3(120, 0.04, zb - zt), Color(0.3, 0.28, 0.4), Vector3(0, 0.02, (zt + zb) * 0.5))
+	Kit.box(self, Vector3(200, 1, 200), Color(0.16, 0.22, 0.2), Vector3(0, -0.5, zt - 40)).material_override = Kit.matte(Color(0.16, 0.22, 0.2))
+	# 도로 (원작: 검게 칠한 도로)
+	Kit.box(self, Vector3(120, 0.04, zb - zt), Color(0.1, 0.09, 0.14), Vector3(0, 0.02, (zt + zb) * 0.5)).material_override = Kit.matte(Color(0.1, 0.09, 0.14))
 	Kit.box(self, Vector3(120, 0.12, 0.5), Color(0.62, 0.58, 0.72), Vector3(0, 0.06, zt - 0.25))
 	Kit.box(self, Vector3(120, 0.12, 0.5), Color(0.62, 0.58, 0.72), Vector3(0, 0.06, zb + 0.25))
 	# 노란 차선
@@ -63,8 +65,8 @@ func _build_town() -> void:
 		Kit.box(self, Vector3(1.1, 0.05, 0.22), Color(1, 0.85, 0.4), Vector3(x, 0.05, zm), 0.2)
 		x += 2.2
 	# 집들 (제안: 임시 배경, 창문에 불빛)
-	var walls := [Color(0.62, 0.52, 0.78), Color(0.7, 0.55, 0.72), Color(0.56, 0.54, 0.8)]
-	var roofs := [Color(0.95, 0.55, 0.68), Color(0.65, 0.55, 0.95), Color(1, 0.68, 0.52)]
+	var walls := [Color(0.42, 0.36, 0.5), Color(0.5, 0.38, 0.42), Color(0.38, 0.36, 0.52)]
+	var roofs := [Color(0.65, 0.15, 0.18), Color(0.3, 0.2, 0.5), Color(0.75, 0.35, 0.12)]
 	var px := px_on_ground(Vector2(640, WorldBG.ROAD_TOP))
 	for i in 7:
 		var cx := ground(Vector2(380.0 + i * 120.0 + 40.0, WorldBG.ROAD_TOP)).x
@@ -97,7 +99,7 @@ func _build_town() -> void:
 	var sky_h := top_c.y - bottom_c.y
 	for i in 6:
 		var y0 := bottom_c.y + sky_h * i / 6.0
-		var col := Color(0.36, 0.28, 0.58).lerp(Color(0.1, 0.1, 0.3), i / 5.0)
+		var col := Color(0.3, 0.1, 0.22).lerp(Color(0.02, 0.02, 0.1), i / 5.0)
 		var band := MeshInstance3D.new()
 		var bm := BoxMesh.new()
 		bm.size = Vector3(80, sky_h / 6.0 + 0.05, 0.1)
@@ -111,7 +113,7 @@ func _build_town() -> void:
 	Kit.sphere(self, 44.0 * ksky, Color(1, 0.95, 0.65), moon_pos, Vector3.ONE, 1.6)
 	# 초승달: 하늘과 같은 색 공으로 달을 살짝 가려요
 	var band_i := clampi(int((moon_pos.y + 14 * ksky - bottom_c.y) / sky_h * 6.0), 0, 5)
-	var mask_col := Color(0.36, 0.28, 0.58).lerp(Color(0.1, 0.1, 0.3), band_i / 5.0)
+	var mask_col := Color(0.3, 0.1, 0.22).lerp(Color(0.02, 0.02, 0.1), band_i / 5.0)
 	Kit.sphere(self, 42.0 * ksky, mask_col, moon_pos + Vector3(20 * ksky, 14 * ksky, 30 * ksky)).material_override = Kit.mat(mask_col, 0.0, 1.0, true)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 7
@@ -163,26 +165,11 @@ func _build_dragon() -> void:
 	for i in 17:
 		var s := Kit.sphere(self, 33.0 * k, PURPLE if i % 3 != 0 else PURPLE_DARK)
 		_neck.append(s)
-	_head = Node3D.new()
-	add_child(_head)
-	var hr := 62.0 * k
-	Kit.sphere(_head, hr, PURPLE, Vector3.ZERO, Vector3(1.05, 0.95, 0.9))
-	# 가시 머리 (원작 그림)
-	for i in 5:
-		var a := -2.6 + i * 0.32
-		var dir := Vector3(cos(a), -sin(a), 0)
-		var sp := Kit.cylinder(_head, 0.0, 14.0 * k, 46.0 * k, PURPLE_DARK, dir * (hr + 10.0 * k))
-		sp.basis = _basis_along(dir)
-	# 큰 노란 눈 (제안: 반짝이 눈)
-	var eye_base := Vector3(8 * k, 20 * k, hr * 0.7)
-	Kit.sphere(_head, 20.0 * k, Color(1, 0.92, 0.45), eye_base, Vector3(1, 1, 0.6), 0.2)
-	Kit.eye(_head, eye_base + Vector3(4 * k, 0, 6 * k), 13.0 * k)
-	Kit.blush(_head, Vector3(-10 * k, -14 * k, hr * 0.82), 13.0 * k)
-	# 입과 송곳니
-	_mouth = Kit.sphere(_head, 1.0, Color(0.42, 0.1, 0.22), Vector3(30 * k, -34 * k, hr * 0.45))
-	for fx in [-14.0, 14.0]:
-		var tooth := Kit.cylinder(_mouth, 0.0, 0.18, 0.35, Color.WHITE, Vector3(fx / 40.0, 0.2, 0.7))
-		tooth.rotation_degrees.z = 180.0
+	# 무서운 가시 머리 (원작 그림: 가시 머리, 날카로운 이빨의 큰 입). 코끝이 2D 코 자리에 와요.
+	var parts := Dragon3D.build_head(self, 36.0 * k, PURPLE, PURPLE_DARK, PURPLE_DARK)
+	_head = parts.root
+	_jaw = parts.jaw
+	_head_mouth = parts.mouth
 	# 코 (입을 벌리면 빛나요)
 	_nose = Kit.sphere(self, 15.0 * k, PURPLE_DARK)
 	_nose_light = OmniLight3D.new()
@@ -219,9 +206,11 @@ func _sync_dragon() -> void:
 		var p := base.lerp(ctrl, t).lerp(ctrl.lerp(h, t), t)
 		_neck[i].position = _wall(d.to_global(p)) + Vector3(0, 0, -0.05 * (1.0 - t))
 	_head.position = _wall(d.to_global(h)) + Vector3(0, 0, 0.1)
+	_head.rotation.y = -0.45
 	var open: bool = d.state == d.State.MOUTH_OPEN
 	var k := _k_dragon
-	_mouth.scale = Vector3(40.0 * k, (24.0 if open else 7.0) * k, 14.0 * k)
+	_jaw.rotation.z = -0.8 if open else -0.12
+	_head_mouth.visible = open
 	var nose_p: Vector3 = _wall(d.nose_global()) + Vector3(0, 0, 0.35)
 	_nose.position = nose_p
 	_nose_light.position = nose_p + Vector3(0, 0, 0.4)

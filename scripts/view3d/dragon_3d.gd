@@ -7,8 +7,8 @@ extends Node3D
 
 const Kit := preload("res://scripts/view3d/kit3d.gd")
 
-const PURPLE := Color(0.5, 0.2, 0.78)
-const PURPLE_DARK := Color(0.3, 0.1, 0.5)
+const PURPLE := Color(0.4, 0.18, 0.78)
+const PURPLE_DARK := Color(0.24, 0.08, 0.48)
 const BELLY := Color(0.72, 0.5, 0.92)
 const SPIKE_BLUE := Color(0.15, 0.3, 0.95)
 
@@ -20,7 +20,7 @@ var wings_up := false
 var dizzy := false
 var flash := 0.0               # 맞아서 하얗게 (초)
 var angry := 0.0               # 공격 준비 중 0~1 (몸이 빨갛게 달아올라요)
-var head_target := Vector3(1.3, 2.5, 0)   # 머리 자리 (몸 기준, +x 쪽)
+var head_target := Vector3(1.5, 2.7, 0)   # 머리 자리 (몸 기준, +x 쪽)
 
 var _t := 0.0
 var _root: Node3D
@@ -73,9 +73,9 @@ func _ready() -> void:
 		_wings.append(w)
 	# 목
 	for i in 9:
-		_neck.append(Kit.sphere(_root, 0.36 - i * 0.012, PURPLE if i % 3 else PURPLE_DARK))
+		_neck.append(Kit.sphere(_root, 0.42 - i * 0.012, PURPLE if i % 3 else PURPLE_DARK))
 	# 머리
-	_head = build_head(_root, 0.62, PURPLE, PURPLE_DARK, SPIKE_BLUE if blue_spikes else PURPLE_DARK)
+	_head = build_head(_root, 0.82, PURPLE, PURPLE_DARK, SPIKE_BLUE if blue_spikes else PURPLE_DARK)
 	# 어질어질 별 (쓰러졌을 때)
 	_stars = Node3D.new()
 	_root.add_child(_stars)

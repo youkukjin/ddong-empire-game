@@ -10,7 +10,7 @@ extends RefCounted
 ## 굵기와 결의 세기는 아래 숫자만 바꾸면 게임 전체가 같이 바뀌어요.
 
 const INK := Color(0.07, 0.035, 0.05)    # 외곽선 색 (진한 크레용 검정)
-const OUTLINE_PX := 3.2                  # 외곽선 굵기 (720줄 화면 기준 픽셀)
+const OUTLINE_PX := 4.0                  # 외곽선 굵기 (720줄 화면 기준 픽셀)
 const GRAIN := 0.32                      # 크레용 결 세기 (0이면 매끈해요)
 
 static var _mats := {}

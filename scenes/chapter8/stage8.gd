@@ -8,6 +8,7 @@ const Rules := preload("res://scenes/chapter8/stage8_rules.gd")
 const Prince := preload("res://scripts/art/prince.gd")
 const Backdrop := preload("res://scripts/art/backdrop.gd")
 const Gesture := preload("res://scripts/gesture.gd")
+const View3D := preload("res://scenes/chapter8/view3d_ch8.gd")
 
 var rules: Rules
 var prince: Node2D
@@ -24,6 +25,7 @@ func _init() -> void:
 func _setup() -> void:
 	rules = Rules.new()
 	backdrop = Backdrop.new("town")
+	add_view3d(View3D)
 	world.add_child(backdrop)
 	_draw_node = Node2D.new()
 	_draw_node.draw.connect(_draw_town)
@@ -76,7 +78,11 @@ func press(p: Vector2) -> void:
 	var h := rules.house_at(p)
 	if not h.is_empty() and h.hp > 0:
 		rules.fix_tap(h)
-		float_text(Vector2(h.x - 30, Rules.HOUSE_Y - 170), "뚝딱!" if h.hp > 0 else "다 고쳤어요!", Color(1, 0.95, 0.6), 28)
+		if h.hp > 0:
+			impact(Vector2(h.x, Rules.HOUSE_Y - 90), "뚝딱!", Color(1, 0.9, 0.5), 0.5)
+		else:
+			impact(Vector2(h.x, Rules.HOUSE_Y - 110), "짠!", Color(1, 0.85, 0.3), 0.9)
+			float_text(Vector2(h.x - 60, Rules.HOUSE_Y - 200), "다 고쳤어요!", Color(1, 0.95, 0.6), 28)
 		prince.play_pose(Prince.Pose.SWING, 0.2)
 		_after_change()
 		return
@@ -143,6 +149,7 @@ func _win() -> void:
 	_end_drag()
 	Save.set_value("game_cleared", true)
 	float_text(Vector2(420, 250), "해가 떴어요!", Color(1, 0.95, 0.6), 56)
+	impact(Vector2(1000, 200), "번쩍!", Color(1, 0.85, 0.3), 1.6)
 	prince.play_pose(Prince.Pose.CHEER, 2.0)
 	var tw := create_tween()
 	tw.tween_property(backdrop, "tint", 1.0, 1.0)
@@ -171,6 +178,14 @@ func _outro_pages() -> Array:
 func _draw_town() -> void:
 	var n := _draw_node
 	var font := ThemeDB.fallback_font
+	if view3d:
+		# 3D가 마을을 그려요. 남은 톡 수만 2D로 보여줘요.
+		for h in rules.houses:
+			if h.hp > 0:
+				var r := Rules.house_rect(h)
+				n.draw_string_outline(font, r.position + Vector2(r.size.x / 2 - 30, -70), "톡 ×%d" % h.hp, HORIZONTAL_ALIGNMENT_LEFT, -1, 28, 8, Color(0.07, 0.035, 0.05))
+				n.draw_string(font, r.position + Vector2(r.size.x / 2 - 30, -70), "톡 ×%d" % h.hp, HORIZONTAL_ALIGNMENT_LEFT, -1, 28, Color(1, 1, 0.7))
+		return
 	for h in rules.houses:
 		var r := Rules.house_rect(h)
 		var fixed: bool = h.hp <= 0
