@@ -79,6 +79,7 @@ func _on_hero_down() -> void:
 	growth.save()
 	var summary := battle.hit_summary()
 	Session.chapter_checkpoint[6] = "lost:" + summary
+	Session.persist()
 	var body := "드래곤에게 졌어요.\n주로 맞은 공격: %s\n레벨·재료·강화는 그대로예요." % summary
 	if growth.losses >= 3 and not growth.help_mode:
 		body += "\n준비 화면에서 \"도움 모드\"(체력 +50%)를 켤 수 있어요."
@@ -87,6 +88,7 @@ func _on_hero_down() -> void:
 
 func _before_restart() -> void:
 	Session.chapter_checkpoint.erase(6)
+	Session.persist()
 
 
 func _outro_pages() -> Array:

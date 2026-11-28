@@ -40,6 +40,8 @@ var _pages_done: Callable
 
 func _ready() -> void:
 	Sound.ensure()
+	Session.restore()
+	Save.set_last_chapter(chapter)
 	rng.randomize()
 	world = Node2D.new()
 	world.name = "World"
@@ -67,6 +69,7 @@ func _ready() -> void:
 	pause_button.pressed.connect(toggle_pause)
 	hud_root.add_child(pause_button)
 	_refresh_pause_button()
+	Session.persist()
 	show_pages(_intro_pages(), start_play)
 
 
@@ -132,6 +135,8 @@ func finish_win(stars: int, title: String, lines: String) -> void:
 	phase = Phase.RESULT
 	_refresh_pause_button()
 	var unlocked: Dictionary = Save.record_chapter_win(chapter, stars)
+	if chapter < Chapters.COUNT and Chapters.is_built(chapter + 1):
+		Save.set_last_chapter(chapter + 1)
 	Session.fail_streak = 0
 	Sound.jingle(true)
 	var body := lines

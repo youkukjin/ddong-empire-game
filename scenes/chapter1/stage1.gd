@@ -62,6 +62,8 @@ var _pause_button: Button
 
 func _ready() -> void:
 	Sound.ensure()
+	Session.restore()
+	Save.set_last_chapter(1)
 	rng.randomize()
 	rules = Rules.new(Session.hard_mode, Session.assist)
 	var resumed := Session.resume_checkpoint and Session.has_checkpoint
@@ -220,6 +222,7 @@ func rescue_citizen(c: Node2D) -> void:
 		Session.has_checkpoint = true
 		Session.checkpoint_time_left = rules.checkpoint_time_left
 		Session.checkpoint_score = rules.checkpoint_score
+		Session.persist()
 		Sound.play("power")
 		_float_text(Vector2(520, 300), "중간 저장! (%d명)" % rules.rescued, Color(0.6, 1, 0.7), 40)
 	_update_hud()
@@ -462,6 +465,7 @@ func _win() -> void:
 	_stop_field()
 	var stars := rules.star_rating()
 	var unlocked: Dictionary = Save.record_chapter1_win(stars, rules.hard)
+	Save.set_last_chapter(2)
 	Session.fail_streak = 0
 	Session.clear_checkpoint()
 	_float_text(Vector2(480, 260), "드래곤이 날아가요!", Color(1, 0.95, 0.7), 48)

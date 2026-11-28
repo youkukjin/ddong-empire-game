@@ -10,6 +10,7 @@ const STAGE_SCENE := "res://scenes/chapter1/stage1.tscn"
 const SELECT_SCENE := "res://scenes/title/chapter_select.tscn"
 const Session := preload("res://scripts/game_session.gd")
 const Save := preload("res://scripts/save_data.gd")
+const Chapters := preload("res://scripts/chapters.gd")
 const Cute := preload("res://scripts/art/cute.gd")
 const StageView := preload("res://scripts/view3d/stage_view.gd")
 const Prince3D := preload("res://scripts/view3d/prince_3d.gd")
@@ -31,11 +32,42 @@ func _ready() -> void:
 	Cute.style_button(hard_button, Cute.LILAC)
 	Cute.style_button(select_button, Cute.MINT)
 	start_button.pressed.connect(_on_start_pressed.bind(false))
+	Session.restore()
+	_add_continue_button()
 	hard_button.pressed.connect(_on_start_pressed.bind(true))
 	hard_button.visible = Save.hard_unlocked()
 	select_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(SELECT_SCENE))
-	start_button.grab_focus()
+	if continue_button == null:
+		start_button.grab_focus()
 	_play_title_bounce()
+
+
+var continue_button: Button = null
+
+
+## 이어하기: 기록이 있으면 큰 '이어하기' 버튼을 맨 위에 두고, 시작하기는 '처음부터'로 작게 바꿔요.
+func _add_continue_button() -> void:
+	if not Save.has_progress():
+		return
+	var n := Save.continue_chapter(Chapters.COUNT)
+	continue_button = Cute.button("이어하기 (%d장)" % n, Vector2(460, 130), 50, Cute.PINK)
+	continue_button.name = "ContinueButton"
+	continue_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	start_button.get_parent().add_child(continue_button)
+	start_button.get_parent().move_child(continue_button, start_button.get_index())
+	continue_button.pressed.connect(_on_continue_pressed.bind(n))
+	start_button.text = "처음부터"
+	start_button.custom_minimum_size = Vector2(320, 84)
+	Cute.style_button(start_button, Cute.CARAMEL, 36)
+	continue_button.grab_focus()
+
+
+func _on_continue_pressed(n: int) -> void:
+	continue_button.disabled = true
+	Session.hard_mode = false
+	# 1장은 중간 저장이 있으면 거기서부터 (5·6장 중간 저장은 그 장이 알아서 불러요)
+	Session.resume_checkpoint = n == 1 and Session.has_checkpoint
+	get_tree().change_scene_to_file(Chapters.scene(n))
 
 
 func _on_start_pressed(hard: bool) -> void:

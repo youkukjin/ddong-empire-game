@@ -37,6 +37,7 @@ func _setup() -> void:
 	growth = Growth.load_or_new()
 	var note: String = Session.chapter_checkpoint.get(6, "")
 	Session.chapter_checkpoint.erase(6)
+	Session.persist()
 	if note.begins_with("lost:"):
 		_lost_summary = note.substr(5)
 	add_view3d(preload("res://scripts/view3d/side_view.gd"), "yard")
