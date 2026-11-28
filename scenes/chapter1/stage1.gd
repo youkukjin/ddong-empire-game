@@ -18,6 +18,7 @@ const WorldBG := preload("res://scenes/chapter1/world_background.gd")
 const Widget := preload("res://scenes/chapter1/hud_widgets.gd")
 const Cute := preload("res://scripts/art/cute.gd")
 const View3D := preload("res://scenes/chapter1/view3d_ch1.gd")
+const Sound := preload("res://scripts/audio/sound.gd")
 const TITLE_SCENE := "res://scenes/title/title_screen.tscn"
 const STAGE_SCENE := "res://scenes/chapter1/stage1.tscn"
 const CHAPTER2_SCENE := "res://scenes/chapter2/stage2.tscn"
@@ -60,6 +61,7 @@ var _pause_button: Button
 
 
 func _ready() -> void:
+	Sound.ensure()
 	rng.randomize()
 	rules = Rules.new(Session.hard_mode, Session.assist)
 	var resumed := Session.resume_checkpoint and Session.has_checkpoint
@@ -159,6 +161,7 @@ func _mouth_step(delta: float) -> void:
 	_mouth_timer -= delta
 	if _mouth_timer <= 0.0 and not dragon.is_busy() and beams_root.get_child_count() == 0:
 		dragon.open_mouth(Rules.NOSE_WINDOW)
+		Sound.play("warn")
 		_mouth_timer = Rules.MOUTH_INTERVAL
 
 
@@ -211,11 +214,13 @@ func rescue_citizen(c: Node2D) -> void:
 	c.enter_dome(WorldBG.DOME_CENTER)
 	var checkpoint_now := rules.on_rescued()
 	background.rescued = rules.rescued
+	Sound.play("coin", 1.0 + minf(rules.rescued, 12) * 0.02)
 	_float_text(WorldBG.DOME_CENTER + Vector2(-40, -200), "+1", Color(1, 0.9, 0.4))
 	if checkpoint_now:
 		Session.has_checkpoint = true
 		Session.checkpoint_time_left = rules.checkpoint_time_left
 		Session.checkpoint_score = rules.checkpoint_score
+		Sound.play("power")
 		_float_text(Vector2(520, 300), "중간 저장! (%d명)" % rules.rescued, Color(0.6, 1, 0.7), 40)
 	_update_hud()
 
@@ -286,7 +291,10 @@ func sweep_segment(a: Vector2, b: Vector2) -> int:
 
 
 func finish_sweep(fires_put_out: int, at: Vector2) -> void:
+	if fires_put_out > 0:
+		Sound.play("swing", 1.2)
 	if rules.on_sweep_finished(fires_put_out):
+		Sound.play("coin", 1.2)
 		_float_text(at + Vector2(-60, -60), "콤보! 별 +1", Color(1, 0.85, 0.3), 40)
 		_update_hud()
 
@@ -312,6 +320,8 @@ func _fire_beam() -> void:
 			aim = right
 			to = left
 	b.setup(dragon.mouth_global(), aim, to, rules.warning_time(), sweep)
+	Sound.play("roar", rng.randf_range(1.0, 1.15), -3.0)
+	Sound.play("fire", 1.0, -2.0)
 	b.finished.connect(_on_beam_finished)
 	beams_root.add_child(b)
 
@@ -335,6 +345,7 @@ func _check_beam_hits() -> void:
 				b.hit_ids[id] = true
 				_release_touches_of(c)
 				c.get_hit()
+				Sound.play("hurt")
 				rules.lose_heart(Rules.HeartReason.BEAM)
 				_float_text(c.position + Vector2(-30, -110), "앗!", Color(1, 0.6, 0.9))
 				_shake()
@@ -342,6 +353,7 @@ func _check_beam_hits() -> void:
 
 
 func _on_nose_pressed() -> void:
+	Sound.play("boom", 1.3)
 	_beam_timer += 1.5
 	_float_text(dragon.nose_global() + Vector2(20, -20), "물러나요!", Color(0.7, 1, 1))
 
@@ -350,6 +362,7 @@ func _on_nose_missed() -> void:
 	if phase != Phase.PLAY:
 		return
 	rules.lose_heart(Rules.HeartReason.NOSE)
+	Sound.play("roar", 0.9)
 	var field := _citizens_on_field()
 	if not field.is_empty():
 		var c: Node2D = field[rng.randi() % field.size()]
@@ -452,12 +465,14 @@ func _win() -> void:
 	Session.fail_streak = 0
 	Session.clear_checkpoint()
 	_float_text(Vector2(480, 260), "드래곤이 날아가요!", Color(1, 0.95, 0.7), 48)
+	Sound.play("roar", 0.8)
 	var tw: Tween = dragon.fly_away()
 	tw.finished.connect(func() -> void: _show_win_result(stars, unlocked))
 
 
 func _fail() -> void:
 	phase = Phase.RESULT
+	Sound.jingle(false)
 	_stop_field()
 	Session.fail_streak += 1
 	var reason := ""
@@ -481,6 +496,7 @@ func _fail() -> void:
 
 func _show_win_result(stars: int, unlocked: Dictionary) -> void:
 	phase = Phase.RESULT
+	Sound.jingle(true)
 	var lines := "%s\n구한 백성 %d / %d명 · 별 점수 %d" % [rules.star_title(stars), rules.rescued, Rules.TOTAL_CITIZENS, rules.score]
 	if unlocked.get("chapter2_new", false):
 		lines += "\n\n2장 '준비'가 열렸어요!"

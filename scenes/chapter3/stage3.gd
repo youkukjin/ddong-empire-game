@@ -123,11 +123,13 @@ func _play_input(event: InputEvent) -> void:
 
 
 func do_jump() -> void:
-	rules.jump()
+	if rules.jump():
+		Sound.play("jump")
 
 
 func do_duck() -> void:
-	rules.duck()
+	if rules.duck():
+		Sound.play("duck")
 
 
 func choose(side: int) -> void:

@@ -1,6 +1,7 @@
 extends Control
 ## 장 고르기: 열린 장을 골라서 바로 할 수 있어요. 깬 장에는 최고 별이 보여요.
 
+const Sound := preload("res://scripts/audio/sound.gd")
 const Save := preload("res://scripts/save_data.gd")
 const Session := preload("res://scripts/game_session.gd")
 const Chapters := preload("res://scripts/chapters.gd")
@@ -9,6 +10,7 @@ const Cute := preload("res://scripts/art/cute.gd")
 
 
 func _ready() -> void:
+	Sound.ensure()
 	add_child(Cute.Paper.new())
 	var title := Label.new()
 	title.text = "장 고르기"

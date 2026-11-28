@@ -12,6 +12,7 @@ const TITLE_SCENE := "res://scenes/title/title_screen.tscn"
 const Cute := preload("res://scripts/art/cute.gd")
 const StageView := preload("res://scripts/view3d/stage_view.gd")
 const BackdropArt := preload("res://scripts/art/backdrop.gd")
+const Sound := preload("res://scripts/audio/sound.gd")
 const PrinceArt := preload("res://scripts/art/prince.gd")
 
 const CREAM := Cute.CREAM
@@ -38,6 +39,7 @@ var _pages_done: Callable
 
 
 func _ready() -> void:
+	Sound.ensure()
 	rng.randomize()
 	world = Node2D.new()
 	world.name = "World"
@@ -131,6 +133,7 @@ func finish_win(stars: int, title: String, lines: String) -> void:
 	_refresh_pause_button()
 	var unlocked: Dictionary = Save.record_chapter_win(chapter, stars)
 	Session.fail_streak = 0
+	Sound.jingle(true)
 	var body := lines
 	if unlocked.get("next_new", false) and chapter < Chapters.COUNT:
 		body += "\n\n%d장 '%s'이(가) 열렸어요!" % [chapter + 1, Chapters.title(chapter + 1)]
@@ -151,6 +154,7 @@ func finish_fail(reason: String, tip: String, extra_buttons: Array = []) -> void
 	phase = Phase.RESULT
 	_refresh_pause_button()
 	Session.fail_streak += 1
+	Sound.jingle(false)
 	var buttons: Array = [["다시 하기", restart]]
 	buttons.append_array(extra_buttons)
 	buttons.append(["처음으로", go_title])
@@ -260,6 +264,11 @@ func hud_bar(pos: Vector2, size: Vector2) -> Panel:
 
 
 func float_text(p: Vector2, text: String, color: Color, font_size := 34) -> void:
+	Sound.for_text(text, font_size)
+	_float_label(p, text, color, font_size)
+
+
+func _float_label(p: Vector2, text: String, color: Color, font_size := 34) -> void:
 	var l := Label.new()
 	l.text = text
 	l.position = p
@@ -295,10 +304,11 @@ func add_view3d(script: Script, kind := "") -> Node3D:
 
 ## 한 방! 박력 연출 (제안): 3D 화면이면 번쩍임·의성어·파편, 아니면 흔들기만.
 func impact(p: Vector2, text := "", color := Color(1, 0.85, 0.2), power := 1.0) -> void:
+	Sound.for_impact(text, power)
 	if view3d:
 		view3d.impact(p, text, color, power)
 	elif text != "":
-		float_text(p + Vector2(-40, -60), text, color, int(36 + 12 * power))
+		_float_label(p + Vector2(-40, -60), text, color, int(36 + 12 * power))
 	shake(5.0 * power)
 
 
@@ -371,6 +381,7 @@ func _show_page() -> void:
 
 
 func next_page() -> void:
+	Sound.play("page", 1.0, -4.0)
 	_page_index += 1
 	if _page_index >= _pages.size():
 		_pages = []

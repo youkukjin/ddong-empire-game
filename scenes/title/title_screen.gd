@@ -5,6 +5,7 @@ extends Control
 ## "장 고르기"를 누르면 열린 장을 골라서 할 수 있어요.
 ## 배경은 3D 무대예요 (제안): 불타는 밤 마을, 거대한 보라색 가시 드래곤, 검을 치켜든 3D 똥 왕자.
 
+const Sound := preload("res://scripts/audio/sound.gd")
 const STAGE_SCENE := "res://scenes/chapter1/stage1.tscn"
 const SELECT_SCENE := "res://scenes/title/chapter_select.tscn"
 const Session := preload("res://scripts/game_session.gd")
@@ -22,6 +23,7 @@ const Dragon3D := preload("res://scripts/view3d/dragon_3d.gd")
 
 
 func _ready() -> void:
+	Sound.ensure()
 	if StageView.can_show():
 		$Background.visible = false
 		_build_3d()

@@ -144,6 +144,11 @@ func _show_event(e: Dictionary) -> void:
 	if view3d:
 		view3d.on_event(e)
 	match e.type:
+		"windup":
+			if e.enemy.kind == "dragon" and String(e.attack.get("type", "")) == "beam":
+				Sound.play("roar", 1.05)
+			else:
+				Sound.play("warn", 0.9 if e.enemy.get("boss", false) else 1.0)
 		"hurt":
 			prince.play_pose(Prince.Pose.HURT, 0.4)
 			prince.blink = Battle.HURT_INVULN
@@ -154,6 +159,7 @@ func _show_event(e: Dictionary) -> void:
 		"summon":
 			float_text(Vector2(e.enemy.x - 100, 300), "무사들아, 나와라!", Color(1, 0.7, 0.7), 34)
 		"land":
+			Sound.play("boom", 0.8)
 			shake(12)
 		"phase":
 			_on_phase(e)
@@ -202,6 +208,7 @@ func do_sword() -> bool:
 	if e.is_empty():
 		return false
 	prince.play_pose(Prince.Pose.SWING, 0.18)
+	Sound.play("swing", randf_range(1.0, 1.2))
 	if e.blocked:
 		float_text(Vector2(e.x - 60, GROUND_Y - 260), "팅! 틈을 노려요", Color(0.8, 0.8, 0.9), 26)
 		return true
@@ -216,6 +223,7 @@ func do_sword() -> bool:
 func do_roll(dir: float) -> void:
 	if battle.roll(dir):
 		prince.play_pose(Prince.Pose.ROLL, float(battle.stats.roll_invuln))
+		Sound.play("swing", 0.75)
 
 
 func release_chain(p: Vector2, held: float) -> void:
@@ -227,6 +235,7 @@ func release_chain(p: Vector2, held: float) -> void:
 		battle.facing = signf(p.x - battle.hero_x)
 	var r := battle.chain()
 	prince.play_pose(Prince.Pose.SWING, 0.3)
+	Sound.play("swing", 0.6, 2.0)
 	_chain_fx = {"t": 0.0, "kind": battle.stats.chain_kind, "dir": battle.facing}
 	if r.blocked:
 		float_text(Vector2(battle.hero_x - 70, GROUND_Y - 260), "꼬리를 막았어요!", Color(0.6, 1, 0.6), 32)
