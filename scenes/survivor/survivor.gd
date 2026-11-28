@@ -34,6 +34,9 @@ var joy: Control
 var hp_bar: ProgressBar
 var xp_bar: ProgressBar
 var time_label: Label
+var best_label: Label
+var _best_time := 0.0
+var _record_shown := true
 var info_label: Label
 var god_button: Button
 var god_info: Label
@@ -91,6 +94,12 @@ func _build_hud() -> void:
 	time_label = hud_label(Vector2(380, 30), 54)
 	time_label.size = Vector2(220, 64)
 	time_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	# 최고 기록 (2026-11-28 사용자: "점점 강해져서 시간을 늘리는 게 목표")
+	best_label = hud_label(Vector2(380, 88), 22, Color(1, 0.85, 0.4))
+	best_label.size = Vector2(220, 28)
+	best_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_best_time = Save.survivor_best()
+	_record_shown = _best_time <= 0.0
 	boss_label = hud_label(Vector2(40, 122), 26, Color(1, 0.75, 0.75))
 	boss_label.size = Vector2(640, 30)
 	boss_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -160,6 +169,12 @@ func _refresh_hud() -> void:
 		time_label.text = "∞ " + time_text(rules.time)
 	else:
 		time_label.text = time_text(left) if not rules.boss_spawned else "보스!"
+	if _best_time > 0.0:
+		best_label.text = ("최고 %s" % time_text(_best_time)) if rules.time < _best_time else "신기록 도전 중!"
+	if not _record_shown and rules.time > _best_time:
+		_record_shown = true
+		impact(CENTER + Vector2(0, -200), "신기록! 계속 버텨요!", Color(1, 0.85, 0.3), 1.2)
+		_sfx("power", 1.3, -2.0)
 	info_label.text = "Lv %d   물리친 적 %d" % [rules.level, rules.kills]
 	var parts: Array = []
 	for id in rules.weapons:
