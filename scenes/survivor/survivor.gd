@@ -43,7 +43,7 @@ func _setup() -> void:
 
 func _intro_pages() -> Array:
 	return [
-		"똥제국 서바이버 (제안 놀이)\n\n성 안 마당에 똥 무사들이 끝없이 몰려와요!\n10분을 버티면 똥 대마왕이 나타나요.",
+		"똥제국 서바이버\n\n성 안 마당에 똥 무사들이 끝없이 몰려와요!\n10분을 버티면 똥 대마왕이 나타나요.",
 		"어떻게 할까요?\n\n• 손가락으로 화면을 끌면 그쪽으로 걸어요\n• 공격은 똥 왕자가 알아서 해요\n• 적이 떨어뜨린 똥 구슬을 모으면 레벨 업!\n  카드 3장 중 하나를 골라 강해져요\n• 게이지가 차면 '각성!' 버튼: 10초 동안 똥의 신",
 	]
 
@@ -275,10 +275,7 @@ func _show_cards() -> void:
 	var colors := [Cute.MINT, Cute.PEACH, Cute.SKY]
 	for i in rules.choices.size():
 		var c: Dictionary = rules.choices[i]
-		var tag := ""
-		if c.kind == "weapon":
-			tag = "\n\n(%s)" % Rules.WEAPONS[c.id].origin
-		var b := make_button("%s\n%s%s" % [c.title, c.desc, tag.replace("\n\n", "  ")], Vector2(620, 240), 34, colors[i % 3])
+		var b := make_button("%s\n%s" % [c.title, c.desc], Vector2(620, 240), 34, colors[i % 3])
 		b.name = "Card%d" % i
 		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		b.pressed.connect(choose_card.bind(i))

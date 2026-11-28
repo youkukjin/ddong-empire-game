@@ -22,11 +22,11 @@ const MAX_LEVEL := 5
 
 ## 무기: 원작 무기(검, 사슬 철퇴, 근육 주먹)와 제안 무기(똥폭탄, 똥파리 떼)
 const WEAPONS := {
-	"sword": {"name": "검", "desc": "앞을 반달 모양으로 베어요", "origin": "원작"},
-	"chain": {"name": "사슬 철퇴", "desc": "왕자 둘레를 빙글빙글 돌아요", "origin": "원작"},
-	"fist": {"name": "근육 주먹", "desc": "가끔 땅을 쾅! 둘레를 밀어내요", "origin": "원작 6장"},
-	"bomb": {"name": "똥폭탄", "desc": "가까운 적에게 던지면 펑!", "origin": "제안"},
-	"flies": {"name": "똥파리 떼", "desc": "알아서 적을 찾아가 물어요", "origin": "제안"},
+	"sword": {"name": "검", "desc": "앞을 반달 모양으로 베어요"},
+	"chain": {"name": "사슬 철퇴", "desc": "왕자 둘레를 빙글빙글 돌아요"},
+	"fist": {"name": "근육 주먹", "desc": "가끔 땅을 쾅! 둘레를 밀어내요"},
+	"bomb": {"name": "똥폭탄", "desc": "가까운 적에게 던지면 펑!"},
+	"flies": {"name": "똥파리 떼", "desc": "알아서 적을 찾아가 물어요"},
 }
 const PASSIVES := {
 	"power": {"name": "힘", "desc": "모든 공격 +12%"},
