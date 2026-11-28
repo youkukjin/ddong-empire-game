@@ -59,7 +59,7 @@ func _run() -> void:
 	check(not paused, "계속하면 다시 놀아요")
 
 	# 대마왕을 물리치면 이겨요
-	s.rules.time = 360.5
+	s.rules.time = 300.5
 	s.rules.boss_spawned = true
 	var boss: Dictionary = s.rules.spawn_enemy("demon", s.rules.hero + Vector2(70, 0))
 	boss.hp = 1.0
@@ -84,7 +84,7 @@ func _run() -> void:
 	await frames(3)
 	check(s.phase == s.Phase.RESULT and s.find_overlay_button("다시 하기") != null, "이어하기는 한 번뿐, 다시 쓰러지면 결과 창")
 	check(s.find_overlay_button("광고 보고 똥전 2배") != null, "결과 창에 광고 보고 똥전 2배")
-	check(Save.survivor_coins() > 0 and Save.survivor_best() > 360.0 and Save.survivor_ranks().size() == 1, "똥전과 기록, 순위가 남아요")
+	check(Save.survivor_coins() > 0 and Save.survivor_best() > 300.0 and Save.survivor_ranks().size() == 1, "똥전과 기록, 순위가 남아요")
 
 	# 다시 하기 → 지면 결과 창
 	s.find_overlay_button("다시 하기").pressed.emit()

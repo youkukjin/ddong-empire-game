@@ -118,7 +118,7 @@ func _run() -> void:
 	r6.time = Rules.BOSS_TIME - 0.05
 	r6.tick(0.1, Vector2.ZERO)
 	var boss: Dictionary = r6.boss()
-	check(not boss.is_empty(), "6분에 대마왕이 나와요")
+	check(not boss.is_empty(), "5분에 대마왕이 나와요")
 	boss.hp = 1.0
 	boss.pos = r6.hero + Vector2(60, 0)
 	r6.hp = 9999.0
