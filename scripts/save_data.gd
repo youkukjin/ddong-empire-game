@@ -87,3 +87,24 @@ static func continue_chapter(count: int) -> int:
 		if is_unlocked(i):
 			return i
 	return 1
+
+
+# ------------------------------------------------------------------ 서바이버 (제안)
+
+static func survivor_coins() -> int:
+	return int(get_value("coins", 0, "survivor"))
+
+
+static func survivor_best() -> float:
+	return float(get_value("best_time", 0.0, "survivor"))
+
+
+## 판이 끝나면 똥전을 더하고 가장 오래 버틴 시간을 남겨요. 새 기록이면 true.
+static func record_survivor(coins: int, survived: float, cleared: bool) -> bool:
+	set_value("coins", survivor_coins() + coins, "survivor")
+	if cleared:
+		set_value("clears", int(get_value("clears", 0, "survivor")) + 1, "survivor")
+	if survived > survivor_best():
+		set_value("best_time", survived, "survivor")
+		return true
+	return false

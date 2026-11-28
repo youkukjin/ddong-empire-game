@@ -41,7 +41,8 @@ var _pages_done: Callable
 func _ready() -> void:
 	Sound.ensure()
 	Session.restore()
-	Save.set_last_chapter(chapter)
+	if chapter > 0:
+		Save.set_last_chapter(chapter)
 	rng.randomize()
 	world = Node2D.new()
 	world.name = "World"

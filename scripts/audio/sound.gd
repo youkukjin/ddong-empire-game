@@ -143,6 +143,8 @@ func _process(_delta: float) -> void:
 
 ## 화면(장)마다 배경음 종류예요.
 static func music_for_scene(path: String) -> String:
+	if path.contains("survivor/"):
+		return "battle"
 	for i in range(8, 0, -1):
 		if path.contains("chapter%d/" % i):
 			return ["", "fire", "train", "cave", "siege", "battle", "dragon", "final", "peace"][i]

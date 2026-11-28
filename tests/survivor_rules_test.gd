@@ -1,0 +1,115 @@
+extends "res://tests/test_base.gd"
+## 서바이버 규칙 자동 확인이에요 (화면 없이 숫자만).
+## 실행: godot --headless --path . -s tests/survivor_rules_test.gd
+
+const Rules := preload("res://scenes/survivor/survivor_rules.gd")
+
+
+func _run() -> void:
+	var r = Rules.new(7)
+	check(r.weapons.has("sword") and r.hp == r.max_hp, "검 하나와 꽉 찬 체력으로 시작해요")
+
+	# 움직이기
+	r.tick(0.5, Vector2.RIGHT)
+	check(r.hero.x > 100.0 and r.facing == Vector2.RIGHT, "오른쪽으로 끌면 왕자가 오른쪽으로 가요")
+
+	# 적이 오고, 검이 알아서 베요
+	var r2 = Rules.new(3)
+	var e = r2.spawn_enemy("warrior", Vector2(80, 0))
+	var hits := 0
+	for i in 20:
+		for ev in r2.tick(0.1, Vector2.ZERO):
+			if ev.type == "hit":
+				hits += 1
+	check(hits > 0 and r2.kills >= 1, "가까운 적을 검이 알아서 베어 물리쳐요")
+	check(r2.gems.size() > 0 or r2.xp > 0, "물리친 적이 똥 구슬을 떨어뜨려요")
+
+	# 구슬을 모으면 레벨업 카드 3장
+	var r3 = Rules.new(5)
+	r3.gems.append({"pos": Vector2(10, 0), "value": 50})
+	var leveled := false
+	for ev in r3.tick(0.1, Vector2.ZERO):
+		if ev.type == "levelup":
+			leveled = true
+	check(leveled and r3.choices.size() == 3, "구슬을 모으면 레벨업하고 카드 3장이 나와요")
+	var t0: float = r3.time
+	r3.tick(1.0, Vector2.RIGHT)
+	check(r3.time == t0, "카드를 고르는 동안은 시간이 멈춰요")
+	var pick: Dictionary = {}
+	for i in r3.choices.size():
+		if r3.choices[i].kind == "weapon" and not r3.weapons.has(r3.choices[i].id):
+			pick = r3.choices[i]
+			r3.choose(i)
+			break
+	if pick.is_empty():
+		r3.choose(0)
+		check(true, "카드를 골랐어요 (새 무기 카드가 안 나온 판)")
+	else:
+		check(r3.weapons.has(pick.id), "새 무기 카드를 고르면 무기가 생겨요: " + pick.title)
+	while not r3.choices.is_empty():
+		r3.choose(0)
+	check(r3.choices.is_empty(), "모두 고르면 다시 움직여요")
+
+	# 모든 무기가 에러 없이 돌아가요
+	var r4 = Rules.new(11)
+	r4.weapons = {"sword": 5, "chain": 5, "fist": 5, "bomb": 5, "flies": 5}
+	for i in 30:
+		r4.spawn_enemy("warrior", Vector2(randf_range(-300, 300), randf_range(-300, 300)))
+	var kinds := {}
+	for i in 100:
+		for ev in r4.tick(0.05, Vector2(0.3, 0.2)):
+			kinds[ev.type] = true
+		while not r4.choices.is_empty():
+			r4.choose(0)
+	check(kinds.has("swing") and kinds.has("slam") and kinds.has("boom"), "검 베기, 주먹 쾅, 똥폭탄 펑이 모두 나와요")
+	check(r4.kills >= 20, "다섯 무기가 함께 적을 쓸어요 (%d마리)" % r4.kills)
+	check(r4.chain_balls().size() == 3 and r4.flies.size() == 10, "철퇴 공 3개, 파리 10마리")
+
+	# 가만히 있으면 결국 져요
+	var r5 = Rules.new(2)
+	r5.weapons = {}
+	for i in 600:
+		r5.tick(0.1, Vector2.ZERO)
+		if r5.outcome() != Rules.Outcome.ONGOING:
+			break
+	check(r5.outcome() == Rules.Outcome.LOSE, "무기 없이 가만히 있으면 쓰러져요")
+
+	# 시간이 지나면 보스
+	var r6 = Rules.new(4)
+	r6.time = Rules.MID_BOSS_TIME - 0.05
+	var texts: Array = []
+	for ev in r6.tick(0.1, Vector2.ZERO):
+		if ev.type == "boss":
+			texts.append(ev.text)
+	check(texts.size() == 1 and r6.mid_spawned, "5분에 중간 보스가 나와요")
+	r6.time = Rules.BOSS_TIME - 0.05
+	r6.tick(0.1, Vector2.ZERO)
+	var boss: Dictionary = r6.boss()
+	check(not boss.is_empty(), "10분에 대마왕이 나와요")
+	boss.hp = 1.0
+	boss.pos = r6.hero + Vector2(60, 0)
+	r6.hp = 9999.0
+	for i in 30:
+		r6.tick(0.1, Vector2.ZERO)
+		while not r6.choices.is_empty():
+			r6.choose(0)
+		if r6.outcome() == Rules.Outcome.WIN:
+			break
+	check(r6.outcome() == Rules.Outcome.WIN, "대마왕을 물리치면 이겨요")
+
+	# 각성
+	var r7 = Rules.new(1)
+	check(not r7.awaken(), "게이지가 안 차면 각성할 수 없어요")
+	r7.god_gauge = 1.0
+	check(r7.awaken() and r7.damage_mult() > 2.0, "게이지가 차면 똥의 신으로 각성해 공격이 세져요")
+
+	# 적 수 제한과 기록
+	var r8 = Rules.new(9)
+	r8.weapons = {}
+	r8.hp = 1e9
+	r8.time = 500.0
+	for i in 400:
+		r8.tick(0.1, Vector2.ZERO)
+	check(r8.enemies.size() <= Rules.ENEMY_CAP, "적은 최대 %d마리까지만 (%d)" % [Rules.ENEMY_CAP, r8.enemies.size()])
+	check(Save.record_survivor(30, 125.0, false) and Save.survivor_coins() == 30, "똥전과 버틴 시간이 기기에 남아요")
+	check(not Save.record_survivor(5, 60.0, false) and Save.survivor_coins() == 35 and Save.survivor_best() == 125.0, "더 짧게 버티면 기록은 그대로, 똥전은 더해져요")

@@ -6,6 +6,7 @@ const Save := preload("res://scripts/save_data.gd")
 const Session := preload("res://scripts/game_session.gd")
 const Chapters := preload("res://scripts/chapters.gd")
 const TITLE_SCENE := "res://scenes/title/title_screen.tscn"
+const SURVIVOR_SCENE := "res://scenes/survivor/survivor.tscn"
 const Cute := preload("res://scripts/art/cute.gd")
 
 
@@ -29,9 +30,20 @@ func _ready() -> void:
 		grid.add_child(_chapter_button(n))
 	var back := Cute.button("← 처음으로", Vector2(260, 76), 30, Cute.CARAMEL)
 	back.name = "Btn_처음으로"
-	back.position = Vector2(510, 610)
+	back.position = Vector2(70, 610)
 	back.pressed.connect(func() -> void: get_tree().change_scene_to_file(TITLE_SCENE))
 	add_child(back)
+	# 서바이버 모드 (제안): 처음부터 열려 있어요
+	var coins := Save.survivor_coins()
+	var best := Save.survivor_best()
+	var label := "똥제국 서바이버!"
+	if coins > 0 or best > 0.0:
+		label += "  (최고 %d:%02d, 똥전 %d)" % [int(best) / 60, int(best) % 60, coins]
+	var surv := Cute.button(label, Vector2(800, 76), 30, Color(1, 0.72, 0.25))
+	surv.name = "Btn_서바이버"
+	surv.position = Vector2(410, 610)
+	surv.pressed.connect(func() -> void: get_tree().change_scene_to_file(SURVIVOR_SCENE))
+	add_child(surv)
 
 
 func _chapter_button(n: int) -> Button:
