@@ -111,9 +111,9 @@ func _build_3d() -> void:
 	var view := StageView.new()
 	view.name = "View3D"
 	view.cam_height = 3.2
-	view.cam_z = 10.0
-	view.pitch_deg = 6.0
-	view.fov_deg = 44.0
+	view.cam_z = 13.0
+	view.pitch_deg = 2.0
+	view.fov_deg = 62.0
 	add_child(view)
 	move_child(view, 0)
 	view.setup(Color(0.02, 0.01, 0.08), Color(0.45, 0.08, 0.15), Color(0.45, 0.4, 0.7), Color(0.75, 0.75, 1.0), 0.8)
@@ -147,18 +147,23 @@ func _build_3d() -> void:
 			_flames.append(fire)
 	# 거대한 똥 드래곤 (원작: 보라색, 가시 머리, 날카로운 이빨)
 	var dragon := Dragon3D.new()
-	dragon.position = Vector3(7.8, 0.0, -4.0)
-	dragon.scale = Vector3.ONE * 2.0
+	# 세로 화면: 드래곤이 제목 뒤 가운데에서 크게 내려다봐요 (2026-11-28 사용자: "드래곤이 잘 안 보인다")
+	dragon.position = Vector3(1.8, 1.3, -8.0)    # 날개를 펴고 하늘에 떠 있어요
+	dragon.scale = Vector3.ONE * 2.6
 	view.add_child(dragon)
-	dragon.facing = -1.0
+	dragon.facing = 1.0
+	dragon.rotation.y = -2.25    # 머리가 왼쪽 앞(왕자와 화면 쪽)을 봐요
 	dragon.mouth_open = 0.9
 	dragon.angry = 0.3
 	dragon.wings_up = true
-	dragon.head_target = Vector3(1.7, 2.6, 0)
+	dragon.head_target = Vector3(1.9, 3.0, 0.3)
 	_dragon = dragon
 	# 검을 치켜든 똥 왕자
 	var prince := Prince3D.new()
-	prince.position = Vector3(-4.3, 0.1, 1.6)
+	prince.position = Vector3(-2.3, 3.2, -1.0)
+	# 왕자는 높은 바위 위에서 드래곤과 맞서요
+	Kit.cylinder(view, 0.9, 1.4, 3.2, Color(0.32, 0.27, 0.3), Vector3(-2.3, 1.6, -1.0))
+	Kit.cylinder(view, 1.0, 0.9, 0.25, Color(0.4, 0.34, 0.36), Vector3(-2.3, 3.1, -1.0))
 	prince.scale = Vector3.ONE * 1.15
 	prince.cheer = true
 	view.add_child(prince)
