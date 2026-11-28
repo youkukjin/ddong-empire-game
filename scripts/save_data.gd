@@ -110,6 +110,27 @@ static func record_survivor(coins: int, survived: float, cleared: bool) -> bool:
 	return false
 
 
+## 서바이버 무대: 고른 무대와 열린 무대 수 (처음엔 1곳)
+static func survivor_stage() -> int:
+	return int(get_value("stage", 0, "survivor"))
+
+
+static func set_survivor_stage(i: int) -> void:
+	set_value("stage", i, "survivor")
+
+
+static func survivor_stages_open() -> int:
+	return int(get_value("stages_open", 1, "survivor"))
+
+
+## 이 무대에서 대마왕을 물리쳤으면 다음 무대를 열어요. 새로 열렸으면 true.
+static func clear_survivor_stage(i: int, count: int) -> bool:
+	if i + 2 > survivor_stages_open() and i + 1 < count:
+		set_value("stages_open", i + 2, "survivor")
+		return true
+	return false
+
+
 ## 서바이버 캐릭터: 고른 캐릭터와 해금한 캐릭터 (처음엔 꼬마 똥)
 static func survivor_hero() -> String:
 	return String(get_value("hero", "kid", "survivor"))

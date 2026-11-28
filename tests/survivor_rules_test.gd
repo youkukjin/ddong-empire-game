@@ -173,6 +173,17 @@ func _run() -> void:
 		ro.tick(1.0 / 30.0, Vector2.RIGHT)
 	check(ro.hero.distance_to(well.pos) >= well.r + Rules.HERO_RADIUS - 1.0, "우물에 부딪히면 막혀요")
 
+	# 무대: 뒤 무대일수록 적이 세고, 대마왕을 물리치면 다음 무대가 열려요
+	var rs0 = Rules.new(1)
+	var sw0: Dictionary = rs0.spawn_enemy("warrior", Vector2(500, 0))
+	var rs2 = Rules.new(1)
+	rs2.set_stage(2)
+	var sw2: Dictionary = rs2.spawn_enemy("warrior", Vector2(500, 0))
+	check(Rules.STAGES.size() >= 4 and sw2.hp > sw0.hp * 1.5, "무대 4곳, 뒤 무대 적이 더 세요")
+	rs2.set_stage(0)
+	check(Save.survivor_stages_open() == 1 and Save.clear_survivor_stage(0, Rules.STAGES.size()) and Save.survivor_stages_open() == 2, "대마왕을 물리치면 다음 무대가 열려요")
+	Save.set_value("stages_open", 1, "survivor")
+
 	# 똥 대장간
 	Save.set_value("coins", 100, "survivor")
 	check(Save.buy_forge("heart", Rules.forge_cost("heart", 0)) and Save.forge_level("heart") == 1 and Save.survivor_coins() == 40, "대장간에서 똥전으로 튼튼 심장을 사요")

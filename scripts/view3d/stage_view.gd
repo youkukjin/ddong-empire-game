@@ -151,13 +151,16 @@ func flash(color: Color, alpha := 0.35) -> void:
 
 
 ## 만화 의성어 글자 (콰앙! 쾅! 콰지직!): 크게 튀어나왔다가 사라져요.
+var comic_scale := 1.0    # 효과 글자 크기 배수 (서바이버는 작게)
+
+
 func comic(p: Vector2, text: String, color: Color, power := 1.0) -> void:
 	if not fx_layer:
 		return
 	var l := Label.new()
 	l.text = text
 	l.add_theme_font_override("font", FONT)
-	var fs := int(54 + 34 * power)
+	var fs := int((54 + 34 * power) * comic_scale)
 	l.add_theme_font_size_override("font_size", fs)
 	l.add_theme_color_override("font_color", color)
 	l.add_theme_color_override("font_outline_color", Kit3D.INK)
@@ -174,7 +177,7 @@ func comic(p: Vector2, text: String, color: Color, power := 1.0) -> void:
 	p -= view_offset
 	l.position = Vector2(clampf(p.x - sz.x * 0.5, 10, maxf(view.x - sz.x - 10, 10)), clampf(p.y - sz.y * 0.5 - 40, 100, maxf(view.y - sz.y - 10, 100)))
 	l.rotation = randf_range(-0.22, 0.22)
-	l.scale = Vector2.ONE * 2.2
+	l.scale = Vector2.ONE * (1.0 + 1.2 * comic_scale)
 	var tw := l.create_tween()
 	tw.tween_property(l, "scale", Vector2.ONE, 0.12).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	tw.tween_interval(0.35)

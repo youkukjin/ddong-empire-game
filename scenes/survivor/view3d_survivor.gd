@@ -45,7 +45,12 @@ var _ground: MeshInstance3D
 var _t := 0.0
 
 
+var ST: Dictionary = Rules.STAGES[0]     # 지금 무대 (바닥, 벽, 장식, 적 색)
+
+
 func _init() -> void:
+	ST = Rules.STAGES[Rules.current_stage]
+	comic_scale = 0.55    # 2026-11-28 사용자: "임팩트 글자 크기가 너무 커"
 	pitch_deg = 54.0   # 너무 위에서 보면 얼굴이 안 보여요 (2026-11-28 사용자)
 	fov_deg = 40.0
 
@@ -55,10 +60,10 @@ func _ready() -> void:
 	sun.rotation_degrees = Vector3(-60, -30, 0)
 	sun.directional_shadow_max_distance = 30.0
 	env.background_mode = Environment.BG_COLOR
-	env.background_color = Color(0.12, 0.06, 0.1)
+	env.background_color = Color(ST.fog).darkened(0.15)
 	# 멀리 위쪽은 어둑한 안개로 (적이 갑자기 나타나 보이지 않게)
 	env.fog_enabled = true
-	env.fog_light_color = Color(0.14, 0.07, 0.12)
+	env.fog_light_color = ST.fog
 	env.fog_density = 0.045
 	env.fog_sky_affect = 0.0
 	_build_yard()
@@ -152,6 +157,7 @@ func _build_yard() -> void:
 shader_type spatial;
 render_mode diffuse_toon;
 uniform vec3 stone : source_color = vec3(0.3, 0.26, 0.29);
+uniform float bricks = 1.0;
 varying vec3 wp;
 float h21(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
 void vertex() { wp = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz; }
@@ -165,7 +171,9 @@ void fragment() {
 	vec2 s = wp.xz * 90.0;
 	float grain = h21(vec2(floor((s.x * 0.8 + s.y * 0.6) / 2.6), floor((s.y * 0.8 - s.x * 0.6) / 30.0))) - 0.5;
 	vec3 c = stone * tone * (1.0 + grain * 0.25);
-	c = mix(vec3(0.12, 0.08, 0.1), c, smoothstep(0.02, 0.07, edge));
+	float blot = h21(floor(wp.xz * 0.6)) * 0.25 + h21(floor(wp.xz * 2.3)) * 0.12;
+	vec3 soft = stone * (0.85 + blot) * (1.0 + grain * 0.25);
+	c = mix(soft, mix(stone * 0.35, c, smoothstep(0.02, 0.07, edge)), bricks);
 	float half_arena = %.1f;
 	float outside = step(half_arena, max(abs(wp.x), abs(wp.z)));
 	c = mix(c, vec3(0.16, 0.1, 0.13), outside);
@@ -176,6 +184,8 @@ void fragment() {
 """ % (Rules.ARENA / 2.0 * K)
 	var m := ShaderMaterial.new()
 	m.shader = sh
+	m.set_shader_parameter("stone", ST.ground)
+	m.set_shader_parameter("bricks", ST.bricks)
 	_ground.material_override = m
 	add_child(_ground)
 	# 성벽 (마당 둘레)
@@ -185,18 +195,21 @@ void fragment() {
 		var sgn := -1.0 if side % 2 == 0 else 1.0
 		var pos := Vector3(0, 0.9, sgn * (half + 0.6)) if horizontal else Vector3(sgn * (half + 0.6), 0.9, 0)
 		var size := Vector3(half * 2.0 + 2.4, 1.8, 1.2) if horizontal else Vector3(1.2, 1.8, half * 2.0 + 2.4)
-		Kit.box(self, size, STONE.darkened(0.15), pos)
+		Kit.box(self, size, Color(ST.wall).darkened(0.15), pos)
 		var count := int(half * 2.0 / 1.4)
 		for i in count:
 			var t := -half + 0.7 + i * 1.4
 			var mp := Vector3(t, 2.05, pos.z) if horizontal else Vector3(pos.x, 2.05, t)
-			Kit.box(self, Vector3(0.7, 0.5, 1.2) if horizontal else Vector3(1.2, 0.5, 0.7), STONE.darkened(0.1), mp)
+			Kit.box(self, Vector3(0.7, 0.5, 1.2) if horizontal else Vector3(1.2, 0.5, 0.7), Color(ST.wall).darkened(0.1), mp)
 		for i in range(-2, 3):
 			var tp := Vector3(i * half * 0.45, 2.2, pos.z + sgn * -0.7) if horizontal else Vector3(pos.x + sgn * -0.7, 2.2, i * half * 0.45)
 			Kit.torch(self, tp, 1.3)
 	# 마당 꾸밈: 나무통, 깃발, 돌기둥, 우물 (자리와 크기는 규칙의 장애물 목록, 부딪히면 막혀요)
 	for o in Rules.obstacles():
 		var p := to3(o.pos)
+		if ST.props != "yard":
+			_stage_prop(String(ST.props), int(o.kind), p, o)
+			continue
 		match int(o.kind):
 			0:
 				Kit.cylinder(self, 0.32, 0.36, 0.8, Color(0.32, 0.2, 0.12), p + Vector3(0, 0.4, 0))
@@ -215,6 +228,60 @@ void fragment() {
 				Kit.cylinder(self, 0.04, 0.04, 1.4, Color(0.35, 0.22, 0.12), p + Vector3(-0.75, 0.7, 0))
 				Kit.cylinder(self, 0.04, 0.04, 1.4, Color(0.35, 0.22, 0.12), p + Vector3(0.75, 0.7, 0))
 				Kit.prism(self, Vector3(1.4, 0.35, 0.7), Color(0.5, 0.18, 0.14), p + Vector3(0, 1.5, 0))
+
+
+## 무대마다 다른 장애물 모습 (자리·크기는 같은 규칙)
+func _stage_prop(style: String, kind: int, p: Vector3, o: Dictionary) -> void:
+	match style:
+		"forest":
+			match kind:
+				0:  # 빨간 버섯
+					Kit.cylinder(self, 0.14, 0.18, 0.5, Color(0.95, 0.9, 0.8), p + Vector3(0, 0.25, 0))
+					Kit.sphere(self, 0.42, Color(0.85, 0.2, 0.18), p + Vector3(0, 0.55, 0), Vector3(1, 0.55, 1))
+					for k in 4:
+						Kit.sphere(self, 0.07, Color.WHITE, p + Vector3(cos(k * 1.6) * 0.25, 0.72, sin(k * 1.6) * 0.25), Vector3.ONE, 0.0, false)
+				1:  # 어린 나무
+					Kit.cylinder(self, 0.05, 0.06, 1.0, Color(0.4, 0.26, 0.14), p + Vector3(0, 0.5, 0))
+					Kit.sphere(self, 0.3, Color(0.35, 0.6, 0.25), p + Vector3(0, 1.1, 0))
+				2:  # 큰 나무
+					Kit.cylinder(self, 0.3, 0.42, 1.6, Color(0.42, 0.27, 0.15), p + Vector3(0, 0.8, 0))
+					for t in [[0, 2.0, 0.95], [-0.45, 1.65, 0.65], [0.45, 1.7, 0.7]]:
+						Kit.sphere(self, t[2], Color(0.3, 0.52, 0.22), p + Vector3(t[0], t[1], 0))
+				_:  # 초록 늪 + 연잎
+					Kit.cylinder(self, 0.9, 0.9, 0.05, Color(0.3, 0.45, 0.2), p + Vector3(0, 0.05, 0), 0.0, false)
+					Kit.torus(self, 0.8, 0.95, Color(0.35, 0.26, 0.15), p + Vector3(0, 0.1, 0))
+					for k in 3:
+						Kit.cylinder(self, 0.18, 0.18, 0.03, Color(0.45, 0.72, 0.3), p + Vector3(cos(k * 2.1) * 0.45, 0.1, sin(k * 2.1) * 0.45))
+		"ice":
+			match kind:
+				0:  # 눈덩이 더미
+					Kit.sphere(self, 0.4, Color(0.95, 0.97, 1.0), p + Vector3(0, 0.3, 0))
+					Kit.sphere(self, 0.25, Color(0.95, 0.97, 1.0), p + Vector3(0.1, 0.72, 0))
+				1:  # 고드름 기둥
+					Kit.spike(self, 0.12, 1.4, Color(0.75, 0.92, 1.0), p, Vector3.UP)
+				2:  # 얼음 기둥
+					Kit.cylinder(self, 0.42, 0.52, 1.9, Color(0.65, 0.85, 1.0), p + Vector3(0, 0.95, 0), 0.4)
+					Kit.spike(self, 0.42, 0.6, Color(0.8, 0.95, 1.0), p + Vector3(0, 1.9, 0), Vector3.UP)
+				_:  # 꽁꽁 언 연못 + 눈사람
+					Kit.cylinder(self, 0.9, 0.9, 0.05, Color(0.7, 0.88, 1.0), p + Vector3(0, 0.05, 0), 0.3, false)
+					Kit.sphere(self, 0.3, Color.WHITE, p + Vector3(0.5, 0.3, 0.3))
+					Kit.sphere(self, 0.2, Color.WHITE, p + Vector3(0.5, 0.68, 0.3))
+					Kit.spike(self, 0.04, 0.18, Color(1, 0.5, 0.1), p + Vector3(0.5, 0.7, 0.5), Vector3.BACK)
+		"lava":
+			match kind:
+				0:  # 검은 바위
+					Kit.sphere(self, 0.42, Color(0.22, 0.17, 0.17), p + Vector3(0, 0.3, 0), Vector3(1, 0.8, 1))
+				1:  # 김 나는 구멍
+					Kit.cylinder(self, 0.12, 0.16, 0.25, Color(0.2, 0.14, 0.12), p + Vector3(0, 0.12, 0))
+					Kit.sphere(self, 0.12, Color(1, 0.5, 0.1), p + Vector3(0, 0.26, 0), Vector3(1, 0.3, 1), 2.0, false)
+				2:  # 용암 바위 기둥
+					Kit.cylinder(self, 0.38, 0.55, 1.7, Color(0.25, 0.15, 0.12), p + Vector3(0, 0.85, 0))
+					Kit.torus(self, 0.4, 0.46, Color(1, 0.45, 0.1), p + Vector3(0, 0.5, 0), 2.0, false)
+				_:  # 부글부글 용암 웅덩이
+					Kit.torus(self, 0.75, 0.95, Color(0.22, 0.14, 0.12), p + Vector3(0, 0.15, 0))
+					Kit.cylinder(self, 0.8, 0.8, 0.05, Color(1, 0.45, 0.08), p + Vector3(0, 0.1, 0), 2.5, false)
+					for k in 2:
+						Kit.sphere(self, 0.12, Color(1, 0.7, 0.2), p + Vector3(-0.2 + k * 0.4, 0.15, 0.1), Vector3.ONE, 2.0, false)
 
 
 # ------------------------------------------------------------------ 적 (MultiMesh)
@@ -317,6 +384,7 @@ func _sync_enemies(rules) -> void:
 			"brute":
 				col = Color(0.4, 0.22, 0.1)
 				hcol = Color(0.35, 0.35, 0.4)
+		col = Color(col.r * ST.tint.r, col.g * ST.tint.g, col.b * ST.tint.b)
 		if float(e.get("slow_until", 0.0)) > rules.time:
 			col = col.lerp(Color(0.62, 0.86, 1.0), 0.65)
 			hcol = hcol.lerp(Color(0.8, 0.95, 1.0), 0.6)

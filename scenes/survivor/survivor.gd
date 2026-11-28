@@ -39,6 +39,8 @@ var god_button: Button
 var god_info: Label
 var boss_bar: ProgressBar
 var boss_label: Label
+var boss_labels: Array = []
+var boss_bars: Array = []
 var skills_label: Label
 var hp_text: Label
 
@@ -49,6 +51,8 @@ func _init() -> void:
 
 func _setup() -> void:
 	rules = Rules.new()
+	rules.set_stage(mini(Save.survivor_stage(), Save.survivor_stages_open() - 1))
+	Sound.survivor_music = String(Rules.STAGES[rules.stage].music)
 	var hid := Save.survivor_hero()
 	if not Save.hero_unlocked(hid, int(Rules.HEROES.get(hid, {"cost": 0}).cost)):
 		hid = "kid"
@@ -87,6 +91,18 @@ func _build_hud() -> void:
 	boss_bar = _bar(Vector2(40, 156), Vector2(640, 22), Color(0.7, 0.2, 0.85))
 	boss_label.visible = false
 	boss_bar.visible = false
+	boss_labels = [boss_label]
+	boss_bars = [boss_bar]
+	# 보스가 여럿이면 체력바도 여러 줄 (2026-11-28 사용자: "두 마리의 체력바가 안 나와")
+	for i in range(1, 3):
+		var l := hud_label(Vector2(40, 122 + i * 62), 26, Color(1, 0.75, 0.75))
+		l.size = Vector2(640, 30)
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		l.visible = false
+		var bb := _bar(Vector2(40, 156 + i * 62), Vector2(640, 22), Color(0.7, 0.2, 0.85))
+		bb.visible = false
+		boss_labels.append(l)
+		boss_bars.append(bb)
 	god_button = make_button("각성!", Vector2(180, 110), 40, Color(1, 0.78, 0.2))
 	god_button.name = "Btn_각성"
 	god_button.position = Vector2(520, 1150)
@@ -159,13 +175,27 @@ func _refresh_hud() -> void:
 		god_button.text = "각성!"
 	else:
 		god_button.text = "%d%%" % int(rules.god_gauge * 100.0)
-	var b: Dictionary = _big_enemy()
-	boss_label.visible = not b.is_empty()
-	boss_bar.visible = boss_label.visible
-	if not b.is_empty():
-		boss_label.text = Rules.BOSS_NAMES.get(b.kind, "보스")
-		boss_bar.max_value = b.max_hp
-		boss_bar.value = maxf(b.hp, 0.0)
+	var bosses: Array = _bosses()
+	for i in boss_bars.size():
+		var on := i < bosses.size()
+		boss_labels[i].visible = on
+		boss_bars[i].visible = on
+		if on:
+			var b: Dictionary = bosses[i]
+			boss_labels[i].text = Rules.BOSS_NAMES.get(b.kind, "보스")
+			boss_bars[i].max_value = b.max_hp
+			boss_bars[i].value = maxf(b.hp, 0.0)
+	god_info.position.y = 196 + maxi(bosses.size() - 1, 0) * 62
+
+
+## 화면에 있는 보스들 (대마왕이 맨 위)
+func _bosses() -> Array:
+	var out: Array = []
+	for e in rules.enemies:
+		if e.boss:
+			out.append(e)
+	out.sort_custom(func(a, b): return a.kind == "demon" and b.kind != "demon")
+	return out.slice(0, 3)
 
 
 func _big_enemy() -> Dictionary:
@@ -300,6 +330,8 @@ func _on_event(ev: Dictionary) -> void:
 		"endless":
 			Sound.play("roar", 0.8, 0.0)
 			impact(CENTER + Vector2(0, -240), "무한 모드!", Color(1, 0.4, 0.35), 2.0)
+			if Save.clear_survivor_stage(rules.stage, Rules.STAGES.size()) and view3d:
+				view3d.comic(CENTER + Vector2(0, 60), "새 무대 열림: " + String(Rules.STAGES[rules.stage + 1].name), Color(0.6, 1, 0.6), 0.9)
 			if view3d:
 				view3d.comic(CENTER + Vector2(0, -100), "적이 점점 세져요!", Color(1, 0.85, 0.4), 0.7)
 		"surround":

@@ -347,7 +347,7 @@ func spawn_enemy(kind: String, pos: Vector2) -> Dictionary:
 			e.dmg = 16.0
 			e.radius = 64.0
 			e.boss = true
-	var pm := power_mult()
+	var pm := power_mult() * stage_mult()
 	e.hp *= pm
 	e.dmg *= sqrt(pm)
 	if not e.boss:
@@ -374,7 +374,7 @@ func _spawn(delta: float, ev: Array) -> void:
 	if not boss_spawned and time >= BOSS_TIME:
 		boss_spawned = true
 		var d := spawn_enemy("demon", _edge_point())
-		ev.append({"type": "boss", "enemy": d, "text": "똥 대마왕: 내 황금 변기를 지켜라!"})
+		ev.append({"type": "boss", "enemy": d, "text": String(STAGES[stage].boss_line)})
 	if endless:
 		_endless_boss_t += delta
 		if _endless_boss_t >= ENDLESS_EVERY:
@@ -412,17 +412,44 @@ func _spawn(delta: float, ev: Array) -> void:
 		spawn_enemy(kind, _edge_point())
 
 
+## 서바이버 무대 (2026-11-28 사용자: "서바이버 챕터도 늘려주고", "챕터마다 배경음악도 다르게").
+## 앞 무대에서 대마왕을 물리치면 다음 무대가 열려요. mult: 적 체력·공격·똥전 배수.
+const STAGES := [
+	{"name": "성 안 마당", "mult": 1.0, "ground": Color(0.3, 0.26, 0.29), "wall": Color(0.4, 0.36, 0.4), "fog": Color(0.14, 0.07, 0.12),
+		"tint": Color(1, 1, 1), "props": "yard", "bricks": 1.0, "music": "happy", "boss_line": "똥 대마왕: 내 황금 변기를 지켜라!"},
+	{"name": "방귀 숲", "mult": 1.35, "ground": Color(0.27, 0.34, 0.17), "wall": Color(0.33, 0.22, 0.13), "fog": Color(0.07, 0.12, 0.05),
+		"tint": Color(0.75, 1.05, 0.7), "props": "forest", "bricks": 0.0, "music": "forest", "boss_line": "똥 대마왕: 숲속 화장실은 내 거다!"},
+	{"name": "꽁꽁 얼음 동굴", "mult": 1.7, "ground": Color(0.45, 0.58, 0.7), "wall": Color(0.55, 0.68, 0.78), "fog": Color(0.1, 0.14, 0.22),
+		"tint": Color(0.8, 0.92, 1.2), "props": "ice", "bricks": 0.5, "music": "icecave", "boss_line": "똥 대마왕: 에취! 엉덩이가 꽁꽁 얼었다!"},
+	{"name": "부글부글 똥 화산", "mult": 2.1, "ground": Color(0.22, 0.13, 0.11), "wall": Color(0.24, 0.14, 0.12), "fog": Color(0.22, 0.07, 0.03),
+		"tint": Color(1.2, 0.82, 0.7), "props": "lava", "bricks": 0.0, "music": "volcano", "boss_line": "똥 대마왕: 앗 뜨거! 내 엉덩이 불났다!"},
+]
+static var current_stage := 0
+var stage := 0
+
+
+func set_stage(i: int) -> void:
+	stage = clampi(i, 0, STAGES.size() - 1)
+	current_stage = stage
+
+
+func stage_mult() -> float:
+	return float(STAGES[stage].mult)
+
+
 ## 마당 장애물: 나무통, 깃대, 돌기둥, 우물. 왕자도 적도 지나가지 못해요 (2026-11-28 사용자: "우물 안 걸리고 통과").
 ## 3D 화면(view3d_survivor)도 이 목록을 보고 같은 자리에 그려요. kind: 0 나무통, 1 깃대, 2 돌기둥, 3 우물
 const OBSTACLE_R := [40.0, 10.0, 52.0, 92.0]
-static var _obstacles: Array = []
+static var _obstacles_by_stage := {}
 
 
 static func obstacles() -> Array:
-	if not _obstacles.is_empty():
-		return _obstacles
+	if _obstacles_by_stage.has(current_stage):
+		return _obstacles_by_stage[current_stage]
+	var _obstacles: Array = []
+	_obstacles_by_stage[current_stage] = _obstacles
 	var r := RandomNumberGenerator.new()
-	r.seed = 55
+	r.seed = 55 + current_stage * 101
 	var half := ARENA / 2.0 - 150.0
 	for i in 46:
 		var p := Vector2(r.randf_range(-half, half), r.randf_range(-half, half))
@@ -1072,4 +1099,4 @@ func _apply_passive(id: String) -> void:
 
 ## 이번 판에 받은 똥전 (판이 끝날 때 기기에 더해요)
 func earned_coins() -> int:
-	return coins + kills / 4 + minute() * 5
+	return int((coins + kills / 4 + minute() * 5) * stage_mult())

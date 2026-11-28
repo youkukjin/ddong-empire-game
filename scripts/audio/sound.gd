@@ -142,7 +142,12 @@ func _process(_delta: float) -> void:
 
 
 ## 화면(장)마다 배경음 종류예요.
+static var survivor_music := "happy"     # 서바이버 무대마다 다른 곡 (survivor.gd가 정해요)
+
+
 static func music_for_scene(path: String) -> String:
+	if path.contains("survivor/survivor"):
+		return survivor_music
 	if path.contains("survivor/"):
 		return "happy"
 	for i in range(8, 0, -1):
@@ -355,7 +360,11 @@ static func _roar(b: PackedFloat32Array, rate: int, r: RandomNumberGenerator) ->
 const MUSIC := {
 	# 흥겹고 잔잔한 곡 (2026-11-28 사용자: "애들이 좋아하게 흥겹고 잔잔하게"). 처음 화면과 서바이버.
 	# 멜로디를 손으로 써 둔 곡이라 tune: true (build_music이 _build_tune으로 만들어요)
-	"happy": {"tune": true, "bpm": 116, "root": 48, "seed": 5},
+	"happy": {"tune": "happy", "bpm": 116, "root": 48, "seed": 5, "lead": "xylo", "minor": false},
+	# 서바이버 무대마다 다른 곡 (2026-11-28 사용자: "챕터마다 배경음악도 다르게")
+	"forest": {"tune": "forest", "bpm": 124, "root": 53, "seed": 6, "lead": "wood", "minor": false},
+	"icecave": {"tune": "icecave", "bpm": 92, "root": 50, "seed": 7, "lead": "bell", "minor": false},
+	"volcano": {"tune": "volcano", "bpm": 136, "root": 43, "seed": 8, "lead": "square", "minor": true},
 	"title": {"bpm": 104, "root": 50, "scale": [0, 2, 3, 5, 7, 8, 10], "prog": [0, 5, 3, 4],
 		"kick": "x...x...x...x.x.", "snare": "....x.......x...", "hat": "..x...x...x...x.",
 		"bass": "x..x..x.x..x..x.", "lead": "x...x.x.x...x...", "wave": 2, "seed": 3, "boom": true},
@@ -396,8 +405,43 @@ static func music_stream(kind: String) -> AudioStreamWAV:
 	return s
 
 
-## 손으로 쓴 멜로디: 마디마다 [시작 칸, 길이 칸, 음(MIDI)]. 한 마디 16칸.
+## 손으로 쓴 멜로디: 마디마다 [시작 칸, 길이 칸, 음(MIDI)]. 한 마디 16칸. 음은 C 기준으로 쓰고 root만큼 옮겨요.
 const TUNE_CHORDS := [0, 4, 5, 3, 0, 4, 3, 0]     # C G Am F | C G F C
+const TUNES := {
+	# 방귀 숲: 통통 튀는 나무 실로폰 (깡충깡충)
+	"forest": {"chords": [0, 3, 4, 0, 5, 3, 4, 0], "notes": [
+		[[0, 1, 72], [2, 1, 76], [4, 2, 79], [6, 1, 76], [8, 2, 72], [12, 2, 74], [14, 2, 76]],
+		[[0, 2, 77], [2, 1, 81], [4, 2, 77], [8, 2, 76], [10, 2, 74], [12, 4, 72]],
+		[[0, 1, 74], [2, 1, 79], [4, 2, 83], [6, 1, 79], [8, 2, 74], [12, 4, 79]],
+		[[0, 2, 76], [2, 2, 72], [4, 4, 79], [10, 2, 76], [12, 4, 72]],
+		[[0, 1, 69], [2, 1, 72], [4, 2, 76], [6, 2, 81], [8, 4, 79], [12, 4, 76]],
+		[[0, 2, 77], [2, 2, 76], [4, 2, 74], [6, 2, 72], [8, 4, 77], [12, 4, 81]],
+		[[0, 2, 79], [2, 1, 77], [4, 1, 76], [6, 2, 74], [8, 4, 71], [12, 4, 74]],
+		[[0, 2, 76], [2, 2, 79], [4, 4, 84], [8, 8, 72]],
+	]},
+	# 얼음 동굴: 느리고 반짝이는 종소리 (자장가처럼)
+	"icecave": {"chords": [0, 5, 3, 4, 0, 5, 3, 4], "notes": [
+		[[0, 4, 76], [4, 4, 79], [8, 8, 84]],
+		[[0, 4, 81], [4, 4, 79], [8, 8, 76]],
+		[[0, 4, 77], [4, 4, 81], [8, 4, 84], [12, 4, 81]],
+		[[0, 8, 79], [8, 8, 74]],
+		[[0, 4, 76], [4, 4, 79], [8, 4, 84], [12, 4, 86]],
+		[[0, 4, 88], [4, 4, 84], [8, 8, 81]],
+		[[0, 4, 77], [4, 4, 76], [8, 4, 74], [12, 4, 77]],
+		[[0, 8, 74], [8, 8, 72]],
+	]},
+	# 똥 화산: 빠르고 신나는 단조 (두근두근 모험)
+	"volcano": {"chords": [0, 0, 5, 6, 0, 0, 3, 4], "notes": [
+		[[0, 2, 72], [2, 2, 72], [4, 2, 75], [6, 2, 77], [8, 4, 79], [12, 2, 77], [14, 2, 75]],
+		[[0, 2, 72], [2, 2, 72], [4, 2, 75], [6, 2, 77], [8, 6, 75]],
+		[[0, 2, 80], [2, 2, 79], [4, 2, 77], [6, 2, 75], [8, 4, 77], [12, 4, 80]],
+		[[0, 2, 82], [2, 2, 80], [4, 2, 79], [6, 2, 77], [8, 8, 79]],
+		[[0, 2, 72], [2, 2, 72], [4, 2, 75], [6, 2, 77], [8, 4, 79], [12, 2, 82], [14, 2, 84]],
+		[[0, 4, 84], [4, 2, 82], [6, 2, 80], [8, 8, 79]],
+		[[0, 2, 77], [2, 2, 79], [4, 2, 80], [6, 2, 77], [8, 4, 75], [12, 4, 74]],
+		[[0, 4, 75], [4, 4, 74], [8, 8, 72]],
+	]},
+}
 const TUNE := [
 	[[0, 2, 76], [2, 2, 79], [4, 2, 79], [6, 2, 76], [8, 4, 72], [12, 2, 74], [14, 2, 76]],
 	[[0, 2, 74], [2, 2, 71], [4, 2, 74], [6, 2, 79], [8, 4, 77], [12, 2, 76], [14, 2, 74]],
@@ -412,51 +456,80 @@ const TUNE := [
 
 static func _build_tune(m: Dictionary) -> PackedFloat32Array:
 	var step: float = 60.0 / float(m.bpm) / 4.0
-	var bars := TUNE.size()
+	var notes: Array = TUNE
+	var chords: Array = TUNE_CHORDS
+	if TUNES.has(String(m.tune)):
+		notes = TUNES[m.tune].notes
+		chords = TUNES[m.tune].chords
+	var shift := int(m.root) - 48
+	var lead := String(m.get("lead", "xylo"))
+	var bars := notes.size()
 	var b := _buf(step * 16 * bars, MRATE)
 	var r := RandomNumberGenerator.new()
 	r.seed = m.seed
-	var major := [0, 2, 4, 5, 7, 9, 11]
+	var major := [0, 2, 3, 5, 7, 8, 10] if m.get("minor", false) else [0, 2, 4, 5, 7, 9, 11]
+	var calm := lead == "bell"
 	for bar in bars:
 		var t0: float = bar * 16 * step
-		var chord: int = TUNE_CHORDS[bar]
+		var chord: int = chords[bar]
 		# 통통 튀는 북: 작은 북, 손뼉, 셰이커
 		for i in 16:
 			var t: float = t0 + i * step
-			if i == 0 or i == 8 or (i == 10 and bar % 2 == 1):
+			if calm:
+				# 얼음 동굴은 북 없이 살짝 반짝이는 소리만
+				if i % 4 == 2:
+					_noise(b, MRATE, r, t, 0.04, 0.03, 0.95, 60, 0.0)
+				continue
+			if i == 0 or i == 8 or (i == 10 and bar % 2 == 1) or (lead == "square" and i % 4 == 0):
 				_tone(b, MRATE, t, 0.16, 120, 50, 0, 0.45, 0.001, 18)
 			if i == 4 or i == 12:
 				_noise(b, MRATE, r, t, 0.09, 0.16, 0.6, 30, 0.0)
+			if lead == "wood" and (i == 6 or i == 14):
+				_tone(b, MRATE, t, 0.05, 900, 850, 0, 0.12, 0.001, 60)
 			if i % 2 == 0:
 				_noise(b, MRATE, r, t, 0.03, 0.05 if i % 4 else 0.07, 0.95, 80, 0.0)
 		# 깡충 베이스 (근음, 5음 왔다 갔다)
-		for i in [0, 3, 6, 8, 11, 14]:
+		for i in ([0, 8] if calm else ([0, 2, 4, 6, 8, 10, 12, 14] if lead == "square" else [0, 3, 6, 8, 11, 14])):
 			var up := 4 if i == 6 or i == 14 else 0
 			var f: float = midi_hz(m.root - 12 + _note(major, chord + up))
-			_tone(b, MRATE, t0 + i * step, step * 1.8, f, f, 3, 0.24, 0.004, 7)
+			_tone(b, MRATE, t0 + i * step, step * (6.0 if calm else 1.8), f, f, 3, 0.2 if calm else 0.24, 0.004, 2 if calm else 7)
 		# 우쿨렐레처럼 뒷박에 짧게 긁는 화음
-		for i in [2, 6, 10, 14]:
+		for i in ([] if calm else [2, 6, 10, 14]):
 			for k in [0, 2, 4]:
 				var f: float = midi_hz(m.root + 12 + _note(major, chord + k))
 				_tone(b, MRATE, t0 + i * step + k * 0.012, step * 1.5, f, f, 3, 0.045, 0.003, 10)
 		# 아주 옅게 깔리는 화음
 		for k in [0, 2, 4]:
 			var f: float = midi_hz(m.root + _note(major, chord + k))
-			_tone(b, MRATE, t0, step * 16, f, f * 1.002, 0, 0.03, 0.2, 0.3)
+			_tone(b, MRATE, t0, step * 16, f, f * 1.002, 0, 0.06 if calm else 0.03, 0.2, 0.3)
 		# 멜로디: 실로폰(사인 + 한 옥타브 위 살짝) + 부드러운 피리
-		for n in TUNE[bar]:
-			var f: float = midi_hz(n[2])
+		for n in notes[bar]:
+			var f: float = midi_hz(n[2] + shift)
 			var t: float = t0 + n[0] * step
 			var d: float = n[1] * step
-			_tone(b, MRATE, t, d + step, f, f, 0, 0.14, 0.002, 5.5)
-			_tone(b, MRATE, t, d * 0.6, f * 2.0, f * 2.0, 0, 0.04, 0.001, 12)
-			_tone(b, MRATE, t, d * 0.95, f, f, 3, 0.04, 0.03, 1.5)
+			match lead:
+				"wood":
+					# 나무 실로폰: 짧고 통통
+					_tone(b, MRATE, t, step * 1.5, f, f, 0, 0.16, 0.001, 14)
+					_tone(b, MRATE, t, step * 0.8, f * 3.0, f * 3.0, 0, 0.04, 0.001, 30)
+				"bell":
+					# 종: 길게 울리고 위 배음이 반짝
+					_tone(b, MRATE, t, d + step * 4.0, f, f, 0, 0.12, 0.002, 1.6)
+					_tone(b, MRATE, t, d + step * 2.0, f * 2.76, f * 2.76, 0, 0.03, 0.001, 4.0)
+				"square":
+					# 네모 소리: 게임기 같은 신나는 소리 (부드럽게 작게)
+					_tone(b, MRATE, t, d * 0.9, f, f, 1, 0.07, 0.004, 3.0)
+					_tone(b, MRATE, t, d * 0.9, f * 1.005, f * 1.005, 3, 0.06, 0.004, 3.0)
+				_:
+					_tone(b, MRATE, t, d + step, f, f, 0, 0.14, 0.002, 5.5)
+					_tone(b, MRATE, t, d * 0.6, f * 2.0, f * 2.0, 0, 0.04, 0.001, 12)
+					_tone(b, MRATE, t, d * 0.95, f, f, 3, 0.04, 0.03, 1.5)
 	return b
 
 
 static func build_music(kind: String) -> PackedFloat32Array:
 	var m: Dictionary = MUSIC[kind]
-	if m.get("tune", false):
+	if m.has("tune"):
 		return _build_tune(m)
 	var step: float = 60.0 / float(m.bpm) / 4.0
 	var bars := 4
