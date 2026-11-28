@@ -61,12 +61,57 @@ static func apply_gear(hero: Node3D, gear: Dictionary) -> void:
 			Kit.cylinder(g, 0.0, 0.07, 0.22, gold, Vector3(cos(a) * 0.2, h * 1.02 + 0.16, sin(a) * 0.2), 0.2)
 	elif crown > 0:
 		Kit.sphere(g, 0.1, Color(0.2, 0.5, 0.95), Vector3(0, 1.82, 0.33), Vector3.ONE, 1.0, false)
+	_equip_models(g, gear.get("equip", []), h, w, is_prince)
 	var thorns := int(gear.get("thorns", 0))
 	if thorns > 0:
 		for i in 10:
 			var a := TAU * i / 10.0
 			var d := Vector3(cos(a), 0.25, sin(a)).normalized()
 			Kit.spike(g, 0.06, 0.28, Color(0.88, 0.86, 0.75), Vector3(cos(a) * w * 0.85, h * 0.28, sin(a) * w * 0.8), d)
+
+
+## 똥 옷장 장비 모양 (모자는 머리 위, 신발은 바닥 양쪽, 장신구는 목이나 옆)
+static func _equip_models(g: Node3D, ids: Array, h: float, w: float, is_prince: bool) -> void:
+	var top := h * (1.12 if is_prince else 1.0)
+	for id in ids:
+		match String(id):
+			"hat_straw":
+				Kit.cylinder(g, 0.55, 0.6, 0.05, Color(0.95, 0.82, 0.45), Vector3(0, top, 0))
+				Kit.cylinder(g, 0.25, 0.3, 0.25, Color(0.95, 0.82, 0.45), Vector3(0, top + 0.14, 0))
+				Kit.cylinder(g, 0.31, 0.31, 0.07, Color(0.85, 0.2, 0.2), Vector3(0, top + 0.06, 0))
+			"hat_pirate":
+				Kit.sphere(g, 0.38, Color(0.12, 0.1, 0.12), Vector3(0, top + 0.1, 0), Vector3(1.4, 0.55, 0.8))
+				Kit.sphere(g, 0.09, Color(0.95, 0.95, 0.9), Vector3(0, top + 0.15, 0.3), Vector3.ONE, 0.2)
+			"hat_propeller":
+				Kit.sphere(g, 0.3, Color(0.3, 0.55, 0.95), Vector3(0, top + 0.02, 0), Vector3(1, 0.55, 1))
+				Kit.cylinder(g, 0.03, 0.03, 0.2, Color(0.9, 0.9, 0.9), Vector3(0, top + 0.25, 0))
+				for k in 2:
+					Kit.box(g, Vector3(0.6, 0.03, 0.1), Color(1, 0.3, 0.3) if k == 0 else Color(1, 0.85, 0.2), Vector3(0, top + 0.36, 0)).rotation.y = k * PI / 2
+			"hat_toilet":
+				Kit.sphere(g, 0.42, Color(0.96, 0.96, 0.98), Vector3(0, top + 0.02, 0), Vector3(1, 0.45, 1.1))
+				Kit.torus(g, 0.3, 0.42, Color(0.9, 0.9, 0.95), Vector3(0, top - 0.02, 0))
+			"shoe_slipper", "shoe_sneaker", "shoe_spring":
+				var sc: Color = {"shoe_slipper": Color(0.2, 0.3, 0.75), "shoe_sneaker": Color(0.95, 0.3, 0.3), "shoe_spring": Color(0.55, 0.85, 0.35)}[String(id)]
+				for sx in [-1.0, 1.0]:
+					Kit.sphere(g, 0.17, sc, Vector3(sx * w * 0.5, 0.08, w * 0.45), Vector3(1, 0.55, 1.5))
+					if id == "shoe_slipper":
+						for st in 3:
+							Kit.box(g, Vector3(0.04, 0.03, 0.2), Color(1, 1, 1), Vector3(sx * w * 0.5 - 0.07 + st * 0.07, 0.17, w * 0.45), 0.0, false)
+					if id == "shoe_sneaker":
+						Kit.box(g, Vector3(0.28, 0.04, 0.05), Color(1, 1, 1), Vector3(sx * w * 0.5, 0.1, w * 0.6), 0.6, false)
+					if id == "shoe_spring":
+						Kit.torus(g, 0.06, 0.1, Color(0.8, 0.8, 0.85), Vector3(sx * w * 0.5, 0.0, w * 0.45))
+			"acc_duck":
+				var d := Vector3(w * 0.95, h * 0.25, 0.1)
+				Kit.sphere(g, 0.2, Color(1, 0.85, 0.15), d, Vector3(1.2, 0.9, 1))
+				Kit.sphere(g, 0.13, Color(1, 0.85, 0.15), d + Vector3(0.1, 0.2, 0))
+				Kit.sphere(g, 0.06, Color(1, 0.5, 0.1), d + Vector3(0.24, 0.18, 0), Vector3(1.4, 0.6, 1))
+			"acc_scarf":
+				Kit.torus(g, w * 0.5, w * 0.72, Color(0.97, 0.97, 0.95), Vector3(0, h * 0.68, 0))
+				Kit.box(g, Vector3(0.14, 0.35, 0.05), Color(0.97, 0.97, 0.95), Vector3(w * 0.3, h * 0.55, w * 0.6))
+			"acc_plunger":
+				Kit.cylinder(g, 0.04, 0.04, 0.8, Color(0.6, 0.4, 0.2), Vector3(-w * 0.95, h * 0.45, 0))
+				Kit.sphere(g, 0.2, Color(0.95, 0.72, 0.2), Vector3(-w * 0.95, h * 0.85, 0), Vector3(1, 0.7, 1), 0.6)
 
 
 ## 약한 똥 캐릭터 (몸통 세 겹 + 얼굴 + 캐릭터마다 다른 소품)

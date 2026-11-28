@@ -169,6 +169,27 @@ static func buy_forge(id: String, cost: int) -> bool:
 	return true
 
 
+## 똥 옷장 장비: 샀는지, 칸마다 무엇을 끼웠는지
+static func equip_owned(id: String) -> bool:
+	return bool(get_value("eq_own_" + id, false, "survivor"))
+
+
+static func buy_equip(id: String, cost: int) -> bool:
+	if equip_owned(id) or survivor_coins() < cost:
+		return false
+	set_value("coins", survivor_coins() - cost, "survivor")
+	set_value("eq_own_" + id, true, "survivor")
+	return true
+
+
+static func equipped(slot: String) -> String:
+	return String(get_value("eq_" + slot, "", "survivor"))
+
+
+static func set_equipped(slot: String, id: String) -> void:
+	set_value("eq_" + slot, id, "survivor")
+
+
 ## 버틴 시간 순위표 (위에서부터 오래 버틴 순, 10개까지). 각 칸: {time, level, kills, cleared, date}
 static func survivor_ranks() -> Array:
 	return get_value("ranks", [], "survivor")

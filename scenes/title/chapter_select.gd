@@ -10,6 +10,7 @@ const SURVIVOR_SCENE := "res://scenes/survivor/survivor.tscn"
 const FORGE_SCENE := "res://scenes/survivor/forge.tscn"
 const SurvivorRules := preload("res://scenes/survivor/survivor_rules.gd")
 const HERO_SCENE := "res://scenes/survivor/hero_select.tscn"
+const WARDROBE_SCENE := "res://scenes/survivor/wardrobe.tscn"
 const Cute := preload("res://scripts/art/cute.gd")
 const ScreenMode := preload("res://scripts/screen_mode.gd")
 
@@ -89,6 +90,11 @@ func _ready() -> void:
 	forge.position = Vector2(370, 760)
 	forge.pressed.connect(func() -> void: get_tree().change_scene_to_file(FORGE_SCENE))
 	add_child(forge)
+	var wardrobe := Cute.button("똥 옷장 (모자·신발·장신구)", Vector2(660, 130), 34, Color(0.75, 0.55, 0.85))
+	wardrobe.name = "Btn_옷장"
+	wardrobe.position = Vector2(30, 940)
+	wardrobe.pressed.connect(func() -> void: get_tree().change_scene_to_file(WARDROBE_SCENE))
+	add_child(wardrobe)
 
 
 func _open(n: int) -> void:

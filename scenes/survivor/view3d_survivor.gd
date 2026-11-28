@@ -1033,7 +1033,7 @@ func sync(rules, delta: float) -> void:
 	if prince3d.get_meta("hero", "prince") != rules.hero_id:
 		_swap_hero(rules.hero_id)
 	HeroModels.apply_gear(prince3d, {"armor": int(rules.passives.get("armor", 0)), "cape": int(rules.passives.get("cape", 0)),
-		"crown": int(rules.passives.get("crown", 0)) if rules.hero_id == "prince" else 0, "thorns": int(rules.weapons.get("thorns", 0))})
+		"crown": int(rules.passives.get("crown", 0)) if rules.hero_id == "prince" else 0, "thorns": int(rules.weapons.get("thorns", 0)), "equip": rules.equip_ids})
 	hero3 = to3(rules.hero)
 	prince3d.position = hero3
 	var f: Vector2 = rules.facing

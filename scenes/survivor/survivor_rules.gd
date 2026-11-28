@@ -1323,6 +1323,53 @@ static func forge_cost(id: String, lv: int) -> int:
 	return int(FORGE[id].cost) * (lv + 1)
 
 
+## 똥 옷장: 똥전으로 사서 끼우는 장비 (2026-11-28 사용자: "똥전을 모아서 아이템도 착용할 수 있으면").
+## 모자·신발·장신구 한 칸에 하나씩. 끼운 장비는 몸에 보이고 판 시작부터 힘이 돼요.
+const EQUIP_SLOTS := {"hat": "모자", "shoe": "신발", "acc": "장신구"}
+const EQUIP := {
+	"hat_straw": {"slot": "hat", "name": "밀짚모자", "desc": "최대 체력 +15", "cost": 120},
+	"hat_pirate": {"slot": "hat", "name": "해적 모자", "desc": "크리티컬 +6%", "cost": 300},
+	"hat_propeller": {"slot": "hat", "name": "프로펠러 모자", "desc": "이동 속도 +12%", "cost": 450},
+	"hat_toilet": {"slot": "hat", "name": "변기 뚜껑 투구", "desc": "방어력 +12%", "cost": 700},
+	"shoe_slipper": {"slot": "shoe", "name": "삼선 슬리퍼", "desc": "이동 속도 +6%", "cost": 100},
+	"shoe_sneaker": {"slot": "shoe", "name": "번쩍 운동화", "desc": "이동 속도 +10%, 줍는 거리 +15%", "cost": 300},
+	"shoe_spring": {"slot": "shoe", "name": "스프링 신발", "desc": "이동 +8%, 공격 속도 +8%", "cost": 600},
+	"acc_duck": {"slot": "acc", "name": "고무 오리", "desc": "행운 +25% (아이템 똥·크리티컬)", "cost": 150},
+	"acc_scarf": {"slot": "acc", "name": "휴지 목도리", "desc": "체력 회복 +0.5/초", "cost": 350},
+	"acc_plunger": {"slot": "acc", "name": "황금 뚫어뻥", "desc": "공격력 +15%", "cost": 900},
+}
+var equip_ids: Array = []
+
+
+func apply_equip(ids: Array) -> void:
+	equip_ids = ids.duplicate()
+	for id in ids:
+		match String(id):
+			"hat_straw":
+				max_hp += 15.0
+				hp += 15.0
+			"hat_pirate":
+				crit_bonus += 0.06
+			"hat_propeller":
+				bonus.speed += 0.12
+			"hat_toilet":
+				bonus.armor += 0.12
+			"shoe_slipper":
+				bonus.speed += 0.06
+			"shoe_sneaker":
+				bonus.speed += 0.10
+				bonus.magnet += 0.15
+			"shoe_spring":
+				bonus.speed += 0.08
+				bonus.cool = maxf(bonus.cool - 0.08, 0.5)
+			"acc_duck":
+				bonus.luck += 0.25
+			"acc_scarf":
+				bonus.regen += 0.5
+			"acc_plunger":
+				bonus.dmg += 0.15
+
+
 func apply_forge(levels: Dictionary) -> void:
 	for id in levels:
 		var n := int(levels[id])

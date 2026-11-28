@@ -61,6 +61,12 @@ func _setup() -> void:
 	for id in Rules.FORGE:
 		forge[id] = Save.forge_level(id)
 	rules.apply_forge(forge)
+	var eq: Array = []
+	for slot in Rules.EQUIP_SLOTS:
+		var eid := Save.equipped(slot)
+		if eid != "" and Save.equip_owned(eid):
+			eq.append(eid)
+	rules.apply_equip(eq)
 	add_view3d(View)
 	_build_hud()
 

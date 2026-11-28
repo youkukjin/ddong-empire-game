@@ -332,3 +332,16 @@ func _run() -> void:
 	for i in 20:
 		rbn.tick(0.05, Vector2.RIGHT)
 	check(rbn.bean > 5.0 and rbn.puddles.size() >= 8, "방귀 콩: 긴 방귀 꼬리가 따라와요")
+	# 똥 옷장 장비
+	var req = Rules.new(43)
+	var sp0: float = req.bonus.speed
+	var hp0e: float = req.max_hp
+	req.apply_equip(["hat_straw", "shoe_sneaker", "acc_plunger"])
+	check(req.max_hp == hp0e + 15.0 and req.bonus.speed > sp0 and req.bonus.dmg > 1.0, "옷장 장비를 끼우면 판 시작부터 힘이 돼요")
+	Save.set_value("coins", 500, "survivor")
+	check(Save.buy_equip("hat_pirate", 300) and Save.survivor_coins() == 200 and Save.equip_owned("hat_pirate"), "똥전으로 해적 모자를 사요")
+	check(not Save.buy_equip("hat_toilet", 700), "똥전이 모자라면 못 사요")
+	Save.set_equipped("hat", "hat_pirate")
+	check(Save.equipped("hat") == "hat_pirate", "산 모자를 끼워요")
+	Save.set_value("coins", 0, "survivor")
+	Save.set_equipped("hat", "")
