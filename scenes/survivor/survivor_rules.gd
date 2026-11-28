@@ -226,21 +226,23 @@ func _spawn(delta: float, ev: Array) -> void:
 		spawn_enemy(kind, _edge_point())
 
 
-## 화면 바로 밖: 왕자 둘레의 큰 네모 테두리 (3D 카메라가 보는 곳보다 조금 넓어요)
-const SPAWN_HALF := Vector2(920.0, 620.0)
+## 화면 바로 밖: 왕자 둘레의 네모 테두리 (세로 화면 3D 카메라가 보는 곳보다 조금 넓어요.
+## 카메라가 비스듬해서 위쪽이 더 멀리 보여요)
+const SPAWN_MIN := Vector2(-680.0, -1150.0)
+const SPAWN_MAX := Vector2(680.0, 640.0)
 
 func _edge_point() -> Vector2:
-	var t := rng.randf_range(-1.0, 1.0)
+	var t := rng.randf()
 	var p: Vector2
 	match rng.randi() % 4:
 		0:
-			p = Vector2(t * SPAWN_HALF.x, -SPAWN_HALF.y)
+			p = Vector2(lerpf(SPAWN_MIN.x, SPAWN_MAX.x, t), SPAWN_MIN.y)
 		1:
-			p = Vector2(t * SPAWN_HALF.x, SPAWN_HALF.y)
+			p = Vector2(lerpf(SPAWN_MIN.x, SPAWN_MAX.x, t), SPAWN_MAX.y)
 		2:
-			p = Vector2(-SPAWN_HALF.x, t * SPAWN_HALF.y)
+			p = Vector2(SPAWN_MIN.x, lerpf(SPAWN_MIN.y, SPAWN_MAX.y, t))
 		_:
-			p = Vector2(SPAWN_HALF.x, t * SPAWN_HALF.y)
+			p = Vector2(SPAWN_MAX.x, lerpf(SPAWN_MIN.y, SPAWN_MAX.y, t))
 	# 성벽 밖이면 반대쪽으로 (적이 벽을 뚫고 오지 않게)
 	var half := ARENA / 2.0 - 60.0
 	var q := hero + p

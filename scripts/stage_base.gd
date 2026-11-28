@@ -14,6 +14,7 @@ const StageView := preload("res://scripts/view3d/stage_view.gd")
 const BackdropArt := preload("res://scripts/art/backdrop.gd")
 const Sound := preload("res://scripts/audio/sound.gd")
 const PrinceArt := preload("res://scripts/art/prince.gd")
+const ScreenMode := preload("res://scripts/screen_mode.gd")
 
 const CREAM := Cute.CREAM
 const BROWN := Cute.COCOA
@@ -31,6 +32,7 @@ var hud_root: Control
 var overlay_root: Control
 var pause_button: Button
 
+var portrait_layout := false   # 세로 화면으로 만든 장이면 true (아직 아닌 장은 가로로 돌려요)
 var view3d: Node3D = null       # 3D 화면 (제안). 규칙과 터치는 2D 화면 좌표 그대로예요.
 
 var _pages: Array = []
@@ -39,6 +41,10 @@ var _pages_done: Callable
 
 
 func _ready() -> void:
+	if portrait_layout:
+		ScreenMode.portrait(get_tree())
+	else:
+		ScreenMode.landscape(get_tree())
 	Sound.ensure()
 	Session.restore()
 	if chapter > 0:
@@ -66,7 +72,7 @@ func _ready() -> void:
 			if c.get_script() == BackdropArt or c.get_script() == PrinceArt:
 				c.visible = false
 	pause_button = make_button("II", Vector2(84, 76), 36, Cute.PINK)
-	pause_button.position = Vector2(1186, 10)
+	pause_button.position = Vector2(screen_size().x - 94, 10)
 	pause_button.pressed.connect(toggle_pause)
 	hud_root.add_child(pause_button)
 	_refresh_pause_button()
@@ -407,7 +413,8 @@ func show_panel(title: String, body: String, buttons: Array, extra: Control = nu
 
 	var panel := PanelContainer.new()
 	panel.add_theme_stylebox_override("panel", Cute.panel_style())
-	panel.custom_minimum_size = Vector2(820, 0)
+	var panel_w := minf(820.0, screen_size().x - 40.0)
+	panel.custom_minimum_size = Vector2(panel_w, 0)
 	var center := CenterContainer.new()
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -431,7 +438,7 @@ func show_panel(title: String, body: String, buttons: Array, extra: Control = nu
 		b.text = body
 		b.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		b.custom_minimum_size = Vector2(756, 0)
+		b.custom_minimum_size = Vector2(panel_w - 64.0, 0)
 		b.add_theme_font_size_override("font_size", 26)
 		b.add_theme_color_override("font_color", BROWN)
 		box.add_child(b)
@@ -443,7 +450,8 @@ func show_panel(title: String, body: String, buttons: Array, extra: Control = nu
 	var colors := [Cute.MINT, Cute.PEACH, Cute.SKY, Cute.LILAC]
 	for i in buttons.size():
 		var entry: Array = buttons[i]
-		var btn := make_button(entry[0], Vector2(180, 80), 28, colors[i % colors.size()])
+		var bw := minf(180.0, (panel_w - 48.0 - 16.0 * (buttons.size() - 1)) / buttons.size())
+		var btn := make_button(entry[0], Vector2(bw, 80), 28, colors[i % colors.size()])
 		btn.name = "Btn_" + String(entry[0]).replace(" ", "_")
 		btn.pressed.connect(entry[1])
 		row.add_child(btn)
@@ -458,6 +466,11 @@ func clear_overlay() -> void:
 ## 지금 떠 있는 창의 버튼을 이름으로 찾아요 (자동 확인용).
 func find_overlay_button(text: String) -> Button:
 	return overlay_root.find_child("Btn_" + text.replace(" ", "_"), true, false) as Button
+
+
+## 지금 화면 크기 (세로 720x1280 또는 가로 1280x720)
+func screen_size() -> Vector2:
+	return Vector2(get_tree().root.content_scale_size)
 
 
 func make_button(text: String, min_size: Vector2, font_size: int, color := BUTTON_BROWN) -> Button:

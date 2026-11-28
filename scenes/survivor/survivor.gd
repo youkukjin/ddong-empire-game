@@ -10,7 +10,7 @@ extends "res://scripts/stage_base.gd"
 const Rules := preload("res://scenes/survivor/survivor_rules.gd")
 const View := preload("res://scenes/survivor/view3d_survivor.gd")
 const SELECT_SCENE := "res://scenes/title/chapter_select.tscn"
-const CENTER := Vector2(640, 400)
+const CENTER := Vector2(360, 640)    # 세로 화면 가운데
 const JOY_R := 90.0
 
 var rules
@@ -31,6 +31,10 @@ var boss_bar: ProgressBar
 var boss_label: Label
 
 
+func _init() -> void:
+	portrait_layout = true
+
+
 func _setup() -> void:
 	rules = Rules.new()
 	add_view3d(View)
@@ -47,22 +51,22 @@ func _intro_pages() -> Array:
 # ------------------------------------------------------------------ 화면 위 표시
 
 func _build_hud() -> void:
-	xp_bar = _bar(Vector2(0, 0), Vector2(1280, 16), Color(1, 0.8, 0.2))
+	xp_bar = _bar(Vector2(0, 0), Vector2(720, 16), Color(1, 0.8, 0.2))
 	hud_bar(Vector2(14, 26), Vector2(330, 84))
 	hp_bar = _bar(Vector2(28, 40), Vector2(300, 24), Color(0.95, 0.3, 0.3))
 	info_label = hud_label(Vector2(28, 66), 26)
-	time_label = hud_label(Vector2(560, 22), 50)
-	time_label.size = Vector2(160, 60)
+	time_label = hud_label(Vector2(380, 30), 54)
+	time_label.size = Vector2(220, 64)
 	time_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	boss_label = hud_label(Vector2(340, 86), 26, Color(1, 0.75, 0.75))
-	boss_label.size = Vector2(600, 30)
+	boss_label = hud_label(Vector2(40, 122), 26, Color(1, 0.75, 0.75))
+	boss_label.size = Vector2(640, 30)
 	boss_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	boss_bar = _bar(Vector2(340, 118), Vector2(600, 20), Color(0.7, 0.2, 0.85))
+	boss_bar = _bar(Vector2(40, 156), Vector2(640, 22), Color(0.7, 0.2, 0.85))
 	boss_label.visible = false
 	boss_bar.visible = false
 	god_button = make_button("각성!", Vector2(180, 110), 40, Color(1, 0.78, 0.2))
 	god_button.name = "Btn_각성"
-	god_button.position = Vector2(1080, 590)
+	god_button.position = Vector2(520, 1150)
 	god_button.pressed.connect(_on_awaken)
 	hud_root.add_child(god_button)
 	joy = Joystick.new()
@@ -202,7 +206,7 @@ func _on_event(ev: Dictionary) -> void:
 			Sound.play("power", 1.2, -3.0)
 		"boss":
 			Sound.play("roar", 1.0, 0.0)
-			impact(CENTER + Vector2(0, -150), ev.text, Color(1, 0.35, 0.35), 1.6)
+			impact(CENTER + Vector2(0, -260), ev.text, Color(1, 0.35, 0.35), 1.6)
 
 
 func _play_input(event: InputEvent) -> void:
@@ -257,14 +261,14 @@ func _show_cards() -> void:
 	overlay_root.add_child(dim)
 	var t := Label.new()
 	t.text = "레벨 업! (Lv %d) 하나 골라요" % rules.level
-	t.position = Vector2(0, 70)
-	t.size = Vector2(1280, 70)
+	t.position = Vector2(0, 150)
+	t.size = Vector2(720, 70)
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	Cute.style_label(t, 52, Color(1, 0.85, 0.25), Cute.COCOA, 12)
 	dim.add_child(t)
-	var row := HBoxContainer.new()
-	row.position = Vector2(85, 190)
-	row.size = Vector2(1110, 380)
+	var row := VBoxContainer.new()
+	row.position = Vector2(50, 260)
+	row.size = Vector2(620, 820)
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", 30)
 	dim.add_child(row)
@@ -274,7 +278,7 @@ func _show_cards() -> void:
 		var tag := ""
 		if c.kind == "weapon":
 			tag = "\n\n(%s)" % Rules.WEAPONS[c.id].origin
-		var b := make_button("%s\n\n%s%s" % [c.title, c.desc, tag], Vector2(330, 360), 30, colors[i % 3])
+		var b := make_button("%s\n%s%s" % [c.title, c.desc, tag.replace("\n\n", "  ")], Vector2(620, 240), 34, colors[i % 3])
 		b.name = "Card%d" % i
 		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		b.pressed.connect(choose_card.bind(i))

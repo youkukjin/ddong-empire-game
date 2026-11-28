@@ -8,7 +8,7 @@ const Prince3D := preload("res://scripts/view3d/prince_3d.gd")
 const Rules := preload("res://scenes/survivor/survivor_rules.gd")
 
 const K := 0.01
-const CAM_DIST := 11.0
+const CAM_DIST := 11.2
 const POOP := Color(0.56, 0.33, 0.15)
 const STEEL := Color(0.62, 0.66, 0.74)
 const STONE := Color(0.4, 0.36, 0.4)
@@ -34,7 +34,7 @@ var _t := 0.0
 
 
 func _init() -> void:
-	pitch_deg = 54.0
+	pitch_deg = 70.0
 	fov_deg = 40.0
 
 
@@ -68,6 +68,7 @@ func _ready() -> void:
 		f.visible = false
 		add_child(f)
 		_flies.append(f)
+	camera.keep_aspect = Camera3D.KEEP_WIDTH
 	_place_camera()
 
 
@@ -79,7 +80,7 @@ func to3(w: Vector2, h := 0.0) -> Vector3:
 
 func screen_of(w: Vector2) -> Vector2:
 	if not camera:
-		return Vector2(640, 400)
+		return Vector2(360, 640)
 	return camera.unproject_position(to3(w, 0.6))
 
 
@@ -121,7 +122,7 @@ void fragment() {
 	vec2 f = fract(row);
 	float edge = min(min(f.x, 1.0 - f.x), min(f.y, 1.0 - f.y));
 	float tone = 0.8 + h21(cell) * 0.35;
-	vec2 s = FRAGCOORD.xy * (720.0 / VIEWPORT_SIZE.y);
+	vec2 s = FRAGCOORD.xy * (720.0 / min(VIEWPORT_SIZE.x, VIEWPORT_SIZE.y));
 	float grain = h21(vec2(floor((s.x * 0.8 + s.y * 0.6) / 2.6), floor((s.y * 0.8 - s.x * 0.6) / 30.0))) - 0.5;
 	vec3 c = stone * tone * (1.0 + grain * 0.25);
 	c = mix(vec3(0.12, 0.08, 0.1), c, smoothstep(0.02, 0.07, edge));

@@ -16,6 +16,7 @@ const StageView := preload("res://scripts/view3d/stage_view.gd")
 const Prince3D := preload("res://scripts/view3d/prince_3d.gd")
 const Kit := preload("res://scripts/view3d/kit3d.gd")
 const Dragon3D := preload("res://scripts/view3d/dragon_3d.gd")
+const ScreenMode := preload("res://scripts/screen_mode.gd")
 
 @onready var start_button: Button = %StartButton
 @onready var hard_button: Button = %HardButton
@@ -24,6 +25,7 @@ const Dragon3D := preload("res://scripts/view3d/dragon_3d.gd")
 
 
 func _ready() -> void:
+	ScreenMode.portrait(get_tree())
 	Sound.ensure()
 	if StageView.can_show():
 		$Background.visible = false

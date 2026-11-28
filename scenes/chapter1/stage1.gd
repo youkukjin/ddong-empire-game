@@ -61,6 +61,8 @@ var _pause_button: Button
 
 
 func _ready() -> void:
+	# 아직 세로로 바꾸지 않은 장이라 가로로 돌려요
+	preload("res://scripts/screen_mode.gd").landscape(get_tree())
 	Sound.ensure()
 	Session.restore()
 	Save.set_last_chapter(1)

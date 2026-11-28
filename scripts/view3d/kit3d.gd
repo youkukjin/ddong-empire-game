@@ -30,7 +30,7 @@ float h21(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453
 
 void fragment() {
 	// 화면 크기와 상관없이 같은 굵기의 크레용 결 (720줄 기준)
-	vec2 s = FRAGCOORD.xy * (720.0 / VIEWPORT_SIZE.y);
+	vec2 s = FRAGCOORD.xy * (720.0 / min(VIEWPORT_SIZE.x, VIEWPORT_SIZE.y));
 	float stroke = h21(vec2(floor((s.x * 0.8 + s.y * 0.6) / 2.6), floor((s.y * 0.8 - s.x * 0.6) / 30.0)));
 	float stroke2 = h21(vec2(floor((s.x * 0.5 - s.y * 0.86) / 3.4), floor((s.y * 0.5 + s.x * 0.86) / 22.0)) + 7.0);
 	float paper = h21(floor(s / 1.6));
@@ -58,7 +58,7 @@ void vertex() {
 	if (l > 0.00001) {
 		off /= l;
 	}
-	clip.xy += off * width_px * 2.0 / VIEWPORT_SIZE * clip.w * (VIEWPORT_SIZE.y / 720.0);
+	clip.xy += off * width_px * 2.0 / VIEWPORT_SIZE * clip.w * (min(VIEWPORT_SIZE.x, VIEWPORT_SIZE.y) / 720.0);
 	POSITION = clip;
 }
 
