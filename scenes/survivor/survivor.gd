@@ -22,6 +22,11 @@ var _touching := false
 var _origin := Vector2.ZERO
 var _finger := Vector2.ZERO
 var _hit_sound_cd := 0.0
+var _gag_cd := 0.0
+var _fart_t := 8.0
+const KILL_GAGS := ["뽀직!", "으악 냄새!", "엄마~!", "꾸에엑", "내 똥꼬!", "퐁!", "변기로 돌아갈래!", "물 내려줘~", "뿌직!"]
+const HURT_GAGS := ["아야 내 엉덩이!", "똥꼬 아파!", "으앙!", "냄새나!", "반칙이야!"]
+const LOSE_GAGS := ["똥꼬에 힘이 빠졌어요...", "변기로 휘리릭~", "잠깐 화장실 다녀올게요!", "으앙, 물 내려가요~"]
 var _crit_cd := 0.0
 var _shown_level := 1
 
@@ -44,6 +49,10 @@ func _init() -> void:
 
 func _setup() -> void:
 	rules = Rules.new()
+	var hid := Save.survivor_hero()
+	if not Save.hero_unlocked(hid, int(Rules.HEROES.get(hid, {"cost": 0}).cost)):
+		hid = "kid"
+	rules.set_hero(hid)
 	var forge := {}
 	for id in Rules.FORGE:
 		forge[id] = Save.forge_level(id)
@@ -189,6 +198,16 @@ func _on_play_started() -> void:
 
 func _play_process(delta: float) -> void:
 	_hit_sound_cd -= delta
+	_gag_cd -= delta
+	# 개그: 오래 걸으면 가끔 뿡! (방귀 똥은 더 자주)
+	if move.length() > 0.1 or Input.is_anything_pressed():
+		_fart_t -= delta
+		if _fart_t <= 0.0:
+			_fart_t = randf_range(6.0, 12.0) * (0.5 if rules.hero_id == "gassy" else 1.0)
+			Sound.play("fart", randf_range(0.85, 1.25), -5.0)
+			if view3d:
+				view3d.fart_puff()
+				view3d.comic(CENTER + Vector2(-80, -40), ["뿡!", "뿌웅~", "뽀옹!", "푸쉬익"].pick_random(), Color(0.7, 0.9, 0.4), 0.5)
 	_crit_cd -= delta
 	var keys := Vector2(
 		float(Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT)) - float(Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT)),
@@ -226,6 +245,10 @@ func _on_event(ev: Dictionary) -> void:
 		"kill":
 			if view3d:
 				view3d.on_kill(ev.enemy)
+				# 개그: 가끔 쓰러지며 한마디
+				if not ev.enemy.boss and _gag_cd <= 0.0 and randf() < 0.08:
+					_gag_cd = 0.7
+					view3d.comic(world_to_screen(ev.enemy.pos) + Vector2(0, -50), KILL_GAGS.pick_random(), Color(1, 0.9, 0.6), 0.55)
 			if ev.enemy.boss:
 				impact(world_to_screen(ev.enemy.pos), "콰앙!!", Color(1, 0.6, 0.2), 2.0)
 		"swing":
@@ -294,11 +317,16 @@ func _on_event(ev: Dictionary) -> void:
 		"hurt":
 			Sound.play("hurt", 1.0, -4.0)
 			_hurt_number(-float(ev.dmg), Color(1, 0.3, 0.25))
+			if view3d and _gag_cd <= 0.0 and randf() < 0.3:
+				_gag_cd = 1.2
+				view3d.comic(CENTER + Vector2(60, -170), HURT_GAGS.pick_random(), Color(1, 0.7, 0.7), 0.6)
 			shake(5.0)
 			if view3d:
 				view3d.flash(Color(1, 0.2, 0.2), 0.25)
 		"levelup":
 			Sound.play("power", 1.2, -3.0)
+			if randf() < 0.5:
+				Sound.play("fart", 1.3, -6.0)
 		"boss":
 			Sound.play("roar", 1.0, 0.0)
 			if ev.text != "":
@@ -491,6 +519,7 @@ func _show_result() -> void:
 		lines += "\n순위 %d위!%s" % [place, " 새 기록!" if best else ""]
 	lines += "\n\n" + rank_text(place)
 	var title := "무한 모드에서 쓰러졌어요!" if win else "쓰러졌어요!"
+	lines = LOSE_GAGS.pick_random() + "\n" + lines
 	if not win:
 		lines += "\n팁: 멈추지 말고 빙글빙글 돌면서 구슬을 모아요"
 	var buttons: Array = []

@@ -19,9 +19,9 @@ const BOSS_TIME := 360.0
 ## 한 판 6분, 중간 보스는 2분마다 (2026-11-28 사용자: "전체 6분으로 하고 2분마다 중간 보스").
 ## 2분 박쥐 왕, 4분 골렘과 드래곤이 한꺼번에, 6분 대마왕은 무사 대장을 데리고 와요.
 const MID_BOSSES := [
-	[120.0, "bat", "똥 박쥐 왕이 날아왔어요!"],
-	[240.0, "golem", "바위 똥 골렘과 보라 드래곤이 함께 왔어요!"],
-	[240.0, "wyrm", ""],
+	[120.0, "bat", "똥 박쥐 왕: 킁킁, 냄새 맡고 왔다!"],
+	[240.0, "golem", "바위 똥 골렘: 쿵... 나 변비야..."],
+	[240.0, "wyrm", "보라 드래곤: 화장실 어디야!!"],
 	[360.0, "captain", ""],
 ]
 const BOSS_NAMES := {"bat": "똥 박쥐 왕", "captain": "똥 무사 대장", "golem": "바위 똥 골렘", "wyrm": "꼬마 보라 드래곤", "demon": "똥 대마왕"}
@@ -115,6 +115,52 @@ func _init(seed_value := -1) -> void:
 
 
 # ------------------------------------------------------------------ 밖에서 부르는 곳
+
+## 고를 수 있는 똥 캐릭터 (2026-11-28 사용자: "초반에는 약한 똥들, 똥 왕자는 똥전으로 해금, 왕자 능력이 제일 좋게").
+## 캐릭터마다 체력, 이동 속도, 시작 무기, 특기가 달라요. cost 0이면 처음부터 열려 있어요.
+const HEROES := {
+	"kid": {"name": "꼬마 똥", "hp": 70.0, "speed": 1.0, "weapon": "bomb", "cost": 0,
+		"skill": "무럭무럭: 경험치 +15%", "desc": "작고 약하지만 쑥쑥 자라요"},
+	"runny": {"name": "설사 똥", "hp": 55.0, "speed": 1.3, "weapon": "flies", "cost": 0,
+		"skill": "후다닥: 이동 속도 +30%", "desc": "제일 빠르지만 몸이 약해요"},
+	"gassy": {"name": "방귀 똥", "hp": 80.0, "speed": 0.95, "weapon": "cloud", "cost": 300,
+		"skill": "뿡뿡: 공격 범위 +20%", "desc": "둘레를 지독한 방귀로 감싸요"},
+	"icy": {"name": "얼음 똥", "hp": 75.0, "speed": 1.0, "weapon": "ice", "cost": 500,
+		"skill": "꽁꽁: 공격 속도 +10%", "desc": "얼음 조각으로 적을 얼려요"},
+	"rock": {"name": "돌 똥", "hp": 130.0, "speed": 0.85, "weapon": "fist", "cost": 800,
+		"skill": "단단: 방어력 +15%", "desc": "느리지만 엄청 튼튼해요"},
+	"prince": {"name": "똥 왕자", "hp": 120.0, "speed": 1.1, "weapon": "sword", "cost": 2000,
+		"skill": "왕의 힘: 공격력+25%, 크리티컬+8%, 각성 2배", "desc": "철퇴도 들고 시작! 똥 제국에서 가장 강해요"},
+}
+var hero_id := "prince"
+var crit_bonus := 0.0
+var god_rate := 1.0
+
+
+func set_hero(id: String) -> void:
+	if not HEROES.has(id):
+		return
+	hero_id = id
+	var h: Dictionary = HEROES[id]
+	max_hp = float(h.hp)
+	hp = max_hp
+	bonus.speed = float(h.speed)
+	weapons = {String(h.weapon): 1}
+	match id:
+		"kid":
+			bonus.xp += 0.15
+		"gassy":
+			bonus.area += 0.2
+		"icy":
+			bonus.cool -= 0.1
+		"rock":
+			bonus.armor += 0.15
+		"prince":
+			bonus.dmg += 0.25
+			crit_bonus = 0.08
+			god_rate = 2.0
+			weapons["chain"] = 1
+
 
 ## 광고 보고 이어하기 (한 판에 한 번): 체력 절반으로 일어나 주변 적을 밀어내요
 var revived := false
@@ -328,7 +374,7 @@ func _spawn(delta: float, ev: Array) -> void:
 	if not boss_spawned and time >= BOSS_TIME:
 		boss_spawned = true
 		var d := spawn_enemy("demon", _edge_point())
-		ev.append({"type": "boss", "enemy": d, "text": "똥 대마왕이 나타났어요!"})
+		ev.append({"type": "boss", "enemy": d, "text": "똥 대마왕: 내 황금 변기를 지켜라!"})
 	if endless:
 		_endless_boss_t += delta
 		if _endless_boss_t >= ENDLESS_EVERY:
@@ -502,14 +548,14 @@ const CRIT_MULT := 2.5
 
 
 func crit_chance() -> float:
-	return 0.08 + (bonus.luck - 1.0) * 0.1 + int(traits.get("trait_atk", 0)) * 0.05
+	return 0.08 + crit_bonus + (bonus.luck - 1.0) * 0.1 + int(traits.get("trait_atk", 0)) * 0.05
 
 
 func _on_kill(e: Dictionary, ev: Array) -> void:
 	enemies.erase(e)
 	kills += 1
 	if god_left <= 0.0:    # 각성 중에 물리친 적은 게이지에 안 쳐요
-		god_gauge = minf(god_gauge + (8.0 if e.boss else 1.0) / GOD_KILLS, 1.0)
+		god_gauge = minf(god_gauge + (8.0 if e.boss else 1.0) * god_rate / GOD_KILLS, 1.0)
 	var value := 1
 	match e.kind:
 		"brute":

@@ -8,6 +8,7 @@ const Chapters := preload("res://scripts/chapters.gd")
 const TITLE_SCENE := "res://scenes/title/title_screen.tscn"
 const SURVIVOR_SCENE := "res://scenes/survivor/survivor.tscn"
 const FORGE_SCENE := "res://scenes/survivor/forge.tscn"
+const HERO_SCENE := "res://scenes/survivor/hero_select.tscn"
 const Cute := preload("res://scripts/art/cute.gd")
 const ScreenMode := preload("res://scripts/screen_mode.gd")
 
@@ -17,58 +18,57 @@ func _ready() -> void:
 	Sound.ensure()
 	add_child(Cute.Paper.new())
 	var title := Label.new()
-	title.text = "장 고르기"
+	title.text = "무엇을 할까요?"
 	title.position = Vector2(0, 30)
 	title.size = Vector2(720, 70)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	Cute.style_label(title, 58, Cute.PINK.darkened(0.15), Color.WHITE, 12)
 	add_child(title)
-	var grid := GridContainer.new()
-	grid.columns = 2
-	grid.position = Vector2(30, 130)
-	grid.add_theme_constant_override("h_separation", 20)
-	grid.add_theme_constant_override("v_separation", 20)
-	add_child(grid)
+	# 이야기: 1~8장을 한 칸으로 (2026-11-28 사용자: "1~8장까지 보이게 하지 말고 한 칸으로 진행 사항 알 수 있게")
+	var cleared := 0
+	var stars_total := 0
 	for n in range(1, Chapters.COUNT + 1):
-		grid.add_child(_chapter_button(n))
+		if Save.best_stars(n) > 0:
+			cleared += 1
+		stars_total += Save.best_stars(n)
+	var next := Save.continue_chapter(Chapters.COUNT)
+	var dots := ""
+	for n in range(1, Chapters.COUNT + 1):
+		dots += "●" if Save.best_stars(n) > 0 else ("◎" if n == next else "○")
+	var story_text := "이야기\n%d장 %s\n%s   %d/%d장  ★%d" % [next, Chapters.title(next), dots, cleared, Chapters.COUNT, stars_total]
+	if cleared >= Chapters.COUNT:
+		story_text = "이야기 (다 깼어요!)\n다시 보기: %d장 %s\n%s   ★%d" % [next, Chapters.title(next), dots, stars_total]
+	var story := Cute.button(story_text, Vector2(660, 300), 34, Cute.PEACH)
+	story.name = "Btn_이야기"
+	story.position = Vector2(30, 140)
+	story.pressed.connect(_open.bind(next))
+	add_child(story)
 	var back := Cute.button("← 처음으로", Vector2(260, 76), 30, Cute.CARAMEL)
 	back.name = "Btn_처음으로"
 	back.position = Vector2(230, 1160)
 	back.pressed.connect(func() -> void: get_tree().change_scene_to_file(TITLE_SCENE))
 	add_child(back)
-	# 서바이버 모드 (제안): 처음부터 열려 있어요
+	# 서바이버 모드: 처음부터 열려 있어요
 	var coins := Save.survivor_coins()
 	var best := Save.survivor_best()
 	var label := "똥제국 서바이버!"
 	if coins > 0 or best > 0.0:
-		label += "  (최고 %d:%02d, 똥전 %d)" % [int(best) / 60, int(best) % 60, coins]
-	var surv := Cute.button(label.replace("  (", "\n("), Vector2(450, 130), 30, Color(1, 0.72, 0.25))
+		label += "\n(최고 %d:%02d, 똥전 %d)" % [int(best) / 60, int(best) % 60, coins]
+	var surv := Cute.button(label, Vector2(660, 230), 40, Color(1, 0.72, 0.25))
 	surv.name = "Btn_서바이버"
-	surv.position = Vector2(30, 1000)
+	surv.position = Vector2(30, 480)
 	surv.pressed.connect(func() -> void: get_tree().change_scene_to_file(SURVIVOR_SCENE))
 	add_child(surv)
-	var forge := Cute.button("똥 대장간", Vector2(200, 130), 30, Color(0.62, 0.5, 0.4))
+	var heroes := Cute.button("캐릭터", Vector2(320, 150), 34, Cute.MINT)
+	heroes.name = "Btn_캐릭터"
+	heroes.position = Vector2(30, 750)
+	heroes.pressed.connect(func() -> void: get_tree().change_scene_to_file(HERO_SCENE))
+	add_child(heroes)
+	var forge := Cute.button("똥 대장간", Vector2(320, 150), 34, Color(0.62, 0.5, 0.4))
 	forge.name = "Btn_대장간"
-	forge.position = Vector2(490, 1000)
+	forge.position = Vector2(370, 750)
 	forge.pressed.connect(func() -> void: get_tree().change_scene_to_file(FORGE_SCENE))
 	add_child(forge)
-
-
-func _chapter_button(n: int) -> Button:
-	var open := Save.is_unlocked(n) and Chapters.is_built(n)
-	var stars := Save.best_stars(n)
-	var text := "%d장\n%s\n" % [n, Chapters.title(n)]
-	if not Chapters.is_built(n):
-		text += "만드는 중"
-	elif not Save.is_unlocked(n):
-		text += "잠김"
-	else:
-		text += "★".repeat(stars) + "☆".repeat(3 - stars)
-	var b := Cute.button(text, Vector2(320, 195), 28, Cute.CHAPTER_COLORS[n - 1] if open else Cute.LOCKED)
-	b.name = "Chapter%d" % n
-	b.disabled = not open
-	b.pressed.connect(_open.bind(n))
-	return b
 
 
 func _open(n: int) -> void:

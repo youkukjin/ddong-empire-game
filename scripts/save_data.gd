@@ -110,6 +110,30 @@ static func record_survivor(coins: int, survived: float, cleared: bool) -> bool:
 	return false
 
 
+## 서바이버 캐릭터: 고른 캐릭터와 해금한 캐릭터 (처음엔 꼬마 똥)
+static func survivor_hero() -> String:
+	return String(get_value("hero", "kid", "survivor"))
+
+
+static func set_survivor_hero(id: String) -> void:
+	set_value("hero", id, "survivor")
+
+
+static func hero_unlocked(id: String, cost: int) -> bool:
+	return cost <= 0 or bool(get_value("hero_" + id, false, "survivor"))
+
+
+## 똥전이 충분하면 빼고 캐릭터를 열어요. 열었으면 true.
+static func unlock_hero(id: String, cost: int) -> bool:
+	if hero_unlocked(id, cost):
+		return true
+	if survivor_coins() < cost:
+		return false
+	set_value("coins", survivor_coins() - cost, "survivor")
+	set_value("hero_" + id, true, "survivor")
+	return true
+
+
 ## 똥 대장간: 똥전으로 산 영구 강화 단계 (0부터)
 static func forge_level(id: String) -> int:
 	return int(get_value("forge_" + id, 0, "survivor"))

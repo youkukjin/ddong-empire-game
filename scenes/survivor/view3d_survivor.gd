@@ -5,6 +5,7 @@ extends "res://scripts/view3d/stage_view.gd"
 
 const Kit := preload("res://scripts/view3d/kit3d.gd")
 const Prince3D := preload("res://scripts/view3d/prince_3d.gd")
+const HeroModels := preload("res://scenes/survivor/hero_models.gd")
 const Rules := preload("res://scenes/survivor/survivor_rules.gd")
 
 const K := 0.01
@@ -61,8 +62,7 @@ func _ready() -> void:
 	env.fog_density = 0.045
 	env.fog_sky_affect = 0.0
 	_build_yard()
-	prince3d = Prince3D.new()
-	prince3d.turn_deg = 0.0
+	prince3d = HeroModels.make("prince")
 	prince3d.scale = Vector3.ONE * 0.62
 	add_child(prince3d)
 	_build_enemy_meshes()
@@ -806,6 +806,15 @@ func on_thorns(radius: float) -> void:
 		_fx.append({"node": sp, "life": 0.3, "max": 0.3, "kind": "thorn", "dir": d, "r": radius * K})
 
 
+## 개그: 엉덩이 뒤로 초록 방귀 뭉치 뿡!
+func fart_puff() -> void:
+	var back := -Vector3(sin(prince3d.rotation.y), 0, cos(prince3d.rotation.y))
+	for i in 3:
+		var sz := 0.25 + i * 0.1
+		var puff := Kit.sphere(self, 1.0, Color(0.6, 0.8, 0.3), hero3 + back * (0.5 + i * 0.3) + Vector3(0, 0.3, 0), Vector3.ONE * sz, 0.2, true)
+		_fx.append({"node": puff, "life": 0.8, "max": 0.8, "kind": "puff", "s": sz * 1.6})
+
+
 func on_kill(e: Dictionary) -> void:
 	if _debris.size() < 70:
 		burst(to3(e.pos, 0.4), Color(0.55, 0.3, 0.12), 4, 0.7)
@@ -859,8 +868,23 @@ func _step_fx(delta: float) -> void:
 
 # ------------------------------------------------------------------ 매 프레임
 
+## 고른 캐릭터 모습으로 바꿔요
+func _swap_hero(id: String) -> void:
+	var old := prince3d
+	prince3d = HeroModels.make(id)
+	prince3d.set_meta("hero", id)
+	prince3d.scale = Vector3.ONE * 0.62
+	add_child(prince3d)
+	prince3d.position = old.position
+	old.queue_free()
+
+
 func sync(rules, delta: float) -> void:
 	_t += delta
+	if prince3d.get_meta("hero", "prince") != rules.hero_id:
+		_swap_hero(rules.hero_id)
+	HeroModels.apply_gear(prince3d, {"armor": int(rules.passives.get("armor", 0)), "cape": int(rules.passives.get("cape", 0)),
+		"crown": int(rules.passives.get("crown", 0)), "thorns": int(rules.weapons.get("thorns", 0))})
 	hero3 = to3(rules.hero)
 	prince3d.position = hero3
 	var f: Vector2 = rules.facing

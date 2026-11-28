@@ -204,7 +204,7 @@ func _duck(sec: float) -> void:
 # ------------------------------------------------------------------ 효과음 만들기
 
 const SFX_NAMES := ["click", "page", "hit", "boom", "hurt", "coin", "miss", "power", "flash", "build",
-	"swing", "jump", "duck", "warn", "fire", "roar", "clang", "win", "fail", "laser"]
+	"swing", "jump", "duck", "warn", "fire", "roar", "clang", "win", "fail", "laser", "fart"]
 
 
 static func sfx_stream(sfx_name: String) -> AudioStreamWAV:
@@ -314,6 +314,17 @@ static func _build_sfx(n: String) -> PackedFloat32Array:
 			_kick(b, RATE, 0.0, 0.9)
 			_kick(b, RATE, 0.75, 1.0)
 			_noise(b, RATE, r, 0.75, 0.9, 0.35, 0.85, 3.5, 0.0)
+		"fart":
+			# 뿌우웅~ (낮은 톱니가 떨리며 내려가요. 개그용)
+			b = _buf(0.5, RATE)
+			var ph := 0.0
+			for i in int(0.45 * RATE):
+				var t := float(i) / RATE
+				var f := 95.0 - t * 60.0 + sin(t * 70.0) * 18.0
+				ph += f / RATE
+				var env := minf(t * 40.0, 1.0) * maxf(1.0 - t / 0.45, 0.0)
+				b[i] += ((ph - floorf(ph)) * 2.0 - 1.0) * 0.5 * env
+			_noise(b, RATE, r, 0.0, 0.42, 0.18, 0.15, 4, 0.0)
 		"fail":
 			b = _buf(1.4, RATE)
 			var fn := [67, 63, 60, 55]
