@@ -9,6 +9,7 @@ extends "res://scripts/stage_base.gd"
 
 const Rules := preload("res://scenes/survivor/survivor_rules.gd")
 const View := preload("res://scenes/survivor/view3d_survivor.gd")
+const SkillCard := preload("res://scenes/survivor/skill_card.gd")
 const SELECT_SCENE := "res://scenes/title/chapter_select.tscn"
 const CENTER := Vector2(360, 640)    # 세로 화면 가운데
 const JOY_R := 90.0
@@ -207,9 +208,10 @@ func _on_event(ev: Dictionary) -> void:
 			if view3d:
 				view3d.on_boom(ev.pos, ev.radius)
 		"beam":
-			Sound.play("flash", randf_range(1.1, 1.3), -10.0)
+			Sound.play("fire", randf_range(0.8, 0.95), -4.0)
+			Sound.play("flash", randf_range(0.9, 1.1), -8.0)
 			if view3d:
-				view3d.on_beam(ev.from, ev.dir, ev.length, ev.width, ev.evolved)
+				view3d.on_beam(ev.from, ev.dir, ev.length, ev.width, ev.evolved, ev.hits)
 		"bolt":
 			Sound.play("boom", randf_range(1.3, 1.6), -10.0)
 			if view3d:
@@ -300,22 +302,22 @@ func _show_cards() -> void:
 	Cute.style_label(t, 52, Color(1, 0.85, 0.25), Cute.COCOA, 12)
 	dim.add_child(t)
 	var row := VBoxContainer.new()
-	row.position = Vector2(50, 260)
-	row.size = Vector2(620, 820)
+	row.position = Vector2(40, 250)
+	row.size = Vector2(640, 840)
+	row.add_theme_constant_override("separation", 26)
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	row.add_theme_constant_override("separation", 30)
 	dim.add_child(row)
-	var colors := [Cute.MINT, Cute.PEACH, Cute.SKY]
 	for i in rules.choices.size():
 		var c: Dictionary = rules.choices[i]
-		var col: Color = colors[i % 3]
-		if c.kind == "evolve":
-			col = Color(1, 0.78, 0.2)
-		var b := make_button("%s\n%s" % [c.title, c.desc], Vector2(620, 240), 34, col)
+		var b := SkillCard.new(c, int(c.get("level", 0)), int(c.get("max", Rules.MAX_LEVEL)))
 		b.name = "Card%d" % i
-		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		b.pressed.connect(choose_card.bind(i))
 		row.add_child(b)
+		# 한 장씩 톡톡 튀어나와요
+		b.modulate.a = 0.0
+		var tw := b.create_tween()
+		tw.tween_interval(0.08 * i)
+		tw.tween_property(b, "modulate:a", 1.0, 0.15)
 
 
 func choose_card(i: int) -> void:

@@ -509,25 +509,47 @@ func on_bhit(pos: Vector2, evo: bool) -> void:
 	shake(0.03, 0.08)
 
 
-## 보라 광선 (진화하면 무지개)
-func on_beam(from: Vector2, dir: Vector2, length: float, width: float, evo: bool) -> void:
-	var b := MeshInstance3D.new()
-	b.mesh = BoxMesh.new()
-	var col := Color(0.75, 0.35, 1.0, 0.85)
+## 보라 광선 (진화하면 무지개): 손끝이 번쩍 → 굵은 빛줄기(하얀 심 + 보라 빛) → 맞은 곳마다 불꽃
+func on_beam(from: Vector2, dir: Vector2, length: float, width: float, evo: bool, hits: Array = []) -> void:
+	var col := Color(0.72, 0.3, 1.0)
 	if evo:
-		col = Color.from_hsv(fmod(_t * 0.7 + randf(), 1.0), 0.7, 1.0, 0.85)
-	var m := StandardMaterial3D.new()
-	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	m.albedo_color = col
-	b.material_override = m
+		col = Color.from_hsv(fmod(_t * 0.7 + randf(), 1.0), 0.75, 1.0)
 	var a := to3(from, 0.6)
 	var c := to3(from + dir * length, 0.6)
-	b.position = (a + c) * 0.5
-	b.rotation.y = atan2(dir.x, dir.y)
-	b.scale = Vector3(width * 2.0 * K, 0.15, length * K)
-	add_child(b)
-	_fx.append({"node": b, "life": 0.25, "max": 0.25, "kind": "beam", "mat": m, "w": width * 2.0 * K})
+	var yaw := atan2(dir.x, dir.y)
+	for layer in 2:
+		var b := MeshInstance3D.new()
+		var cm := CylinderMesh.new()
+		cm.top_radius = 1.0
+		cm.bottom_radius = 1.0
+		cm.height = 1.0
+		cm.radial_segments = 12
+		b.mesh = cm
+		var m := StandardMaterial3D.new()
+		m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		m.blend_mode = BaseMaterial3D.BLEND_MODE_ADD if layer == 0 else BaseMaterial3D.BLEND_MODE_MIX
+		m.albedo_color = Color(col.lightened(0.1), 0.75) if layer == 0 else Color(1, 0.95, 1.0, 0.95)
+		b.material_override = m
+		b.position = (a + c) * 0.5
+		b.basis = Basis(Vector3.UP, yaw) * Basis(Vector3.RIGHT, PI / 2)
+		var w := width * K * (1.6 if layer == 0 else 0.5)
+		add_child(b)
+		_fx.append({"node": b, "life": 0.35, "max": 0.35, "kind": "beam", "mat": m, "w": w, "len": length * K, "yaw": yaw, "a0": m.albedo_color.a})
+	# 손끝 번쩍
+	var muzzle := MeshInstance3D.new()
+	muzzle.mesh = SphereMesh.new()
+	muzzle.material_override = Kit.mat(Color(col.lightened(0.4), 0.9), 3.0, 0.5, true, false)
+	muzzle.position = a
+	add_child(muzzle)
+	_fx.append({"node": muzzle, "life": 0.22, "max": 0.22, "kind": "boom", "r": width * K * 2.2})
+	# 맞은 곳마다 보라 불꽃
+	for i in mini(hits.size(), 6):
+		burst(to3(hits[i], 0.6), col.lightened(0.3), 4, 0.8)
+	flash(col.lightened(0.5), 0.14)
+	shake(0.06, 0.15)
+	if hits.size() > 0 and randf() < 0.45:
+		comic(screen_of(from + dir * minf(length * 0.45, 260.0)), "콰앙!", col.lightened(0.35), 0.8)
 
 
 ## 번개 (하늘에서 쾅)
@@ -593,8 +615,11 @@ func _step_fx(delta: float) -> void:
 				var r2: float = f.r * (0.3 + k * 0.8)
 				node.scale = Vector3.ONE * r2
 			"beam":
-				node.scale.x = f.w * (1.0 - k * 0.8)
-				f.mat.albedo_color.a = 0.85 * (1.0 - k)
+				# 확 굵어졌다가 가늘어지며 사라져요
+				var grow: float = minf(k / 0.15, 1.0)
+				var wv: float = f.w * grow * (1.0 - maxf(k - 0.4, 0.0) * 1.5)
+				node.scale = Vector3(maxf(wv, 0.001), f.len, maxf(wv, 0.001) * 0.6)
+				f.mat.albedo_color.a = f.a0 * (1.0 - maxf(k - 0.5, 0.0) * 2.0)
 				continue
 			"bolt":
 				continue

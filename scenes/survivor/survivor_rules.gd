@@ -478,12 +478,14 @@ func _weapons(delta: float, ev: Array) -> void:
 				if not t.is_empty():
 					dirs.append((t.pos - hero).normalized())
 		for dir in dirs:
+			var hits: Array = []
 			for e in enemies:
 				var to: Vector2 = e.pos - hero
 				var along := to.dot(dir)
 				if along > -10.0 and along < length and absf(to.cross(dir)) < width + e.radius:
-					damage(e, (15.0 + lv * 8.0) * (1.4 if evo else 1.0), ev, 10.0)
-			ev.append({"type": "beam", "from": hero, "dir": dir, "length": length, "width": width, "evolved": evo})
+					damage(e, (15.0 + lv * 8.0) * (1.4 if evo else 1.0), ev, 26.0)
+					hits.append(e.pos)
+			ev.append({"type": "beam", "from": hero, "dir": dir, "length": length, "width": width, "evolved": evo, "hits": hits})
 	# 똥 부메랑: 앞으로 던지면 돌아와요
 	lv = lv_of("boomerang")
 	if lv > 0 and _ready_weapon("boomerang", 2.3 - lv * 0.15, delta):
@@ -690,27 +692,27 @@ func make_choices() -> Array:
 	# 진화할 수 있으면 진화 카드가 꼭 나와요
 	for id in weapons:
 		if int(weapons[id]) >= MAX_LEVEL and not evolved.has(id) and passives.has(WEAPONS[id].pair) and out.size() < 3:
-			out.append({"kind": "evolve", "id": id, "title": "진화! " + WEAPONS[id].evo, "desc": WEAPONS[id].evo_desc})
+			out.append({"kind": "evolve", "id": id, "name": WEAPONS[id].evo, "level": 0, "title": "진화! " + WEAPONS[id].evo, "desc": WEAPONS[id].evo_desc})
 	var pool: Array = []
 	for id in WEAPONS:
 		var lv := int(weapons.get(id, 0))
 		if lv == 0 and weapons.size() < MAX_WEAPONS:
-			pool.append({"kind": "weapon", "id": id, "title": "새 무기: " + WEAPONS[id].name, "desc": WEAPONS[id].desc})
+			pool.append({"kind": "weapon", "id": id, "name": WEAPONS[id].name, "level": 1, "title": "새 무기: " + WEAPONS[id].name, "desc": WEAPONS[id].desc})
 		elif lv > 0 and lv < MAX_LEVEL:
-			pool.append({"kind": "weapon", "id": id, "title": "%s Lv%d" % [WEAPONS[id].name, lv + 1], "desc": WEAPONS[id].desc})
+			pool.append({"kind": "weapon", "id": id, "name": WEAPONS[id].name, "level": lv + 1, "title": "%s Lv%d" % [WEAPONS[id].name, lv + 1], "desc": WEAPONS[id].desc})
 			pool.append(pool[pool.size() - 1])   # 가진 무기 강화가 조금 더 자주 나와요
 	for id in PASSIVES:
 		var pl := int(passives.get(id, 0))
 		if pl < int(PASSIVES[id].max) and (pl > 0 or passives.size() < MAX_PASSIVES):
 			var t: String = PASSIVES[id].name if pl == 0 else "%s Lv%d" % [PASSIVES[id].name, pl + 1]
-			pool.append({"kind": "passive", "id": id, "title": t, "desc": PASSIVES[id].desc})
+			pool.append({"kind": "passive", "id": id, "name": PASSIVES[id].name, "level": pl + 1, "max": int(PASSIVES[id].max), "title": t, "desc": PASSIVES[id].desc})
 	while out.size() < 3 and not pool.is_empty():
 		var c: Dictionary = pool.pop_at(rng.randi() % pool.size())
 		if out.any(func(o): return o.kind == c.kind and o.id == c.id):
 			continue
 		out.append(c)
 	while out.size() < 3:
-		out.append({"kind": "heal", "id": "heal", "title": "똥빵", "desc": "체력 40 회복, 똥전 +10"})
+		out.append({"kind": "heal", "id": "heal", "name": "똥빵", "level": 0, "title": "똥빵", "desc": "체력 40 회복, 똥전 +10"})
 	return out
 
 
