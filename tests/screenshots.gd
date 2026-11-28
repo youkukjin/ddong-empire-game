@@ -109,6 +109,37 @@ func _main() -> void:
 	await _save("7장-변신2-번쩍")
 	await create_timer(1.5).timeout
 	await _save("7장-변신3-똥의신")
+	# 서바이버 (제안)
+	var sv := await _open("res://scenes/survivor/survivor.tscn", 5)
+	await _save("서바이버-설명")
+	sv.skip_intro()
+	sv.rules.weapons = {"sword": 3, "chain": 2, "bomb": 2, "flies": 1}
+	sv.rules.time = 200.0
+	for i in 90:
+		sv.rules.spawn_enemy(["warrior", "runner", "brute"][i % 3], sv.rules.hero + Vector2.from_angle(i * 0.7) * (200.0 + (i % 9) * 60.0))
+	for i in 30:
+		sv.rules.gems.append({"pos": sv.rules.hero + Vector2.from_angle(i * 1.3) * (90.0 + i * 12.0), "value": 5 if i % 7 == 0 else 1})
+	sv.rules.hp = 9999.0
+	sv.rules.max_hp = 9999.0
+	await create_timer(1.2).timeout
+	await _save("서바이버-플레이")
+	sv.rules.gems.append({"pos": sv.rules.hero, "value": 300})
+	await _frames(6)
+	await _save("서바이버-카드")
+	while not sv.rules.choices.is_empty():
+		sv.choose_card(0)
+	sv.rules.god_gauge = 1.0
+	sv._on_awaken()
+	sv.rules.weapons["fist"] = 3
+	sv.rules.time = 600.0
+	sv.rules.boss_spawned = true
+	sv.rules.spawn_enemy("demon", sv.rules.hero + Vector2(260, -160))
+	sv.rules.spawn_enemy("captain", sv.rules.hero + Vector2(-260, -120))
+	await create_timer(1.0).timeout
+	await _save("서바이버-보스")
+	sv._finish(true)
+	await _frames(10)
+	await _save("서바이버-결과")
 	# 결과 창
 	var st := current_scene
 	if st.has_method("finish_win"):

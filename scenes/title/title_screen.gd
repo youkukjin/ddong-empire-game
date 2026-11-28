@@ -1,13 +1,14 @@
 extends Control
 ## 타이틀 화면: 게임 제목과 시작 버튼을 보여줘요.
 ## 시작하기를 누르면 1장 '등장' 스테이지로 가요.
-## 1장을 별 3개로 깨면 "어려움 모드" 버튼이 나타나요.
 ## "장 고르기"를 누르면 열린 장을 골라서 할 수 있어요.
 ## 배경은 3D 무대예요 (제안): 불타는 밤 마을, 거대한 보라색 가시 드래곤, 검을 치켜든 3D 똥 왕자.
 
 const Sound := preload("res://scripts/audio/sound.gd")
 const STAGE_SCENE := "res://scenes/chapter1/stage1.tscn"
 const SELECT_SCENE := "res://scenes/title/chapter_select.tscn"
+const SURVIVOR_LOBBY := "res://scenes/title/chapter_select.tscn"
+const SurvivorRules := preload("res://scenes/survivor/survivor_rules.gd")
 const Session := preload("res://scripts/game_session.gd")
 const Save := preload("res://scripts/save_data.gd")
 const Chapters := preload("res://scripts/chapters.gd")
@@ -16,6 +17,7 @@ const StageView := preload("res://scripts/view3d/stage_view.gd")
 const Prince3D := preload("res://scripts/view3d/prince_3d.gd")
 const Kit := preload("res://scripts/view3d/kit3d.gd")
 const Dragon3D := preload("res://scripts/view3d/dragon_3d.gd")
+const ScreenMode := preload("res://scripts/screen_mode.gd")
 
 @onready var start_button: Button = %StartButton
 @onready var hard_button: Button = %HardButton
@@ -24,46 +26,57 @@ const Dragon3D := preload("res://scripts/view3d/dragon_3d.gd")
 
 
 func _ready() -> void:
+	ScreenMode.portrait(get_tree())
 	Sound.ensure()
 	if StageView.can_show():
 		$Background.visible = false
 		_build_3d()
-	Cute.style_button(start_button, Cute.PINK)
-	Cute.style_button(hard_button, Cute.LILAC)
-	Cute.style_button(select_button, Cute.MINT)
-	start_button.pressed.connect(_on_start_pressed.bind(false))
 	Session.restore()
-	_add_continue_button()
+	_add_mode_buttons()
+	Cute.style_button(start_button, Cute.CARAMEL, 32)
+	Cute.style_button(hard_button, Cute.LILAC, 32)
+	Cute.style_button(select_button, Cute.MINT, 32)
+	for b in [start_button, hard_button, select_button]:
+		b.custom_minimum_size = Vector2(320, 76)
+	start_button.text = "처음부터"
+	start_button.visible = Save.has_progress()
+	start_button.pressed.connect(_on_start_pressed.bind(false))
 	hard_button.pressed.connect(_on_start_pressed.bind(true))
-	hard_button.visible = Save.hard_unlocked()
+	hard_button.visible = false    # 어려움 모드는 없앴어요 (2026-11-28 사용자 요청)
+	select_button.text = "장 고르기"
 	select_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(SELECT_SCENE))
-	if continue_button == null:
-		start_button.grab_focus()
 	_play_title_bounce()
 
 
-var continue_button: Button = null
+var story_button: Button = null
+var survivor_button: Button = null
 
 
-## 이어하기: 기록이 있으면 큰 '이어하기' 버튼을 맨 위에 두고, 시작하기는 '처음부터'로 작게 바꿔요.
-func _add_continue_button() -> void:
+## 처음 화면에서 바로 고르는 두 모드 (2026-11-28 사용자: "여기서 바로 스토리 모드와 서바이버 모드").
+## 스토리 모드는 이어할 장부터, 서바이버 모드는 무대·캐릭터를 고르는 곳으로 가요.
+func _add_mode_buttons() -> void:
+	var parent := start_button.get_parent()
+	var n := Save.continue_chapter(Chapters.COUNT) if Save.has_progress() else 1
+	var sub := "%d장부터 이어하기" % n if Save.has_progress() else "1장부터 시작"
+	story_button = Cute.button("스토리 모드\n" + sub, Vector2(540, 160), 42, Cute.PINK)
+	story_button.name = "StoryButton"
+	story_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	parent.add_child(story_button)
+	parent.move_child(story_button, start_button.get_index())
+	story_button.pressed.connect(_on_story_pressed.bind(n))
+	survivor_button = Cute.button("서바이버 모드\n" + SurvivorRules.STAGES[Save.survivor_stage()].name, Vector2(540, 160), 42, Color(1, 0.72, 0.25))
+	survivor_button.name = "SurvivorButton"
+	survivor_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	parent.add_child(survivor_button)
+	parent.move_child(survivor_button, start_button.get_index())
+	survivor_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(SURVIVOR_LOBBY))
+
+
+func _on_story_pressed(n: int) -> void:
+	story_button.disabled = true
 	if not Save.has_progress():
+		_on_start_pressed(false)
 		return
-	var n := Save.continue_chapter(Chapters.COUNT)
-	continue_button = Cute.button("이어하기 (%d장)" % n, Vector2(460, 130), 50, Cute.PINK)
-	continue_button.name = "ContinueButton"
-	continue_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	start_button.get_parent().add_child(continue_button)
-	start_button.get_parent().move_child(continue_button, start_button.get_index())
-	continue_button.pressed.connect(_on_continue_pressed.bind(n))
-	start_button.text = "처음부터"
-	start_button.custom_minimum_size = Vector2(320, 84)
-	Cute.style_button(start_button, Cute.CARAMEL, 36)
-	continue_button.grab_focus()
-
-
-func _on_continue_pressed(n: int) -> void:
-	continue_button.disabled = true
 	Session.hard_mode = false
 	# 1장은 중간 저장이 있으면 거기서부터 (5·6장 중간 저장은 그 장이 알아서 불러요)
 	Session.resume_checkpoint = n == 1 and Session.has_checkpoint
@@ -97,9 +110,9 @@ func _build_3d() -> void:
 	var view := StageView.new()
 	view.name = "View3D"
 	view.cam_height = 3.2
-	view.cam_z = 10.0
-	view.pitch_deg = 6.0
-	view.fov_deg = 44.0
+	view.cam_z = 13.0
+	view.pitch_deg = 2.0
+	view.fov_deg = 62.0
 	add_child(view)
 	move_child(view, 0)
 	view.setup(Color(0.02, 0.01, 0.08), Color(0.45, 0.08, 0.15), Color(0.45, 0.4, 0.7), Color(0.75, 0.75, 1.0), 0.8)
@@ -133,18 +146,23 @@ func _build_3d() -> void:
 			_flames.append(fire)
 	# 거대한 똥 드래곤 (원작: 보라색, 가시 머리, 날카로운 이빨)
 	var dragon := Dragon3D.new()
-	dragon.position = Vector3(7.8, 0.0, -4.0)
-	dragon.scale = Vector3.ONE * 2.0
+	# 세로 화면: 드래곤이 제목 뒤 가운데에서 크게 내려다봐요 (2026-11-28 사용자: "드래곤이 잘 안 보인다")
+	dragon.position = Vector3(1.8, 1.3, -8.0)    # 날개를 펴고 하늘에 떠 있어요
+	dragon.scale = Vector3.ONE * 2.6
 	view.add_child(dragon)
-	dragon.facing = -1.0
+	dragon.facing = 1.0
+	dragon.rotation.y = -2.25    # 머리가 왼쪽 앞(왕자와 화면 쪽)을 봐요
 	dragon.mouth_open = 0.9
 	dragon.angry = 0.3
 	dragon.wings_up = true
-	dragon.head_target = Vector3(1.7, 2.6, 0)
+	dragon.head_target = Vector3(1.9, 3.0, 0.3)
 	_dragon = dragon
 	# 검을 치켜든 똥 왕자
 	var prince := Prince3D.new()
-	prince.position = Vector3(-4.3, 0.1, 1.6)
+	prince.position = Vector3(-2.3, 3.2, -1.0)
+	# 왕자는 높은 바위 위에서 드래곤과 맞서요
+	Kit.cylinder(view, 0.9, 1.4, 3.2, Color(0.32, 0.27, 0.3), Vector3(-2.3, 1.6, -1.0))
+	Kit.cylinder(view, 1.0, 0.9, 0.25, Color(0.4, 0.34, 0.36), Vector3(-2.3, 3.1, -1.0))
 	prince.scale = Vector3.ONE * 1.15
 	prince.cheer = true
 	view.add_child(prince)

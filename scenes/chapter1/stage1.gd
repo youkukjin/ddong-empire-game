@@ -504,8 +504,6 @@ func _show_win_result(stars: int, unlocked: Dictionary) -> void:
 	var lines := "%s\n구한 백성 %d / %d명 · 별 점수 %d" % [rules.star_title(stars), rules.rescued, Rules.TOTAL_CITIZENS, rules.score]
 	if unlocked.get("chapter2_new", false):
 		lines += "\n\n2장 '준비'가 열렸어요!"
-	if unlocked.get("hard_new", false):
-		lines += "\n어려움 모드가 열렸어요! (타이틀 화면에서 골라요)"
 	var star_widget := Widget.new(Widget.Kind.STARS)
 	star_widget.custom_minimum_size = Vector2(360, 110)
 	star_widget.max_value = 3

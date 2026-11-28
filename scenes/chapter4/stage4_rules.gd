@@ -5,6 +5,8 @@ extends RefCounted
 ## 대포가 누구 편인지는 그림만으로는 확실하지 않아서, 성벽 위에서 왕자에게 쏘는 것으로 정했어요 (제안).
 ## 벽돌 칸 수, 체력, 대포 간격, 별 기준 같은 숫자는 모두 (제안)이에요.
 
+## 2026-11-28 사용자: "성벽 돌파 조작감이 너무 어려워 쉽게" → 검 닿는 거리↑, 소용돌이 힘 8, 모으기 0.8초,
+## 대포 간격↑·대포알 작게, 하트 5개, 2분 30초. 벽돌을 톡 하면 걸어가서 알아서 쳐요(stage4.gd).
 enum Outcome { ONGOING, WIN, FAIL }
 enum FailReason { NONE, HEARTS, TIME }
 
@@ -16,9 +18,9 @@ const BRICK_W := 112.0
 const BRICK_H := 60.0
 const BRICK_HP := 3
 const SWORD_ROWS := 2               # 검은 아래 두 줄까지만 닿아요
-const SWORD_REACH := 170.0          # 왕자와 벽돌 가운데가 이만큼 가까워야 검이 닿아요
-const VORTEX_POWER := 5             # 소용돌이 힘 5: 아래 벽돌부터 차례로 깎고, 남은 힘은 위 벽돌로 넘어가요
-const CHARGE_TIME := 1.7            # 사슬 모으기 (6장 설계 시작값)
+const SWORD_REACH := 240.0          # 왕자와 벽돌 가운데가 이만큼 가까워야 검이 닿아요
+const VORTEX_POWER := 8             # 소용돌이 힘 5: 아래 벽돌부터 차례로 깎고, 남은 힘은 위 벽돌로 넘어가요
+const CHARGE_TIME := 0.8            # 사슬 모으기 (6장 설계 시작값)
 const WALK_SPEED := 420.0
 const ROLL_DISTANCE := 170.0
 const ROLL_INVULN := 0.4
@@ -26,12 +28,12 @@ const MIN_X := 60.0
 const MAX_X := 1220.0
 const CANNON_COLS := [1, 5, 8]
 const CANNON_WARN := 1.5            # 땅에 빨간 그림자가 1.5초 먼저 보여요
-const CANNON_GAP := 2.8             # 대포알 간격 (남은 시간이 45초 아래면 2.2초)
-const CANNON_GAP_LATE := 2.2
-const BALL_RADIUS := 70.0
+const CANNON_GAP := 3.6             # 대포알 간격 (남은 시간이 45초 아래면 2.2초)
+const CANNON_GAP_LATE := 3.0
+const BALL_RADIUS := 55.0
 const HURT_INVULN := 1.3
-const TIME_LIMIT := 120.0
-const HEARTS := 4
+const TIME_LIMIT := 150.0
+const HEARTS := 5
 
 var bricks: Array = []              # bricks[col][row] = 남은 체력 (row 0이 맨 위)
 var cannons := {}                   # 열 -> 살아 있는지

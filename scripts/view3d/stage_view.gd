@@ -18,6 +18,9 @@ var sun: DirectionalLight3D
 var _shake_left := 0.0
 var _shake_power := 0.0
 var _shake_time := 0.2
+## 세로 화면 (2026-11-28): 가로 1280x720 판 중 어느 부분을 보여줄지. 화면 점 = 판 점 - view_offset
+var view_offset := Vector2.ZERO
+var _cropped := false
 
 const Kit3D := preload("res://scripts/view3d/kit3d.gd")
 const FONT := preload("res://assets/fonts/Jua-Regular.ttf")
@@ -125,6 +128,20 @@ func impact(p: Vector2, text := "", color := Color(1, 0.85, 0.2), power := 1.0) 
 		hit_stop(0.05 + 0.03 * power)
 
 
+## 세로 화면이 가로 판의 한 부분을 보여주게 카메라를 맞춰요 (그림은 가로와 똑같고 잘라 보여줘요).
+func set_view_offset(off: Vector2) -> void:
+	view_offset = off
+	_cropped = true
+	if not camera:
+		return
+	var near := camera.near
+	var unit := 2.0 * near * tan(deg_to_rad(fov_deg) * 0.5) / SCREEN.y
+	camera.projection = Camera3D.PROJECTION_FRUSTUM
+	camera.keep_aspect = Camera3D.KEEP_HEIGHT
+	camera.size = 1280.0 * unit
+	camera.frustum_offset = Vector2((off.x + 360.0 - SCREEN.x * 0.5) * unit, -((off.y + 640.0) - SCREEN.y * 0.5) * unit)
+
+
 func flash(color: Color, alpha := 0.35) -> void:
 	if not _flash_rect:
 		return
@@ -134,13 +151,16 @@ func flash(color: Color, alpha := 0.35) -> void:
 
 
 ## 만화 의성어 글자 (콰앙! 쾅! 콰지직!): 크게 튀어나왔다가 사라져요.
+var comic_scale := 1.0    # 효과 글자 크기 배수 (서바이버는 작게)
+
+
 func comic(p: Vector2, text: String, color: Color, power := 1.0) -> void:
 	if not fx_layer:
 		return
 	var l := Label.new()
 	l.text = text
 	l.add_theme_font_override("font", FONT)
-	var fs := int(54 + 34 * power)
+	var fs := int((54 + 34 * power) * comic_scale)
 	l.add_theme_font_size_override("font_size", fs)
 	l.add_theme_color_override("font_color", color)
 	l.add_theme_color_override("font_outline_color", Kit3D.INK)
@@ -153,9 +173,11 @@ func comic(p: Vector2, text: String, color: Color, power := 1.0) -> void:
 	var sz := l.get_minimum_size()
 	l.size = sz
 	l.pivot_offset = sz * 0.5
-	l.position = Vector2(clampf(p.x - sz.x * 0.5, 10, SCREEN.x - sz.x - 10), clampf(p.y - sz.y * 0.5 - 40, 100, SCREEN.y - sz.y - 10))
+	var view := get_viewport().get_visible_rect().size
+	p -= view_offset
+	l.position = Vector2(clampf(p.x - sz.x * 0.5, 10, maxf(view.x - sz.x - 10, 10)), clampf(p.y - sz.y * 0.5 - 40, 100, maxf(view.y - sz.y - 10, 100)))
 	l.rotation = randf_range(-0.22, 0.22)
-	l.scale = Vector2.ONE * 2.2
+	l.scale = Vector2.ONE * (1.0 + 1.2 * comic_scale)
 	var tw := l.create_tween()
 	tw.tween_property(l, "scale", Vector2.ONE, 0.12).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	tw.tween_interval(0.35)

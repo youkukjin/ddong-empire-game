@@ -238,7 +238,7 @@ func _draw_course() -> void:
 func _update_hud() -> void:
 	if not _time_label:
 		return
-	_time_label.text = "⏱ " + time_text(rules.time_left)
+	_time_label.text = "남은 시간 " + time_text(rules.time_left)
 	_hearts_label.text = "♥".repeat(rules.hearts) + "♡".repeat(Rules.HEARTS - rules.hearts)
 	var pct := int(100.0 * rules.distance / rules.total_length())
 	_info_label.text = "3장 구멍 탐험 · 간 거리 %d%% · 반짝이는 돌 %d" % [pct, rules.gems]

@@ -17,7 +17,7 @@ func _test_rules() -> void:
 	check(not r.sword_hit(6, 4), "멀리 있는 벽돌에는 검이 안 닿아요")
 	check(r.sword_hit(2, 4) and r.bricks[2][4] == 2, "가까운 아래 벽돌은 검으로 1씩 깎여요")
 	var v := r.vortex()
-	check(v.col == 2 and r.bricks[2][4] == 0 and r.bricks[2][3] == 0 and r.bricks[2][2] == 3, "소용돌이: 아래 벽돌부터 힘 5만큼 깎아요")
+	check(v.col == 2 and r.bricks[2][4] == 0 and r.bricks[2][3] == 0 and r.bricks[2][2] == 0 and r.bricks[2][1] == 3, "소용돌이: 아래 벽돌부터 힘 8만큼 깎아요")
 	r.vortex()
 	r.vortex()
 	check(r.column_clear(2), "소용돌이를 여러 번 쏘면 한 줄이 위까지 뚫려요")

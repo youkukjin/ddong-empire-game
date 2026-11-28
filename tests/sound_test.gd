@@ -27,4 +27,4 @@ func _run() -> void:
 				clip += 1
 		rms = sqrt(rms / b.size())
 		check(s != null and s.loop_mode == AudioStreamWAV.LOOP_FORWARD and rms > 0.03 and clip < b.size() / 50, "배경음 '%s' %.1f초, 만드는 데 %dms, 크기 %.2f, 넘침 %d" % [kind, b.size() / float(Sound.MRATE), ms, rms, clip])
-	check(Sound.music_for_scene("res://scenes/chapter6/stage6.tscn") == "dragon" and Sound.music_for_scene("res://scenes/title/title_screen.tscn") == "title", "장마다 배경음이 달라요")
+	check(Sound.music_for_scene("res://scenes/chapter6/stage6.tscn") == "dragon" and Sound.music_for_scene("res://scenes/title/title_screen.tscn") == "happy", "장마다 배경음이 달라요")

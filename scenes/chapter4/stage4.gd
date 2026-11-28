@@ -56,7 +56,7 @@ func use_seed(s: int) -> void:
 func _intro_pages() -> Array:
 	return [
 		"굴 끝에 드래곤의 본거지가 있었어요.\n그런데 그 아래를 단단한 벽돌 성벽이 막고 있었어요.\n성벽 위에는 대포가 있었어요.",
-		"어떻게 할까요?\n\n• 땅을 톡: 그쪽으로 걸어가요\n• 아래 두 줄 벽돌을 톡: 검으로 쳐요\n• 꾹 눌렀다 떼기: 사슬 무기의 초록 소용돌이가 왕자 위 벽돌을 부숴요\n  (벽돌이 없는 줄에서 쏘면 성벽 위 대포도 부서져요)\n• 옆으로 쓱: 굴러서 대포알을 피해요 (땅의 빨간 그림자를 보세요)\n\n나란한 두 줄을 위부터 아래까지 뚫으면 성공! 하트 %d개, %s" % [Rules.HEARTS, time_text(Rules.TIME_LIMIT)],
+		"어떻게 할까요?\n\n• 땅을 톡: 그쪽으로 걸어가요\n• 벽돌을 톡: 왕자가 걸어가서 알아서 부숴요 (아래는 검, 위는 초록 소용돌이)\n• 꾹 눌렀다 떼기: 그 자리에서 바로 소용돌이\n  (벽돌이 없는 줄에서 쏘면 성벽 위 대포도 부서져요)\n• 옆으로 쓱: 굴러서 대포알을 피해요 (땅의 빨간 그림자를 보세요)\n\n나란한 두 줄을 위부터 아래까지 뚫으면 성공! 하트 %d개, %s" % [Rules.HEARTS, time_text(Rules.TIME_LIMIT)],
 	]
 
 
@@ -69,6 +69,8 @@ func _on_paused() -> void:
 
 func _play_process(delta: float) -> void:
 	gesture.tick(delta)
+	_auto_cd -= delta
+	_auto_hit()
 	for e in rules.tick(delta):
 		match e.type:
 			"land":
@@ -115,6 +117,27 @@ func _play_input(event: InputEvent) -> void:
 			release_chain(g.held)
 
 
+## 톡 한 벽돌: 왕자가 그 줄까지 걸어가서 알아서 쳐요 (아래 두 줄은 검, 위는 소용돌이)
+var _pending := Vector2i(-1, -1)
+var _auto_cd := 0.0
+
+
+func _auto_hit() -> void:
+	if _pending.x < 0:
+		return
+	if absf(rules.prince_x - Rules.col_center_x(_pending.x)) > 12.0:
+		return
+	var b := _pending
+	_pending = Vector2i(-1, -1)
+	if rules.bricks[b.x][b.y] <= 0:
+		return
+	if b.y >= Rules.ROWS - Rules.SWORD_ROWS:
+		tap_at(Rules.brick_rect(b.x, b.y).get_center())
+	elif _auto_cd <= 0.0:
+		_auto_cd = 0.7
+		release_chain(Rules.CHARGE_TIME)
+
+
 func tap_at(p: Vector2) -> void:
 	var b := Rules.brick_at(p)
 	if b.x >= 0 and rules.bricks[b.x][b.y] > 0:
@@ -126,10 +149,10 @@ func tap_at(p: Vector2) -> void:
 			else:
 				impact(p, "와르르!", Color(1, 0.7, 0.3), 1.1)
 			return
-		if b.y < Rules.ROWS - Rules.SWORD_ROWS:
-			_float_small(p + Vector2(-60, -40), "검이 안 닿아요", Color(1, 0.85, 0.6))
+		_pending = b
 		rules.walk_to(Rules.col_center_x(b.x))
 		return
+	_pending = Vector2i(-1, -1)
 	rules.walk_to(p.x)
 
 
@@ -268,6 +291,6 @@ func _float_small(p: Vector2, text: String, color: Color) -> void:
 func _update_hud() -> void:
 	if not _time_label:
 		return
-	_time_label.text = "⏱ " + time_text(rules.time_left)
+	_time_label.text = "남은 시간 " + time_text(rules.time_left)
 	_hearts_label.text = "♥".repeat(rules.hearts) + "♡".repeat(Rules.HEARTS - rules.hearts)
 	_info_label.text = "4장 성벽 돌파 · 부순 벽돌 %d · 남은 대포 %d" % [rules.bricks_broken, rules.live_cannons().size()]

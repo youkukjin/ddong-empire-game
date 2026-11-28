@@ -14,6 +14,7 @@ const StageView := preload("res://scripts/view3d/stage_view.gd")
 const BackdropArt := preload("res://scripts/art/backdrop.gd")
 const Sound := preload("res://scripts/audio/sound.gd")
 const PrinceArt := preload("res://scripts/art/prince.gd")
+const ScreenMode := preload("res://scripts/screen_mode.gd")
 
 const CREAM := Cute.CREAM
 const BROWN := Cute.COCOA
@@ -31,6 +32,13 @@ var hud_root: Control
 var overlay_root: Control
 var pause_button: Button
 
+var portrait_layout := false   # 세로 화면 전용으로 새로 만든 장(서바이버)이면 true
+## 세로 화면 맞추기 (2026-11-28): 가로로 만든 장은 1280x720 판을 그대로 두고,
+## 세로 화면이 그 판의 한 부분(가로 720)을 왕자를 따라 보여줘요. 위아래는 하늘과 땅이 더 보여요.
+## 화면 점 = 판 점 - view_offset
+var fit_portrait := false    # 2026-11-28: 잘라 보여주기 대신 판 전체를 너비에 맞춰 보여줘요 (ScreenMode.fit_landscape)
+var view_offset := Vector2(0, -280)
+var _world_base := Vector2.ZERO
 var view3d: Node3D = null       # 3D 화면 (제안). 규칙과 터치는 2D 화면 좌표 그대로예요.
 
 var _pages: Array = []
@@ -39,9 +47,14 @@ var _pages_done: Callable
 
 
 func _ready() -> void:
+	if portrait_layout:
+		ScreenMode.portrait(get_tree())
+	else:
+		ScreenMode.fit_landscape(get_tree())
 	Sound.ensure()
 	Session.restore()
-	Save.set_last_chapter(chapter)
+	if chapter > 0:
+		Save.set_last_chapter(chapter)
 	rng.randomize()
 	world = Node2D.new()
 	world.name = "World"
@@ -59,13 +72,15 @@ func _ready() -> void:
 	overlay_root = _full_control()
 	overlay.add_child(overlay_root)
 	_setup()
+	if _band():
+		_fit_hud()
 	if view3d:
 		# 3D가 대신 그리는 2D 배경과 2D 왕자는 숨겨요 (규칙 계산용으로는 그대로 있어요)
 		for c in world.get_children():
 			if c.get_script() == BackdropArt or c.get_script() == PrinceArt:
 				c.visible = false
 	pause_button = make_button("II", Vector2(84, 76), 36, Cute.PINK)
-	pause_button.position = Vector2(1186, 10)
+	pause_button.position = Vector2(screen_size().x - 94, 10)
 	pause_button.pressed.connect(toggle_pause)
 	hud_root.add_child(pause_button)
 	_refresh_pause_button()
@@ -122,10 +137,59 @@ func start_play() -> void:
 func _process(delta: float) -> void:
 	if phase == Phase.PLAY and not paused:
 		_play_process(delta)
+	if _band():
+		_follow(delta)
+
+
+## 가로 판을 세로 화면에 보여주는 중인지
+func _band() -> bool:
+	return fit_portrait and not portrait_layout
+
+
+## 세로 화면이 따라갈 판 위 x (장마다 바꿀 수 있어요). 기본: 2D 왕자
+func focus_x() -> float:
+	for c in world.get_children():
+		if c.get_script() == PrinceArt:
+			return c.position.x
+	return 640.0
+
+
+func _follow(delta: float) -> void:
+	var target := clampf(focus_x() - 360.0, 0.0, 560.0)
+	var k := clampf(delta * 6.0, 0.0, 1.0) if delta > 0.0 else 1.0
+	view_offset.x = lerpf(view_offset.x, target, k)
+	_world_base = -view_offset
+	if not _shaking:
+		world.position = _world_base
+	if view3d and view3d.has_method("set_view_offset"):
+		view3d.set_view_offset(view_offset)
+
+
+## 화면 위 표시를 세로 화면에 맞게 옮겨요: 위쪽 것은 위에, 아래쪽 것은 맨 아래로, 가로는 좁혀요.
+func _fit_hud() -> void:
+	for c in hud_root.get_children():
+		var ctl := c as Control
+		if ctl == null or ctl == pause_button:
+			continue
+		if ctl.get_anchor(SIDE_RIGHT) > 0.5 and ctl.get_anchor(SIDE_LEFT) < 0.5:
+			continue   # 화면 가득 채우는 것
+		var p := ctl.position
+		var w := ctl.size.x
+		var cx := p.x + w * 0.5
+		var nx := cx * 720.0 / 1280.0 - w * 0.5
+		ctl.position = Vector2(clampf(nx, 6.0, maxf(720.0 - w - 6.0, 6.0)), p.y + (560.0 if p.y > 360.0 else 0.0))
+
+
+## 판 점 → 세로 화면 점
+func to_screen(p: Vector2) -> Vector2:
+	return p - view_offset if _band() else p
 
 
 func _unhandled_input(event: InputEvent) -> void:
 	if phase == Phase.PLAY and not paused:
+		if _band():
+			# 세로 화면 점 → 가로 판 점
+			event = event.xformed_by(Transform2D(0.0, view_offset))
 		_play_input(event)
 
 
@@ -142,6 +206,8 @@ func finish_win(stars: int, title: String, lines: String) -> void:
 	var body := lines
 	if unlocked.get("next_new", false) and chapter < Chapters.COUNT:
 		body += "\n\n%d장 '%s'이(가) 열렸어요!" % [chapter + 1, Chapters.title(chapter + 1)]
+	if unlocked.get("hero_new", false):
+		body += "\n\n스토리 완성 선물! 서바이버에서 돌 똥을 쓸 수 있어요!"
 	var star_widget: Control = null
 	if stars > 0:
 		star_widget = StarRow.new()
@@ -317,13 +383,18 @@ func impact(p: Vector2, text := "", color := Color(1, 0.85, 0.2), power := 1.0) 
 	shake(5.0 * power)
 
 
+var _shaking := false
+
+
 func shake(strength := 8.0) -> void:
 	if view3d:
 		view3d.shake(strength * 0.012, 0.15 + strength * 0.01)
+	_shaking = true
 	var tw := create_tween()
 	for i in 4:
-		tw.tween_property(world, "position", Vector2(rng.randf_range(-strength, strength), rng.randf_range(-strength, strength) * 0.75), 0.04)
-	tw.tween_property(world, "position", Vector2.ZERO, 0.04)
+		tw.tween_property(world, "position", _world_base + Vector2(rng.randf_range(-strength, strength), rng.randf_range(-strength, strength) * 0.75), 0.04)
+	tw.tween_property(world, "position", _world_base, 0.04)
+	tw.tween_callback(func() -> void: _shaking = false)
 
 
 static func time_text(sec: float) -> String:
@@ -406,7 +477,8 @@ func show_panel(title: String, body: String, buttons: Array, extra: Control = nu
 
 	var panel := PanelContainer.new()
 	panel.add_theme_stylebox_override("panel", Cute.panel_style())
-	panel.custom_minimum_size = Vector2(820, 0)
+	var panel_w := minf(820.0, screen_size().x - 40.0)
+	panel.custom_minimum_size = Vector2(panel_w, 0)
 	var center := CenterContainer.new()
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -430,7 +502,7 @@ func show_panel(title: String, body: String, buttons: Array, extra: Control = nu
 		b.text = body
 		b.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		b.custom_minimum_size = Vector2(756, 0)
+		b.custom_minimum_size = Vector2(panel_w - 64.0, 0)
 		b.add_theme_font_size_override("font_size", 26)
 		b.add_theme_color_override("font_color", BROWN)
 		box.add_child(b)
@@ -442,7 +514,8 @@ func show_panel(title: String, body: String, buttons: Array, extra: Control = nu
 	var colors := [Cute.MINT, Cute.PEACH, Cute.SKY, Cute.LILAC]
 	for i in buttons.size():
 		var entry: Array = buttons[i]
-		var btn := make_button(entry[0], Vector2(180, 80), 28, colors[i % colors.size()])
+		var bw := minf(180.0, (panel_w - 48.0 - 16.0 * (buttons.size() - 1)) / buttons.size())
+		var btn := make_button(entry[0], Vector2(bw, 80), 28, colors[i % colors.size()])
 		btn.name = "Btn_" + String(entry[0]).replace(" ", "_")
 		btn.pressed.connect(entry[1])
 		row.add_child(btn)
@@ -457,6 +530,11 @@ func clear_overlay() -> void:
 ## 지금 떠 있는 창의 버튼을 이름으로 찾아요 (자동 확인용).
 func find_overlay_button(text: String) -> Button:
 	return overlay_root.find_child("Btn_" + text.replace(" ", "_"), true, false) as Button
+
+
+## 지금 화면 크기 (세로 720x1280 또는 가로 1280x720)
+func screen_size() -> Vector2:
+	return Vector2(get_tree().root.content_scale_size)
 
 
 func make_button(text: String, min_size: Vector2, font_size: int, color := BUTTON_BROWN) -> Button:

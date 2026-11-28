@@ -2,7 +2,7 @@
 
 importer="font_data_dynamic"
 type="FontFile"
-uid="uid://dpix17h6obo2y"
+uid="uid://mgx8pds5i1b5"
 path="res://.godot/imported/Jua-Regular.ttf-69b81abe04d21f5b162d8c70bc8d894b.fontdata"
 
 [deps]
@@ -25,7 +25,7 @@ hinting=1
 subpixel_positioning=1
 oversampling=0.0
 Fallbacks=null
-fallbacks=[]
+fallbacks=[Resource("res://assets/fonts/Symbols-DejaVuBold.ttf")]
 Compress=null
 compress=true
 preload=[]
