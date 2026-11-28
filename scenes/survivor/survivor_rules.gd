@@ -25,7 +25,7 @@ const MID_BOSSES := [
 	[360.0, "captain", ""],
 ]
 const BOSS_NAMES := {"bat": "똥 박쥐 왕", "captain": "똥 무사 대장", "golem": "바위 똥 골렘", "wyrm": "꼬마 보라 드래곤", "demon": "똥 대마왕"}
-const ENDLESS_EVERY := 75.0           # 무한 모드에서 중간 보스가 다시 오는 간격
+const ENDLESS_EVERY := 45.0           # 무한 모드에서 중간 보스가 다시 오는 간격
 const GOD_TIME := 10.0
 const GOD_KILLS := 300                # 각성 게이지가 차는 처치 수
 const MAX_WEAPONS := 6
@@ -192,9 +192,9 @@ func outcome() -> int:
 
 ## 무한 모드에서 적이 얼마나 센지 (1분마다 +35%)
 func power_mult() -> float:
-	if not endless:
-		return 1.0
-	return 1.0 + maxf(time - BOSS_TIME, 0.0) / 60.0 * 0.35
+	# 6분이 지나면 1분마다 +60%, 갈수록 더 가파르게 (2026-11-28 사용자: "6분 이후에는 더 어려워졌으면")
+	var over := maxf(time - BOSS_TIME, 0.0) / 60.0
+	return 1.0 + over * 0.6 + over * over * 0.15
 
 
 func xp_needed() -> int:
@@ -207,7 +207,9 @@ func minute() -> int:
 
 ## 난이도 시계: 10단계 흐름을 6분에 담아요 (1분 = 난이도 1.67)
 func pace() -> float:
-	return minf(time, BOSS_TIME) / BOSS_TIME * 10.0
+	if time <= BOSS_TIME:
+		return time / BOSS_TIME * 10.0
+	return 10.0 + (time - BOSS_TIME) / 60.0 * 2.5    # 6분 뒤엔 더 빨리 늘어요
 
 
 func damage_mult() -> float:
@@ -382,8 +384,6 @@ func _spawn(delta: float, ev: Array) -> void:
 			var mb2: Array = MID_BOSSES[rng.randi() % MID_BOSSES.size()]
 			var c2 := spawn_enemy(mb2[1], _edge_point())
 			ev.append({"type": "boss", "enemy": c2, "text": "더 센 " + mb2[2]})
-	elif boss_spawned:
-		return
 	# 포위 공격: 1분 30초부터 1분마다 똥 무사들이 빙 둘러싸요 (도망만 다니면 갇혀요)
 	_ring_t += delta
 	if time >= 60.0 and _ring_t >= 45.0:
@@ -397,6 +397,8 @@ func _spawn(delta: float, ev: Array) -> void:
 		ev.append({"type": "surround"})
 	# 1분마다 더 많이 (처음 1초에 1.3마리 → 9분에 약 8마리)
 	var rate := 1.3 + pace() * 0.75
+	if boss_spawned and not endless:
+		rate *= 0.6    # 대마왕과 싸우는 동안은 조금 덜
 	_spawn_acc += rate * delta
 	while _spawn_acc >= 1.0:
 		_spawn_acc -= 1.0
@@ -407,7 +409,7 @@ func _spawn(delta: float, ev: Array) -> void:
 		var r := rng.randf()
 		if time > 30.0 and r < 0.28:
 			kind = "runner"
-		elif time > 75.0 and r > 0.9:
+		elif time > 75.0 and r > (0.9 if time < BOSS_TIME else 0.8):
 			kind = "brute"
 		spawn_enemy(kind, _edge_point())
 
