@@ -709,6 +709,10 @@ func _make_item(kind: String) -> Node3D:
 	add_child(n)
 	if kind == "bread":
 		return _make_bread(n)
+	if kind == "rocket":
+		return _make_rocket(n)
+	if kind == "bean":
+		return _make_bean(n)
 	var c := Color(0.95, 0.25, 0.3) if kind == "heal" else Color(0.3, 0.55, 1.0)
 	for t in [[0.32, 0.0, 0.55], [0.24, 0.22, 0.6], [0.15, 0.4, 0.7]]:
 		Kit.sphere(n, t[0], c, Vector3(0, t[1], 0), Vector3(1, t[2], 1), 0.6)
@@ -724,6 +728,37 @@ func _make_item(kind: String) -> Node3D:
 			Kit.box(n, Vector3(0.1, 0.1, 0.1), Color(0.9, 0.9, 0.95), Vector3(sx * 0.14, 0.56, 0), 0.6)
 		Kit.box(n, Vector3(0.38, 0.1, 0.1), Color(0.9, 0.2, 0.2), Vector3(0, 0.92, 0), 0.4)
 	var glow := Kit.sphere(n, 0.5, c, Vector3(0, 0.02, 0), Vector3(1, 0.08, 1), 0.5, false)
+	glow.transparency = 0.6
+	return n
+
+
+## 방귀 콩: 초록 콩깍지에 동글동글 콩 세 알
+func _make_bean(n: Node3D) -> Node3D:
+	var pod := Kit.capsule(n, 0.2, 0.9, Color(0.4, 0.72, 0.25), Vector3(0, 0.35, 0))
+	pod.rotation.z = PI / 2
+	for k in 3:
+		Kit.sphere(n, 0.15, Color(0.6, 0.88, 0.35), Vector3(-0.25 + k * 0.25, 0.45, 0.08))
+	for k in 3:
+		var puff := Kit.sphere(n, 0.08 + k * 0.03, Color(0.7, 0.92, 0.4), Vector3(0.5 + k * 0.12, 0.5 + k * 0.15, 0), Vector3.ONE, 0.6, false)
+		puff.transparency = 0.45
+	var glow := Kit.sphere(n, 0.5, Color(0.5, 0.85, 0.3), Vector3(0, 0.02, 0), Vector3(1, 0.08, 1), 0.5, false)
+	glow.transparency = 0.6
+	return n
+
+
+## 방귀 로켓: 빨간 로켓에 똥 창문, 꽁무니에 초록 방귀
+func _make_rocket(n: Node3D) -> Node3D:
+	var body := Kit.capsule(n, 0.2, 0.8, Color(0.92, 0.25, 0.2), Vector3(0, 0.5, 0))
+	body.rotation.z = 0.0
+	Kit.spike(n, 0.2, 0.3, Color(0.95, 0.9, 0.85), Vector3(0, 0.95, 0), Vector3.UP)
+	Kit.sphere(n, 0.09, Color(0.56, 0.33, 0.15), Vector3(0, 0.6, 0.18))
+	for k in 3:
+		var a := k * TAU / 3.0
+		Kit.box(n, Vector3(0.05, 0.22, 0.16), Color(1, 0.8, 0.2), Vector3(cos(a) * 0.2, 0.2, sin(a) * 0.2))
+	for k in 3:
+		var puff := Kit.sphere(n, 0.1 + k * 0.04, Color(0.65, 0.9, 0.35), Vector3(0, 0.05 - k * 0.12, 0), Vector3.ONE, 0.8, false)
+		puff.transparency = 0.4
+	var glow := Kit.sphere(n, 0.5, Color(1, 0.5, 0.3), Vector3(0, 0.02, 0), Vector3(1, 0.08, 1), 0.5, false)
 	glow.transparency = 0.6
 	return n
 
@@ -761,30 +796,30 @@ func on_god_wave(radius: float) -> void:
 	shake(0.35, 0.4)
 
 
-func on_slam(radius: float) -> void:
+func on_slam(radius: float, col := Color(1, 0.8, 0.3, 0.8)) -> void:
 	var ring := MeshInstance3D.new()
 	var tm := TorusMesh.new()
 	tm.inner_radius = 0.85
 	tm.outer_radius = 1.0
 	ring.mesh = tm
-	ring.material_override = Kit.mat(Color(1, 0.8, 0.3, 0.8), 2.0, 0.5, true, false)
+	ring.material_override = Kit.mat(col, 2.0, 0.5, true, false)
 	ring.position = hero3 + Vector3(0, 0.1, 0)
 	add_child(ring)
 	_fx.append({"node": ring, "life": 0.35, "max": 0.35, "kind": "ring", "r": radius * K})
 	burst(hero3 + Vector3(0, 0.3, 0), Color(0.6, 0.5, 0.45), 10, 1.0)
 
 
-func on_boom(pos: Vector2, radius: float) -> void:
+func on_boom(pos: Vector2, radius: float, col := Color(1, 0.6, 0.15, 0.75), word := "펑!") -> void:
 	var ball := MeshInstance3D.new()
 	var sm := SphereMesh.new()
 	ball.mesh = sm
-	ball.material_override = Kit.mat(Color(1, 0.6, 0.15, 0.75), 2.5, 0.5, true, false)
+	ball.material_override = Kit.mat(col, 2.5, 0.5, true, false)
 	ball.position = to3(pos, 0.3)
 	add_child(ball)
 	_fx.append({"node": ball, "life": 0.3, "max": 0.3, "kind": "boom", "r": radius * K})
 	burst(to3(pos, 0.4), Color(0.5, 0.28, 0.1), 8, 1.0)
 	if randf() < 0.4:
-		comic(screen_of(pos), "펑!", Color(1, 0.6, 0.2), 0.6)
+		comic(screen_of(pos), word, col.lightened(0.2), 0.6)
 
 
 ## 부메랑 모양 (ㄱ자로 꺾인 두꺼운 날개, 크기 1)
@@ -1051,7 +1086,15 @@ func sync(rules, delta: float) -> void:
 		else:
 			var v: Vector2 = sh.vel
 			var yaw := atan2(v.x, v.y)
-			_put(sm, i, Basis(Vector3.UP, yaw) * Basis.from_scale(Vector3(r * 0.6, r * 0.6, r * 1.9)), to3(sh.pos, 0.5), Color(0.75, 0.97, 1.0))
+			var scol: Color = sh.get("color", Color(0.75, 0.97, 1.0))
+			match String(sh.kind):
+				"marble", "snow", "boulder":    # 동그란 것: 구르며 통통
+					var rr := r * (1.4 if sh.kind == "marble" else 2.4)
+					_put(sm, i, Basis(Vector3.RIGHT, _t * 10.0) * Basis.from_scale(Vector3.ONE * rr * 2.0), to3(sh.pos, rr + 0.05), scol)
+				"pebble", "drop":
+					_put(sm, i, Basis(Vector3.UP, yaw) * Basis.from_scale(Vector3(r * 0.8, r * 0.8, r * 1.3)), to3(sh.pos, 0.5), scol)
+				_:
+					_put(sm, i, Basis(Vector3.UP, yaw) * Basis.from_scale(Vector3(r * 0.6, r * 0.6, r * 1.9)), to3(sh.pos, 0.5), scol)
 	sm.visible_instance_count = sn
 	# 부메랑: 빙글빙글 도는 ㄱ자 똥 부메랑 + 꼬리 바람
 	var bmm: MultiMesh = _boomers.multimesh
@@ -1092,9 +1135,13 @@ func sync(rules, delta: float) -> void:
 		_puddles[i].visible = i < rules.puddles.size()
 		if i < rules.puddles.size():
 			var pd: Dictionary = rules.puddles[i]
+			var pcol: Color = pd.get("color", Color(0.35, 0.45, 0.12, 0.7))
+			if _puddles[i].get_meta("col", Color(0.35, 0.45, 0.12, 0.7)) != pcol:
+				_puddles[i].set_meta("col", pcol)
+				_puddles[i].material_override = Kit.mat(pcol, 0.3 if pcol.a > 0.9 else 0.0, 0.5, true, false)
 			var pr: float = pd.r * K * (1.0 + sin(_t * 3.0 + i) * 0.03)
 			_puddles[i].position = to3(pd.pos, 0.03)
-			_puddles[i].scale = Vector3(pr, 1, pr)
+			_puddles[i].scale = Vector3(pr, 1, pr) if not pd.has("mine") and not pd.has("trip") else Vector3(pr, 4.0, pr)
 	# 방귀 구름
 	var cr: float = rules.cloud_radius() * K
 	_cloud.visible = cr > 0.0

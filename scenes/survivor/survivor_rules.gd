@@ -47,7 +47,19 @@ const WEAPONS := {
 	"thorns": {"name": "가시 갑옷", "desc": "부딪힌 적을 찌르고, 맞으면 가시가 튀어요", "pair": "armor", "evo": "드래곤 비늘", "evo_desc": "가시가 두 배, 받는 피해 줄어요"},
 	"puddle": {"name": "똥 웅덩이", "desc": "웅덩이에 들어온 적이 느려지고 아파요", "pair": "cape", "evo": "똥 늪", "evo_desc": "커다란 늪이 왕자를 따라와요"},
 	"ice": {"name": "얼음 똥", "desc": "사방으로 얼음 조각을 쏴서 얼려요", "pair": "crown", "evo": "눈보라", "evo_desc": "얼음 조각이 많아지고 꽁꽁 얼려요"},
+	# ---- 똥마다 하나뿐인 새 스킬 (2026-11-28 사용자: "각 똥의 특성에 맞게 정리하고 새로운 스킬을 만들어")
+	"marbles": {"name": "알록달록 구슬", "desc": "구슬을 사방으로 튕겨요, 적을 뚫고 지나가요", "pair": "luck", "evo": "무지개 구슬비", "evo_desc": "구슬이 두 배, 더 세게 튕겨요"},
+	"slingshot": {"name": "똥 새총", "desc": "가장 가까운 적을 딱! 아주 세게 맞혀요", "pair": "power", "evo": "황금 새총", "evo_desc": "한 번에 세 발씩, 맞으면 펑!"},
+	"banana": {"name": "바나나 껍질", "desc": "지나간 자리에 껍질, 밟은 적은 꽈당 멈춰요", "pair": "swift", "evo": "바나나 폭풍", "evo_desc": "껍질이 잔뜩, 꽈당하면 크게 아파요"},
+	"spray": {"name": "설사 분수", "desc": "뒤로 주르륵 뿜어서 쫓아오는 적을 맞혀요", "pair": "milk", "evo": "설사 대폭포", "evo_desc": "사방으로 콸콸 뿜어요"},
+	"stink": {"name": "방귀 폭발", "desc": "몸에서 뿌웅! 둘레 적을 멀리 날려요", "pair": "cape", "evo": "방귀 화산", "evo_desc": "더 크고 더 자주 터져요"},
+	"mine": {"name": "냄새 지뢰", "desc": "땅에 냄새 지뢰, 밟으면 뻥!", "pair": "power", "evo": "똥 지뢰밭", "evo_desc": "지뢰가 잔뜩, 크게 터져요"},
+	"snowball": {"name": "눈덩이 굴리기", "desc": "눈덩이가 굴러가며 점점 커져요", "pair": "crown", "evo": "눈사태", "evo_desc": "커다란 눈덩이가 여러 개"},
+	"frost": {"name": "꽁꽁 파동", "desc": "둘레 적을 잠깐 꽁꽁 얼려요", "pair": "book", "evo": "얼음 왕국", "evo_desc": "더 넓게, 더 오래 얼려요"},
+	"boulder": {"name": "굴러가는 바위", "desc": "커다란 바위가 데굴데굴 다 밀어버려요", "pair": "heart", "evo": "산사태", "evo_desc": "바위가 세 개씩 굴러가요"},
+	"quake": {"name": "쿵쿵 지진", "desc": "적 밑에서 땅이 쿵! 솟아올라요", "pair": "armor", "evo": "대지진", "evo_desc": "더 많이, 더 세게 쿵쿵"},
 }
+const BASE_WEAPONS := ["sword", "chain", "fist", "bomb", "flies", "beam", "boomerang", "cloud", "lightning", "thorns", "puddle", "ice"]
 ## 능력치 11개 (한 판에 6개까지)
 const PASSIVES := {
 	"power": {"name": "힘", "desc": "공격력 +12%", "max": 5},
@@ -80,7 +92,7 @@ var weapons := {"sword": 1}          # 이름 -> 레벨
 var passives := {}                   # 이름 -> 단계
 var enemies: Array = []              # {id, kind, pos, hp, max_hp, speed, dmg, radius, boss, hit_cd: {}}
 var gems: Array = []                 # {pos, value}
-var items: Array = []                # {kind: "heal"|"magnet"|"bread", pos, age}
+var items: Array = []                # {kind: "heal"|"magnet"|"bread"|"rocket", pos, age}
 var vacuum := 0.0
 var _ring_t := 0.0                    # 자석 똥을 먹으면 잠깐 모든 구슬이 날아와요
 const ITEM_HEAL := 30.0
@@ -119,15 +131,15 @@ func _init(seed_value := -1) -> void:
 ## 고를 수 있는 똥 캐릭터 (2026-11-28 사용자: "초반에는 약한 똥들, 똥 왕자는 똥전으로 해금, 왕자 능력이 제일 좋게").
 ## 캐릭터마다 체력, 이동 속도, 시작 무기, 특기가 달라요. cost 0이면 처음부터 열려 있어요.
 const HEROES := {
-	"kid": {"name": "꼬마 똥", "hp": 70.0, "speed": 1.0, "weapon": "bomb", "cost": 0,
+	"kid": {"name": "꼬마 똥", "hp": 70.0, "speed": 1.0, "weapon": "slingshot", "cost": 0,
 		"skill": "무럭무럭: 경험치 +15%", "desc": "작고 약하지만 쑥쑥 자라요"},
-	"runny": {"name": "설사 똥", "hp": 55.0, "speed": 1.3, "weapon": "flies", "cost": 0,
+	"runny": {"name": "설사 똥", "hp": 55.0, "speed": 1.3, "weapon": "spray", "cost": 0,
 		"skill": "후다닥: 이동 속도 +30%", "desc": "제일 빠르지만 몸이 약해요"},
-	"gassy": {"name": "방귀 똥", "hp": 80.0, "speed": 0.95, "weapon": "cloud", "cost": 300,
+	"gassy": {"name": "방귀 똥", "hp": 80.0, "speed": 0.95, "weapon": "stink", "cost": 300,
 		"skill": "뿡뿡: 공격 범위 +20%", "desc": "둘레를 지독한 방귀로 감싸요"},
-	"icy": {"name": "얼음 똥", "hp": 75.0, "speed": 1.0, "weapon": "ice", "cost": 500,
+	"icy": {"name": "얼음 똥", "hp": 75.0, "speed": 1.0, "weapon": "snowball", "cost": 500,
 		"skill": "꽁꽁: 공격 속도 +10%", "desc": "얼음 조각으로 적을 얼려요"},
-	"rock": {"name": "돌 똥", "hp": 130.0, "speed": 0.85, "weapon": "fist", "cost": 800,
+	"rock": {"name": "돌 똥", "hp": 130.0, "speed": 0.85, "weapon": "boulder", "cost": 800,
 		"skill": "단단: 방어력 +15%", "desc": "느리지만 엄청 튼튼해요"},
 	"prince": {"name": "똥 왕자", "hp": 120.0, "speed": 1.1, "weapon": "sword", "cost": 2000,
 		"skill": "왕의 힘: 공격력+25%, 크리티컬+8%, 각성 2배", "desc": "철퇴도 들고 시작! 똥 제국에서 가장 강해요"},
@@ -135,11 +147,11 @@ const HEROES := {
 ## 캐릭터마다 레벨업 카드에 나오는 무기가 달라요 (2026-11-28 사용자: "케릭터마다 스킬이 달라야").
 ## 똥 왕자만 12개 전부 나와요.
 const HERO_KITS := {
-	"kid": ["bomb", "boomerang", "puddle", "flies", "lightning", "fist"],
-	"runny": ["flies", "puddle", "boomerang", "beam", "cloud", "lightning"],
-	"gassy": ["cloud", "puddle", "beam", "flies", "bomb", "lightning"],
-	"icy": ["ice", "beam", "lightning", "boomerang", "sword", "thorns"],
-	"rock": ["fist", "thorns", "bomb", "sword", "chain", "puddle"],
+	"kid": ["marbles", "slingshot", "bomb", "boomerang", "lightning", "fist"],
+	"runny": ["banana", "spray", "flies", "puddle", "cloud", "boomerang"],
+	"gassy": ["stink", "mine", "cloud", "beam", "bomb", "flies"],
+	"icy": ["snowball", "frost", "ice", "lightning", "sword", "thorns"],
+	"rock": ["boulder", "quake", "fist", "thorns", "chain", "bomb"],
 }
 ## 캐릭터마다 나오는 능력치 카드도 달라요 (8개씩, 똥 왕자만 11개 전부). 진화 짝은 꼭 들어 있어요.
 const HERO_PASSIVES := {
@@ -149,6 +161,54 @@ const HERO_PASSIVES := {
 	"icy": ["armor", "book", "crown", "dumbbell", "luck", "power", "magnet", "swift"],
 	"rock": ["armor", "cape", "dumbbell", "heart", "power", "swift", "milk", "crown"],
 }
+## 똥마다 자기만의 무기 이름과 맛 (2026-11-28 사용자: "스킬들이 중복이 많네"). 똥 왕자는 원래 이름 그대로.
+## 맞은 적에게 붙는 효과도 똥마다 달라요: 설사=미끌미끌, 방귀=냄새로 비틀, 얼음=꽁꽁, 돌=쾅 밀쳐요.
+const HERO_WEAPONS := {
+	"kid": {"bomb": ["물풍선", "던지면 퐁! 터져요"], "boomerang": ["종이 부메랑", "슝 날아갔다 돌아와요"],
+		"fist": ["꼬마 주먹", "가끔 땅을 콩! 둘레를 밀어요"], "flies": ["똥파리 친구", "친구 파리가 적을 물어요"],
+		"lightning": ["찌릿 번개", "하늘에서 찌릿! 번개가 떨어져요"], "puddle": ["흙탕물", "첨벙! 들어온 적이 느려져요"]},
+	"runny": {"flies": ["설사 파리", "파리가 쫓아가 물고 미끌미끌"], "puddle": ["주르륵 웅덩이", "미끄러운 설사 웅덩이"],
+		"boomerang": ["휴지 부메랑", "두루마리 휴지가 날아갔다 와요"], "beam": ["설사 물총", "쭉 뿜어서 꿰뚫어요"],
+		"cloud": ["설사 안개", "둘레에 냄새나는 안개"], "lightning": ["설사 소나기", "하늘에서 철퍽! 떨어져요"]},
+	"gassy": {"cloud": ["방귀 구름", "둘레의 적이 계속 아파하고 느려져요"], "beam": ["방귀 광선", "뿌우웅~ 길게 뿜어 꿰뚫어요"],
+		"bomb": ["방귀 풍선", "던지면 뻥! 냄새 폭발"], "flies": ["냄새 파리", "냄새 맡은 파리가 몰려가요"],
+		"puddle": ["방귀 늪", "부글부글 냄새나는 늪"], "lightning": ["방귀 번개", "하늘에서 뿡! 번쩍"]},
+	"icy": {"ice": ["얼음 똥", "사방으로 얼음 조각을 쏴요"], "beam": ["얼음 광선", "차가운 빛줄기로 꿰뚫어요"],
+		"lightning": ["우박", "하늘에서 얼음덩이가 쿵!"], "boomerang": ["눈꽃 부메랑", "눈꽃이 날아갔다 돌아와요"],
+		"sword": ["고드름 칼", "앞을 고드름으로 베어요"], "thorns": ["얼음 가시", "부딪힌 적을 얼음 가시로 찔러요"]},
+	"rock": {"fist": ["바위 주먹", "땅을 쾅! 크게 밀어내요"], "thorns": ["돌 가시", "부딪힌 적을 돌 가시로 찔러요"],
+		"bomb": ["바위 던지기", "커다란 돌을 던져 쿵!"], "sword": ["돌칼", "앞을 돌칼로 베어요"],
+		"chain": ["돌 철퇴", "둘레를 돌덩이가 빙글빙글"], "puddle": ["모래 늪", "빠지면 느려지는 모래 늪"]},
+}
+const HERO_HIT_FX := {"runny": "미끌", "gassy": "비틀", "icy": "꽁꽁", "rock": "쾅"}
+
+
+static func weapon_name_for(hid: String, id: String) -> String:
+	if HERO_WEAPONS.has(hid) and HERO_WEAPONS[hid].has(id):
+		return String(HERO_WEAPONS[hid][id][0])
+	return String(WEAPONS[id].name)
+
+
+func weapon_name(id: String) -> String:
+	return weapon_name_for(hero_id, id)
+
+
+func weapon_desc(id: String) -> String:
+	var d := String(WEAPONS[id].desc)
+	if HERO_WEAPONS.has(hero_id) and HERO_WEAPONS[hero_id].has(id):
+		d = String(HERO_WEAPONS[hero_id][id][1])
+	match hero_id:
+		"runny":
+			d += " (맞으면 미끌미끌 느려져요)"
+		"gassy":
+			d += " (가끔 냄새로 비틀비틀)"
+		"icy":
+			d += " (맞으면 꽁꽁 느려져요)"
+		"rock":
+			d += " (세게 밀쳐내요)"
+	return d
+
+
 ## 캐릭터 특기와 어울리는 능력치 카드가 더 자주 나와요
 const HERO_FAVORITE := {"kid": "book", "runny": "swift", "gassy": "cape", "icy": "dumbbell", "rock": "armor", "prince": "power"}
 var hero_id := "prince"
@@ -158,7 +218,7 @@ var hero_id := "prince"
 static func hero_kit(id: String) -> Array:
 	if HERO_KITS.has(id):
 		return HERO_KITS[id]
-	return WEAPONS.keys()
+	return BASE_WEAPONS
 var crit_bonus := 0.0
 var god_rate := 1.0
 
@@ -375,6 +435,8 @@ func tick(delta: float, move: Vector2) -> Array:
 	if god_left > 0.0:
 		_god_special(delta, ev)
 	_tummy_tick(delta)
+	_rocket_tick(delta, ev)
+	_bean_tick(delta)
 	_spawn(delta, ev)
 	_move_enemies(delta, ev)
 	_weapons(delta, ev)
@@ -659,6 +721,17 @@ func damage(e: Dictionary, amount: float, ev: Array, knock := 0.0) -> void:
 		knock = maxf(knock, 30.0)
 	e.hp -= dmg
 	e.flash = 0.12
+	if not e.boss:
+		match hero_id:
+			"runny":
+				_slow(e, 0.75, 0.4)
+			"gassy":
+				if rng.randf() < 0.2:
+					_slow(e, 0.4, 0.6)
+			"icy":
+				_slow(e, 0.7, 0.6)
+			"rock":
+				knock += 22.0
 	if trait_lv("trait_icy") > 0 and not e.boss:
 		_slow(e, maxf(0.65 - 0.1 * trait_lv("trait_icy"), 0.35), 0.8)
 	if knock > 0.0 and not e.boss:
@@ -709,6 +782,10 @@ func _on_kill(e: Dictionary, ev: Array) -> void:
 		drop_item("magnet", e.pos + Vector2(-18, 0))
 	if rng.randf() < 0.003 * bonus.luck:
 		drop_item("bread", e.pos + Vector2(0, 18))
+	if rng.randf() < 0.0025 * bonus.luck:
+		drop_item("rocket", e.pos + Vector2(0, -18))
+	if rng.randf() < 0.0025 * bonus.luck:
+		drop_item("bean", e.pos + Vector2(-18, -18))
 	if e.boss:
 		coins += 200 if e.kind == "demon" else 50
 		if e.kind != "demon":
@@ -912,6 +989,22 @@ func _weapons(delta: float, ev: Array) -> void:
 		if pd.life <= 0.0:
 			puddles.erase(pd)
 			continue
+		if pd.has("mine"):
+			for e in enemies:
+				if (e.pos - pd.pos).length() < pd.r + e.radius:
+					_strike_pop(pd.pos, pd.mine, pd.dmg, ev)
+					puddles.erase(pd)
+					break
+			continue
+		if pd.get("trip", false):
+			for e in enemies:
+				if not e.boss and (e.pos - pd.pos).length() < pd.r + e.radius * 0.5:
+					damage(e, pd.dmg, ev)
+					_slow(e, 0.0, 1.2)
+					ev.append({"type": "trip", "pos": e.pos})
+					puddles.erase(pd)
+					break
+			continue
 		for e in enemies:
 			if (e.pos - pd.pos).length() < pd.r + e.radius * 0.5:
 				_slow(e, 0.5, 0.3)
@@ -928,7 +1021,114 @@ func _weapons(delta: float, ev: Array) -> void:
 			shots.append({"kind": "ice", "pos": hero, "vel": dir * 460.0, "life": 1.1 * area, "r": 18.0 * area,
 				"dmg": (8.0 + lv * 4.0) * (1.5 if evo else 1.0), "pierce": 3 if evo else 1, "hit": {}, "freeze": 0.0 if evo else 0.35})
 		ev.append({"type": "ice"})
+	_new_weapons(delta, ev, area, amount)
 	_move_shots(delta, ev)
+
+
+## 똥마다 하나뿐인 새 스킬들
+func _shoot(kind: String, from: Vector2, dir: Vector2, speed: float, life: float, r: float, dmg: float, pierce: int, color: Color, extra := {}) -> void:
+	var sh := {"kind": kind, "pos": from, "vel": dir * speed, "life": life, "r": r, "dmg": dmg, "pierce": pierce, "hit": {}, "freeze": 1.0, "color": color}
+	sh.merge(extra, true)
+	shots.append(sh)
+
+
+func _new_weapons(delta: float, ev: Array, area: float, amount: int) -> void:
+	var lv: int
+	# 알록달록 구슬: 사방으로 튕기는 구슬
+	lv = lv_of("marbles")
+	if lv > 0 and _ready_weapon("marbles", 1.6 - lv * 0.1, delta):
+		var evo := evolved.has("marbles")
+		var n := (3 + lv / 2 + amount) * (2 if evo else 1)
+		for k in n:
+			var c := Color.from_hsv(rng.randf(), 0.75, 1.0)
+			_shoot("marble", hero, Vector2.from_angle(rng.randf() * TAU), 420.0, 1.0 * area, 12.0 * area, (7.0 + lv * 3.0) * (1.4 if evo else 1.0), 3, c, {"knock": 20.0})
+		ev.append({"type": "ice"})
+	# 똥 새총: 가까운 적을 세게
+	lv = lv_of("slingshot")
+	if lv > 0 and _ready_weapon("slingshot", 1.0 - lv * 0.06, delta):
+		var evo := evolved.has("slingshot")
+		for k in (1 + amount + (2 if evo else 0)):
+			var t := _nearest(650.0, k)
+			if t.is_empty():
+				break
+			_shoot("pebble", hero, (t.pos - hero).normalized(), 760.0, 0.9, 14.0 * area, 22.0 + lv * 9.0, 1, Color(0.55, 0.33, 0.15), {"knock": 40.0, "pop": evo})
+	# 바나나 껍질: 지나간 자리에, 밟으면 꽈당
+	lv = lv_of("banana")
+	if lv > 0 and _ready_weapon("banana", 1.4 - lv * 0.12, delta):
+		var evo := evolved.has("banana")
+		for k in (1 + amount / 2 + (2 if evo else 0)):
+			var at := hero + Vector2.from_angle(rng.randf() * TAU) * (0.0 if k == 0 else rng.randf_range(40.0, 160.0))
+			puddles.append({"pos": at, "r": 34.0 * area, "life": 6.0, "dmg": (12.0 + lv * 6.0) * (1.6 if evo else 1.0), "follow": false, "color": Color(1.0, 0.88, 0.2, 0.95), "trip": true})
+	# 설사 분수: 뒤로 뿜어요 (진화: 사방)
+	lv = lv_of("spray")
+	if lv > 0 and _ready_weapon("spray", 0.9 - lv * 0.05, delta):
+		var evo := evolved.has("spray")
+		var back := -facing
+		var n := 5 + lv + amount * 2 + (8 if evo else 0)
+		for k in n:
+			var dir := Vector2.from_angle(back.angle() + rng.randf_range(-0.6, 0.6)) if not evo else Vector2.from_angle(TAU * k / n)
+			_shoot("drop", hero, dir, rng.randf_range(300.0, 420.0), 0.55 * area, 13.0 * area, 6.0 + lv * 3.0, 2, Color(0.6, 0.4, 0.12), {"freeze": 0.6})
+		ev.append({"type": "spray"})
+	# 방귀 폭발: 몸에서 뿌웅!
+	lv = lv_of("stink")
+	if lv > 0 and _ready_weapon("stink", (3.2 - lv * 0.25) * (0.7 if evolved.has("stink") else 1.0), delta):
+		var evo := evolved.has("stink")
+		var r := (150.0 + lv * 15.0) * area * (1.4 if evo else 1.0)
+		for e in enemies:
+			if e.pos.distance_to(hero) < r + e.radius:
+				damage(e, (14.0 + lv * 7.0) * (1.5 if evo else 1.0), ev, 0.0 if e.boss else 150.0)
+				_slow(e, 0.5, 1.0)
+		ev.append({"type": "ring", "r": r, "color": Color(0.6, 0.9, 0.3), "word": "뿌웅!", "fart": true})
+	# 냄새 지뢰: 밟으면 뻥
+	lv = lv_of("mine")
+	if lv > 0 and _ready_weapon("mine", 1.8 - lv * 0.15, delta):
+		var evo := evolved.has("mine")
+		for k in (1 + amount / 2 + (2 if evo else 0)):
+			# 다가오는 적이 밟게 적과 나 사이에 놓아요
+			var t := _nearest(400.0, k)
+			var at := hero + Vector2.from_angle(rng.randf() * TAU) * rng.randf_range(20.0, 60.0)
+			if not t.is_empty():
+				at = hero.lerp(t.pos, 0.5)
+			puddles.append({"pos": at, "r": 26.0, "life": 10.0, "dmg": (30.0 + lv * 12.0) * (1.5 if evo else 1.0), "follow": false, "color": Color(0.45, 0.75, 0.2, 0.95), "mine": (110.0 + lv * 10.0) * area * (1.3 if evo else 1.0)})
+	# 눈덩이 굴리기: 굴러가며 커져요
+	lv = lv_of("snowball")
+	if lv > 0 and _ready_weapon("snowball", 2.0 - lv * 0.12, delta):
+		var evo := evolved.has("snowball")
+		for k in (1 + amount + (2 if evo else 0)):
+			var dir := facing.rotated((k - (amount + (2 if evo else 0)) * 0.5) * 0.5)
+			_shoot("snow", hero, dir, 260.0, 2.2, 18.0 * area, 14.0 + lv * 6.0, 99, Color(0.95, 0.98, 1.0), {"grow": 22.0 * area, "freeze": 0.5, "knock": 30.0})
+	# 꽁꽁 파동: 둘레를 얼려요
+	lv = lv_of("frost")
+	if lv > 0 and _ready_weapon("frost", 4.0 - lv * 0.3, delta):
+		var evo := evolved.has("frost")
+		var r := (170.0 + lv * 15.0) * area * (1.4 if evo else 1.0)
+		for e in enemies:
+			if e.pos.distance_to(hero) < r + e.radius:
+				damage(e, 8.0 + lv * 4.0, ev)
+				_slow(e, 0.0, (1.2 + lv * 0.15) * (1.5 if evo else 1.0))
+		ev.append({"type": "ring", "r": r, "color": Color(0.6, 0.9, 1.0), "word": "꽁꽁!"})
+	# 굴러가는 바위: 크고 느리게, 다 밀어요
+	lv = lv_of("boulder")
+	if lv > 0 and _ready_weapon("boulder", 2.6 - lv * 0.15, delta):
+		var evo := evolved.has("boulder")
+		var n := 1 + amount + (2 if evo else 0)
+		for k in n:
+			var dir := facing.rotated((k - (n - 1) * 0.5) * 0.6)
+			_shoot("boulder", hero, dir, 230.0, 2.6, 38.0 * area, 24.0 + lv * 9.0, 99, Color(0.5, 0.47, 0.45), {"knock": 90.0})
+	# 쿵쿵 지진: 적 밑에서 땅이 솟아요
+	lv = lv_of("quake")
+	if lv > 0 and _ready_weapon("quake", 2.2 - lv * 0.15, delta):
+		var evo := evolved.has("quake")
+		for k in (2 + lv / 2 + amount + (3 if evo else 0)):
+			var t := _nearest(550.0, rng.randi() % 8)
+			if t.is_empty():
+				break
+			var r := (60.0 + lv * 6.0) * area
+			for e in enemies:
+				if (e.pos - t.pos).length() < r + e.radius:
+					damage(e, (20.0 + lv * 8.0) * (1.4 if evo else 1.0), ev)
+					_slow(e, 0.2, 0.5)
+			ev.append({"type": "pop", "pos": t.pos, "radius": r, "color": Color(0.6, 0.45, 0.3), "word": "쿵!"})
 
 
 ## 날아가는 것들 (부메랑, 얼음 조각)
@@ -944,6 +1144,8 @@ func _move_shots(delta: float, ev: Array) -> void:
 		else:
 			sh.life -= delta
 			sh.pos += sh.vel * delta
+			if sh.has("grow"):
+				sh.r += float(sh.grow) * delta
 			if sh.life <= 0.0:
 				shots.erase(sh)
 				continue
@@ -956,13 +1158,24 @@ func _move_shots(delta: float, ev: Array) -> void:
 					ev.append({"type": "bhit", "pos": e.pos, "evolved": evolved.has("boomerang")})
 				elif not sh.hit.has(e.id):
 					sh.hit[e.id] = true
-					damage(e, sh.dmg, ev)
-					_slow(e, sh.freeze, 1.5)
-					ev.append({"type": "ice_hit", "pos": e.pos, "evo": evolved.has("ice")})
+					damage(e, sh.dmg * (1.0 + (sh.r / 18.0 - 1.0) * 0.5 if sh.kind == "snow" else 1.0), ev, float(sh.get("knock", 0.0)))
+					if float(sh.freeze) < 1.0:
+						_slow(e, sh.freeze, 1.5)
+					if sh.kind == "ice":
+						ev.append({"type": "ice_hit", "pos": e.pos, "evo": evolved.has("ice")})
+					elif sh.get("pop", false):
+						_strike_pop(e.pos, 70.0, sh.dmg * 0.6, ev)
 					sh.pierce -= 1
 					if sh.pierce <= 0:
 						shots.erase(sh)
 						break
+
+
+func _strike_pop(at: Vector2, r: float, dmg: float, ev: Array) -> void:
+	for e in enemies:
+		if (e.pos - at).length() < r + e.radius:
+			damage(e, dmg, ev)
+	ev.append({"type": "boom", "pos": at, "radius": r})
 
 
 func _strike(at: Vector2, r: float, dmg: float, ev: Array) -> void:
@@ -1137,6 +1350,39 @@ func apply_forge(levels: Dictionary) -> void:
 ## 썩은 빵 (2026-11-28 사용자: "썩은 빵 먹으면 방귀랑 설사가 더 잘 나오게"):
 ## 먹으면 배탈(15초) → 장난 방귀가 자주 뿡! 지나간 자리에 설사 웅덩이가 생겨 적이 미끄러지고 아파요.
 const TUMMY_TIME := 15.0
+## 방귀 로켓 (2026-11-28 사용자: "똥 방귀가 앞으로 나가게 한다든지 특이한 아이템"):
+## 주우면 1.5초 동안 뿌우웅~ 앞으로 날아가요. 안 아프고, 부딪힌 적은 날아가요.
+const ROCKET_TIME := 1.5
+## 방귀 콩 (2026-11-28 사용자: "방구 길이가 길어진다든지"): 12초 동안 엉덩이 뒤로 긴 방귀 꼬리가 따라와요.
+## 꼬리에 닿은 적은 아파하고 느려져요.
+const BEAN_TIME := 12.0
+var bean := 0.0
+var _bean_t := 0.0
+
+
+func _bean_tick(delta: float) -> void:
+	if bean <= 0.0:
+		return
+	bean = maxf(bean - delta, 0.0)
+	_bean_t -= delta
+	if _bean_t <= 0.0:
+		_bean_t = 0.08
+		puddles.append({"pos": hero - facing * 30.0, "r": 46.0 * bonus.area, "life": 2.2, "dmg": 9.0, "follow": false, "color": Color(0.6, 0.85, 0.3, 0.55)})
+var rocket := 0.0
+
+
+func _rocket_tick(delta: float, ev: Array) -> void:
+	if rocket <= 0.0:
+		return
+	rocket = maxf(rocket - delta, 0.0)
+	invuln = maxf(invuln, 0.15)
+	hero += facing * 820.0 * delta
+	var half := ARENA / 2.0 - 40.0
+	hero = hero.clamp(Vector2(-half, -half), Vector2(half, half))
+	hero = push_out(hero, HERO_RADIUS)
+	for e in enemies:
+		if e.hp > 0.0 and (e.pos - hero).length() < HERO_RADIUS + float(e.radius) + 30.0 and _hit_once(e, "rocket", 0.5):
+			damage(e, 45.0, ev, 0.0 if e.boss else 160.0)
 var tummy := 0.0
 var _tummy_t := 0.0
 
@@ -1176,6 +1422,12 @@ func _collect(delta: float, ev: Array) -> void:
 				var amount := minf(ITEM_HEAL, max_hp - hp)
 				hp += amount
 				ev.append({"type": "heal", "amount": ITEM_HEAL})
+			elif it.kind == "bean":
+				bean = BEAN_TIME
+				ev.append({"type": "bean"})
+			elif it.kind == "rocket":
+				rocket = ROCKET_TIME
+				ev.append({"type": "rocket"})
 			elif it.kind == "bread":
 				tummy = TUMMY_TIME
 				ev.append({"type": "bread"})
@@ -1224,9 +1476,9 @@ func make_choices() -> Array:
 		if lv == 0 and not kit.has(id):
 			continue
 		if lv == 0 and weapons.size() < MAX_WEAPONS:
-			pool.append({"kind": "weapon", "id": id, "name": WEAPONS[id].name, "level": 1, "title": "새 무기: " + WEAPONS[id].name, "desc": WEAPONS[id].desc})
+			pool.append({"kind": "weapon", "id": id, "name": weapon_name(id), "level": 1, "title": "새 무기: " + weapon_name(id), "desc": weapon_desc(id)})
 		elif lv > 0 and lv < MAX_LEVEL:
-			pool.append({"kind": "weapon", "id": id, "name": WEAPONS[id].name, "level": lv + 1, "title": "%s Lv%d" % [WEAPONS[id].name, lv + 1], "desc": WEAPONS[id].desc})
+			pool.append({"kind": "weapon", "id": id, "name": weapon_name(id), "level": lv + 1, "title": "%s Lv%d" % [weapon_name(id), lv + 1], "desc": weapon_desc(id)})
 			pool.append(pool[pool.size() - 1])   # 가진 무기 강화가 조금 더 자주 나와요
 	var pkit: Array = HERO_PASSIVES.get(hero_id, PASSIVES.keys())
 	for id in PASSIVES:

@@ -162,6 +162,59 @@ static func build(p: Node3D, id: String) -> void:
 			var cp := Kit.prism(p, Vector3(1.1, 1.2, 0.12), Color(0.75, 0.15, 0.2), Vector3(0, -0.15, 0))
 			cp.rotation.x = 0.15
 			Kit.torus(p, 0.15, 0.28, GOLD, Vector3(0, 0.5, 0.05))
+		"marbles":
+			var mc := [Color(0.95, 0.25, 0.3), Color(0.25, 0.6, 1.0), Color(1, 0.85, 0.2), Color(0.35, 0.85, 0.4), Color(0.75, 0.4, 0.95)]
+			for i in 5:
+				var a := i * TAU / 5.0
+				Kit.sphere(p, 0.26, mc[i], Vector3(cos(a) * 0.45, sin(a) * 0.45, 0), Vector3.ONE, 0.4)
+				Kit.sphere(p, 0.07, Color(1, 1, 1), Vector3(cos(a) * 0.45 - 0.08, sin(a) * 0.45 + 0.1, 0.22), Vector3.ONE, 1.0, false)
+		"slingshot":
+			Kit.cylinder(p, 0.08, 0.08, 0.7, WOOD, Vector3(0, -0.55, 0))
+			for sx in [-1.0, 1.0]:
+				Kit.cylinder(p, 0.07, 0.07, 0.6, WOOD, Vector3(sx * 0.25, 0.05, 0)).rotation.z = -sx * 0.4
+			Kit.box(p, Vector3(0.55, 0.05, 0.05), Color(0.85, 0.3, 0.25), Vector3(0, 0.25, 0.05))
+			Kit.sphere(p, 0.15, POOP, Vector3(0, 0.25, 0.2))
+		"banana":
+			for i in 3:
+				var a := -0.9 + i * 0.9
+				var b := Kit.capsule(p, 0.13, 0.75, Color(1, 0.86, 0.2), Vector3(sin(a) * 0.3, -0.1 + cos(a) * 0.15, 0))
+				b.rotation.z = a
+			Kit.cylinder(p, 0.08, 0.1, 0.2, Color(0.45, 0.35, 0.15), Vector3(0, 0.45, 0))
+		"spray":
+			_poop(p, 0.55, Color(0.68, 0.45, 0.15), Vector3(-0.35, -0.55, 0))
+			for i in 5:
+				Kit.sphere(p, 0.12 + i * 0.02, Color(0.6, 0.4, 0.12), Vector3(0.05 + i * 0.18, -0.25 + i * 0.12 - i * i * 0.015, 0.1), Vector3(1.3, 1, 1), 0.2)
+		"stink":
+			_poop(p, 0.6, Color(0.45, 0.5, 0.25), Vector3(0, -0.5, 0))
+			Kit.torus(p, 0.55, 0.72, Color(0.6, 0.9, 0.3), Vector3(0, -0.2, 0), 0.8)
+			for i in 4:
+				var a := i * TAU / 4.0 + 0.4
+				Kit.sphere(p, 0.18, Color(0.65, 0.9, 0.35), Vector3(cos(a) * 0.75, 0.2 + sin(a) * 0.3, 0.1), Vector3.ONE, 0.5, false)
+		"mine":
+			Kit.cylinder(p, 0.5, 0.55, 0.25, Color(0.35, 0.45, 0.2), Vector3(0, -0.35, 0))
+			Kit.sphere(p, 0.35, Color(0.4, 0.55, 0.22), Vector3(0, -0.15, 0), Vector3(1, 0.6, 1))
+			Kit.sphere(p, 0.1, Color(1, 0.3, 0.2), Vector3(0, 0.12, 0), Vector3.ONE, 2.0, false)
+			for i in 3:
+				Kit.sphere(p, 0.12 + i * 0.04, Color(0.65, 0.9, 0.35), Vector3(0.1 - i * 0.08, 0.35 + i * 0.2, 0), Vector3.ONE, 0.4, false)
+		"snowball":
+			Kit.sphere(p, 0.6, Color(0.96, 0.98, 1.0), Vector3(0.1, -0.1, 0), Vector3.ONE, 0.2)
+			Kit.sphere(p, 0.25, Color(0.85, 0.92, 1.0), Vector3(-0.6, -0.45, 0.1))
+			Kit.sphere(p, 0.14, Color(0.85, 0.92, 1.0), Vector3(-0.95, -0.6, 0.1))
+		"frost":
+			for i in 6:
+				var a := i * TAU / 6.0
+				var sp := Kit.box(p, Vector3(0.1, 0.8, 0.06), Color(0.7, 0.9, 1.0), Vector3(cos(a) * 0.35, sin(a) * 0.35, 0), 0.8)
+				sp.rotation.z = a - PI / 2
+			Kit.sphere(p, 0.18, Color(0.9, 0.97, 1.0), Vector3.ZERO, Vector3.ONE, 1.0)
+		"boulder":
+			Kit.sphere(p, 0.62, Color(0.55, 0.52, 0.5), Vector3(0, -0.05, 0), Vector3(1.05, 0.9, 1))
+			Kit.sphere(p, 0.2, Color(0.45, 0.42, 0.4), Vector3(0.3, 0.25, 0.4))
+			for i in 3:
+				Kit.sphere(p, 0.1, Color(0.7, 0.6, 0.45), Vector3(-0.75 - i * 0.15, -0.55, 0), Vector3.ONE, 0.0, false)
+		"quake":
+			Kit.box(p, Vector3(1.4, 0.2, 0.8), Color(0.5, 0.38, 0.25), Vector3(0, -0.6, 0))
+			for i in 3:
+				Kit.spike(p, 0.22, 0.7 + i * 0.15, Color(0.6, 0.47, 0.32), Vector3(-0.4 + i * 0.4, -0.5, 0), Vector3(-0.2 + i * 0.2, 1, 0))
 		"twin":    # 쌍둥이 똥: 똑같은 똥 둘
 			_poop(p, 0.5, POOP, Vector3(-0.32, -0.45, 0))
 			_poop(p, 0.5, POOP.lightened(0.12), Vector3(0.32, -0.45, 0))

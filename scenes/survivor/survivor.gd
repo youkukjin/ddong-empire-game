@@ -157,7 +157,7 @@ func _refresh_hud() -> void:
 	info_label.text = "Lv %d   물리친 적 %d" % [rules.level, rules.kills]
 	var parts: Array = []
 	for id in rules.weapons:
-		parts.append((Rules.WEAPONS[id].evo + "★") if rules.evolved.has(id) else "%s%d" % [Rules.WEAPONS[id].name, rules.weapons[id]])
+		parts.append((Rules.WEAPONS[id].evo + "★") if rules.evolved.has(id) else "%s%d" % [rules.weapon_name(id), rules.weapons[id]])
 	for id in rules.passives:
 		parts.append("%s%d" % [rules.passive_name(id), rules.passives[id]])
 	for id in rules.traits:
@@ -244,6 +244,8 @@ func _play_process(delta: float) -> void:
 			if view3d:
 				view3d.fart_puff()
 				view3d.comic(CENTER + Vector2(-80, -40), ["뿡!", "뿌웅~", "뽀옹!", "푸쉬익"].pick_random(), Color(0.7, 0.9, 0.4), 0.5)
+	if (rules.rocket > 0.0 or rules.bean > 0.0) and view3d and Engine.get_process_frames() % 4 == 0:
+		view3d.fart_puff()
 	_crit_cd -= delta
 	var keys := Vector2(
 		float(Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT)) - float(Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT)),
@@ -305,6 +307,23 @@ func _on_event(ev: Dictionary) -> void:
 			_sfx("swing", randf_range(0.95, 1.1), -8.0)
 			if view3d:
 				view3d.on_swing(ev.dirs, ev.reach)
+		"ring":
+			_sfx("fart" if ev.get("fart", false) else "clang", 0.7 if ev.get("fart", false) else 1.5, -6.0, 0.3)
+			if view3d:
+				var rc: Color = ev.color
+				view3d.on_slam(ev.r, Color(rc.r, rc.g, rc.b, 0.8))
+				view3d.comic(CENTER + Vector2(randf_range(-90, 90), -70), String(ev.word), rc, 0.55)
+		"pop":
+			_sfx("boom", randf_range(0.6, 0.75), -9.0, 0.12)
+			if view3d:
+				var pc: Color = ev.color
+				view3d.on_boom(ev.pos, ev.radius, Color(pc.r, pc.g, pc.b, 0.75), String(ev.word))
+		"trip":
+			_sfx("hit", 0.6, -6.0, 0.2)
+			if view3d and randf() < 0.5:
+				view3d.comic(world_to_screen(ev.pos) + Vector2(0, -40), ["꽈당!", "미끌!", "으앗!"].pick_random(), Color(1, 0.9, 0.3), 0.5)
+		"spray":
+			_sfx("fart", randf_range(1.3, 1.5), -12.0, 0.4)
 		"god_fart":
 			_sfx("fart", randf_range(0.6, 0.8), 0.0)
 			if view3d:
@@ -318,6 +337,12 @@ func _on_event(ev: Dictionary) -> void:
 			_sfx("boom", 0.7, 0.0)
 			if view3d:
 				view3d.on_god_wave(ev.r)
+		"bean":
+			_sfx("fart", 0.9, 0.0, 0.1)
+			impact(CENTER + Vector2(0, -150), "방귀 콩! 방귀 꼬리가 길~게", Color(0.7, 0.9, 0.4), 1.0)
+		"rocket":
+			_sfx("fart", 0.55, 2.0, 0.1)
+			impact(CENTER + Vector2(0, -150), "방귀 로켓! 뿌우우웅~", Color(0.7, 0.9, 0.4), 1.0)
 		"bread":
 			_sfx("fart", 0.7, 0.0)
 			_fart_t = 0.5

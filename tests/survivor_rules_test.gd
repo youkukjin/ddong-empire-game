@@ -82,7 +82,7 @@ func _run() -> void:
 		r9.choices = []
 	check(seen.has("beam") and seen.has("bolt") and r9.shots.size() + r9.puddles.size() > 0 or seen.has("ice"), "광선, 번개, 얼음, 웅덩이가 나와요")
 	check(r9.cloud_radius() > 0.0, "방귀 구름이 둘레에 있어요")
-	check(Rules.WEAPONS.size() == 12 and Rules.PASSIVES.size() == 11, "무기 12개, 능력치 11개")
+	check(Rules.WEAPONS.size() == 22 and Rules.BASE_WEAPONS.size() == 12 and Rules.PASSIVES.size() == 11, "무기 22개(기본 12 + 똥마다 새 스킬 10), 능력치 11개")
 	var r10 = Rules.new(14)
 	r10.weapons = {"sword": 5}
 	r10.passives = {"dumbbell": 1}
@@ -298,3 +298,37 @@ func _run() -> void:
 	for i in 20:
 		rr.tick(0.05, Vector2.RIGHT)
 	check(rr.puddles.size() >= 1, "주르륵 똥 특성: 지나간 자리에 웅덩이")
+	# 새 스킬 10개가 모두 적을 아프게 해요
+	for wid in ["marbles", "slingshot", "banana", "spray", "stink", "mine", "snowball", "frost", "boulder", "quake"]:
+		var rw = Rules.new(40)
+		rw.weapons = {wid: 3}
+		rw.hp = 1e9
+		rw.facing = Vector2.RIGHT
+		var targets: Array = []
+		for i in 8:
+			targets.append(rw.spawn_enemy("brute", rw.hero + Vector2.from_angle(i * TAU / 8.0) * 90.0))
+		var hp0 := 0.0
+		for t in targets:
+			hp0 += float(t.hp)
+		for i in 80:
+			rw.tick(0.05, Vector2.RIGHT * (0.3 if i % 20 < 10 else -0.3))
+			rw.choices = []
+		var hp1 := 0.0
+		for t in targets:
+			hp1 += maxf(float(t.hp), 0.0)
+		check(hp1 < hp0, "새 스킬 %s: 적이 아파해요" % wid)
+	var rrk = Rules.new(41)
+	rrk.weapons = {}
+	rrk.facing = Vector2.RIGHT
+	rrk.drop_item("rocket", rrk.hero)
+	var rk_e: Dictionary = rrk.spawn_enemy("warrior", rrk.hero + Vector2(200, 0))
+	var rk_hp: float = rk_e.hp
+	for i in 20:
+		rrk.tick(0.05, Vector2.ZERO)
+	check(rrk.hero.x > 300.0 and rk_e.hp < rk_hp, "방귀 로켓: 앞으로 쌩 날아가며 적을 날려요")
+	var rbn = Rules.new(42)
+	rbn.weapons = {}
+	rbn.drop_item("bean", rbn.hero)
+	for i in 20:
+		rbn.tick(0.05, Vector2.RIGHT)
+	check(rbn.bean > 5.0 and rbn.puddles.size() >= 8, "방귀 콩: 긴 방귀 꼬리가 따라와요")

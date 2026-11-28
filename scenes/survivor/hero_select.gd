@@ -168,7 +168,7 @@ class HeroRow extends Control:
 		var name_col := CREAM if not locked else CREAM.darkened(0.4)
 		draw_string_outline(FONT, Vector2(x, 42), String(h.name), HORIZONTAL_ALIGNMENT_LEFT, -1, 34, 6, Color(0.08, 0.05, 0.05))
 		draw_string(FONT, Vector2(x, 42), String(h.name), HORIZONTAL_ALIGNMENT_LEFT, -1, 34, name_col)
-		var wname: String = Rules.WEAPONS[h.weapon].name
+		var wname: String = Rules.weapon_name_for(id, String(h.weapon))
 		draw_string(FONT, Vector2(x + 150, 40), "체력 %d   이동 %d%%" % [int(h.hp), int(float(h.speed) * 100.0)], HORIZONTAL_ALIGNMENT_LEFT, -1, 22, CREAM.darkened(0.2))
 		draw_string(FONT, Vector2(x, 78), "무기: %s · 각성: %s" % [wname, Rules.GOD_INFO[id].name], HORIZONTAL_ALIGNMENT_LEFT, 380, 20, Color(1, 0.8, 0.45))
 		draw_string(FONT, Vector2(x, 110), String(h.skill), HORIZONTAL_ALIGNMENT_LEFT, 360, 21, Color(0.7, 0.9, 0.85))
@@ -176,7 +176,7 @@ class HeroRow extends Control:
 		if Rules.HERO_KITS.has(id):
 			var names: Array = []
 			for w in Rules.HERO_KITS[id]:
-				names.append(SHORT.get(w, w))
+				names.append(Rules.weapon_name_for(id, String(w)))
 			draw_string(FONT, Vector2(x, 138), "얻는 무기: " + " · ".join(names), HORIZONTAL_ALIGNMENT_LEFT, 380, 17, CREAM.darkened(0.3))
 		else:
 			draw_string(FONT, Vector2(x, 138), "얻는 무기: 12개 전부!", HORIZONTAL_ALIGNMENT_LEFT, -1, 19, Color(1, 0.85, 0.35))
