@@ -140,9 +140,9 @@ const HEROES := {
 	"icy": {"name": "얼음 똥", "hp": 75.0, "speed": 1.0, "weapon": "snowball", "cost": 500,
 		"skill": "꽁꽁: 공격 속도 +10%", "desc": "얼음 조각으로 적을 얼려요"},
 	"rock": {"name": "돌 똥", "hp": 130.0, "speed": 0.85, "weapon": "boulder", "cost": 800,
-		"skill": "단단: 방어력 +15%", "desc": "느리지만 엄청 튼튼해요"},
+		"skill": "단단: 방어력 +15%", "desc": "튼튼해요! 스토리를 끝까지 깨도 열려요"},
 	"prince": {"name": "똥 왕자", "hp": 120.0, "speed": 1.1, "weapon": "sword", "cost": 2000,
-		"skill": "왕의 힘: 공격력+25%, 크리티컬+8%, 각성 2배", "desc": "가장 강해요! 스토리를 끝까지 깨도 열려요"},
+		"skill": "왕의 힘: 공격력+25%, 크리티컬+8%, 각성 2배", "desc": "철퇴도 들고 시작! 똥 제국에서 가장 강해요"},
 }
 ## 캐릭터마다 레벨업 카드에 나오는 무기가 달라요 (2026-11-28 사용자: "케릭터마다 스킬이 달라야").
 ## 똥 왕자만 12개 전부 나와요.
@@ -888,9 +888,23 @@ func _weapons(delta: float, ev: Array) -> void:
 		if b.t <= 0.0:
 			bombs.erase(b)
 			var br: float = (80.0 + b.lv * 10.0) * area * (1.4 if evolved.has("bomb") else 1.0)
+			# 똥마다 폭탄 맛이 달라요: 물풍선은 넓게 첨벙(느려짐), 방귀 풍선은 냄새 늪이 남고, 바위는 멀리 날려요
+			var bdmg: float = (16.0 + b.lv * 7.0) * (1.5 if evolved.has("bomb") else 1.0)
+			var bknock := 30.0
+			match hero_id:
+				"kid":
+					br *= 1.3
+					bdmg *= 0.85
+				"rock":
+					bknock = 110.0
+					bdmg *= 1.15
+				"gassy":
+					puddles.append({"pos": b.pos, "r": br * 0.8, "life": 3.0, "dmg": 5.0 + b.lv * 2.0, "follow": false, "color": Color(0.55, 0.85, 0.3, 0.5)})
 			for e in enemies:
 				if (e.pos - b.pos).length() < br + e.radius:
-					damage(e, (16.0 + b.lv * 7.0) * (1.5 if evolved.has("bomb") else 1.0), ev, 30.0)
+					damage(e, bdmg, ev, bknock)
+					if hero_id == "kid":
+						_slow(e, 0.6, 1.0)
 			ev.append({"type": "boom", "pos": b.pos, "radius": br})
 	# 똥파리 떼: 레벨만큼 파리가 날아가 물어요. 진화: 말벌 16마리
 	lv = lv_of("flies")
@@ -938,7 +952,7 @@ func _weapons(delta: float, ev: Array) -> void:
 	lv = lv_of("boomerang")
 	if lv > 0 and _ready_weapon("boomerang", 2.3 - lv * 0.15, delta):
 		var evo := evolved.has("boomerang")
-		var n := 1 + amount + (1 if lv >= 4 else 0) + (2 if evo else 0)
+		var n := 1 + amount + (1 if lv >= 4 else 0) + (2 if evo else 0) + (1 if hero_id == "kid" else 0)    # 종이 부메랑은 하나 더
 		for k in n:
 			var dir := facing.rotated((k - (n - 1) / 2.0) * 0.45)
 			_next_id += 1

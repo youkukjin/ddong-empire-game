@@ -17,6 +17,19 @@ const CAPE := Color(0.42, 0.12, 0.62)
 const HORN_RED := Color(0.95, 0.12, 0.1)
 const MAX_INST := 160
 
+## 똥마다 겹치는 무기도 생김새·색·소리 글자가 달라요 (2026-11-28 사용자: "이름만 다르고 임팩트며 다 똑같잖아")
+## main: 터지는 색, word: 터질 때 글자, debris: 튀는 조각 색
+const HERO_FX := {
+	"kid": {"main": Color(0.35, 0.7, 1.0), "word": "퐁!", "debris": Color(0.6, 0.85, 1.0), "beam": "쭈욱!", "swing": Color(1, 0.7, 0.85)},
+	"runny": {"main": Color(0.72, 0.5, 0.16), "word": "철퍽!", "debris": Color(0.55, 0.38, 0.12), "beam": "쭈와악!", "swing": Color(0.9, 0.75, 0.4)},
+	"gassy": {"main": Color(0.55, 0.9, 0.3), "word": "뿡!", "debris": Color(0.6, 0.85, 0.35), "beam": "뿌우웅!", "swing": Color(0.7, 1, 0.5)},
+	"icy": {"main": Color(0.7, 0.93, 1.0), "word": "꽁!", "debris": Color(0.85, 0.97, 1.0), "beam": "쨍!", "swing": Color(0.75, 0.95, 1.0)},
+	"rock": {"main": Color(0.62, 0.56, 0.5), "word": "쿵!", "debris": Color(0.5, 0.45, 0.4), "beam": "콰광!", "swing": Color(0.75, 0.7, 0.65)},
+}
+var _hero_fx := {}
+var _hero_id := "prince"
+const PUDDLE_COL := {"kid": Color(0.45, 0.36, 0.25, 0.7), "runny": Color(0.75, 0.55, 0.15, 0.7), "rock": Color(0.85, 0.75, 0.5, 0.75)}
+
 var stage: Node2D
 var prince3d: Node3D
 var hero3 := Vector3.ZERO
@@ -675,7 +688,7 @@ func on_swing(dirs: Array, reach: float) -> void:
 		m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		m.cull_mode = BaseMaterial3D.CULL_DISABLED
-		m.albedo_color = Color(1, 0.97, 0.7, 0.9)
+		m.albedo_color = Color(1, 0.97, 0.7, 0.9) if _hero_fx.is_empty() else Color(_hero_fx.swing.r, _hero_fx.swing.g, _hero_fx.swing.b, 0.9)
 		arc.material_override = m
 		var r := reach * K
 		add_child(arc)
@@ -810,6 +823,11 @@ func on_slam(radius: float, col := Color(1, 0.8, 0.3, 0.8)) -> void:
 
 
 func on_boom(pos: Vector2, radius: float, col := Color(1, 0.6, 0.15, 0.75), word := "펑!") -> void:
+	var debris := Color(0.5, 0.28, 0.1)
+	if word == "펑!" and not _hero_fx.is_empty():
+		col = Color(_hero_fx.main.r, _hero_fx.main.g, _hero_fx.main.b, 0.75)
+		word = _hero_fx.word
+		debris = _hero_fx.debris
 	var ball := MeshInstance3D.new()
 	var sm := SphereMesh.new()
 	ball.mesh = sm
@@ -817,7 +835,7 @@ func on_boom(pos: Vector2, radius: float, col := Color(1, 0.6, 0.15, 0.75), word
 	ball.position = to3(pos, 0.3)
 	add_child(ball)
 	_fx.append({"node": ball, "life": 0.3, "max": 0.3, "kind": "boom", "r": radius * K})
-	burst(to3(pos, 0.4), Color(0.5, 0.28, 0.1), 8, 1.0)
+	burst(to3(pos, 0.4), debris, 8, 1.0)
 	if randf() < 0.4:
 		comic(screen_of(pos), word, col.lightened(0.2), 0.6)
 
@@ -882,6 +900,8 @@ func on_bhit(pos: Vector2, evo: bool) -> void:
 ## 보라 광선 (진화하면 무지개): 손끝이 번쩍 → 굵은 빛줄기(하얀 심 + 보라 빛) → 맞은 곳마다 불꽃
 func on_beam(from: Vector2, dir: Vector2, length: float, width: float, evo: bool, hits: Array = []) -> void:
 	var col := Color(0.72, 0.3, 1.0)
+	if not _hero_fx.is_empty():
+		col = _hero_fx.main
 	if evo:
 		col = Color.from_hsv(fmod(_t * 0.7 + randf(), 1.0), 0.75, 1.0)
 	var a := to3(from, 0.6)
@@ -919,7 +939,7 @@ func on_beam(from: Vector2, dir: Vector2, length: float, width: float, evo: bool
 	flash(col.lightened(0.5), 0.14)
 	shake(0.06, 0.15)
 	if hits.size() > 0 and randf() < 0.45:
-		comic(screen_of(from + dir * minf(length * 0.45, 260.0)), "콰앙!", col.lightened(0.35), 0.8)
+		comic(screen_of(from + dir * minf(length * 0.45, 260.0)), "콰앙!" if _hero_fx.is_empty() else String(_hero_fx.beam), col.lightened(0.35), 0.8)
 
 
 ## 번개 (하늘에서 쾅)
@@ -927,13 +947,28 @@ func on_bolt(pos: Vector2, radius: float) -> void:
 	var p := to3(pos)
 	var bolt := Node3D.new()
 	add_child(bolt)
-	var y := 0.0
-	var x := 0.0
-	for i in 6:
-		var seg := Kit.box(bolt, Vector3(0.12, 1.1, 0.12), Color(1, 0.95, 0.4), Vector3(x, y + 0.55, 0), 3.0, false)
-		seg.rotation.z = randf_range(-0.5, 0.5)
-		y += 1.0
-		x += randf_range(-0.3, 0.3)
+	var bcol := Color(1, 0.95, 0.4)
+	var hid: String = _hero_id
+	if hid == "icy" or hid == "runny":
+		# 얼음 똥은 우박, 설사 똥은 철퍽 떨어지는 덩어리: 하늘에서 큰 덩이가 줄줄이
+		bcol = Color(0.85, 0.97, 1.0) if hid == "icy" else Color(0.7, 0.48, 0.15)
+		for i in 4:
+			Kit.sphere(bolt, 0.28 - i * 0.04, bcol, Vector3(randf_range(-0.2, 0.2), 0.4 + i * 1.3, 0), Vector3.ONE, 1.0, i == 0)
+		burst(p + Vector3(0, 0.3, 0), bcol, 6, 1.0)
+		if randf() < 0.3:
+			comic(screen_of(pos), "우박!" if hid == "icy" else "철퍽!", bcol, 0.55)
+	else:
+		if hid == "gassy":
+			bcol = Color(0.6, 1.0, 0.35)
+		elif hid == "kid":
+			bcol = Color(1, 0.6, 0.9)
+		var y := 0.0
+		var x := 0.0
+		for i in 6:
+			var seg := Kit.box(bolt, Vector3(0.12, 1.1, 0.12), bcol, Vector3(x, y + 0.55, 0), 3.0, false)
+			seg.rotation.z = randf_range(-0.5, 0.5)
+			y += 1.0
+			x += randf_range(-0.3, 0.3)
 	bolt.position = p
 	_fx.append({"node": bolt, "life": 0.18, "max": 0.18, "kind": "bolt"})
 	var ring := MeshInstance3D.new()
@@ -941,7 +976,7 @@ func on_bolt(pos: Vector2, radius: float) -> void:
 	tm.inner_radius = 0.8
 	tm.outer_radius = 1.0
 	ring.mesh = tm
-	ring.material_override = Kit.mat(Color(1, 0.95, 0.4, 0.8), 2.0, 0.5, true, false)
+	ring.material_override = Kit.mat(Color(bcol.r, bcol.g, bcol.b, 0.8), 2.0, 0.5, true, false)
 	ring.position = p + Vector3(0, 0.1, 0)
 	add_child(ring)
 	_fx.append({"node": ring, "life": 0.25, "max": 0.25, "kind": "ring_at", "r": radius * K})
@@ -951,7 +986,7 @@ func on_bolt(pos: Vector2, radius: float) -> void:
 func on_thorns(radius: float) -> void:
 	for i in 12:
 		var d := Vector3.FORWARD.rotated(Vector3.UP, TAU * i / 12.0)
-		var sp := Kit.spike(self, 0.06, 0.5, Color(0.75, 0.75, 0.85), hero3 + Vector3(0, 0.5, 0), d)
+		var sp := Kit.spike(self, 0.06, 0.5, Color(0.75, 0.75, 0.85) if _hero_fx.is_empty() else _hero_fx.debris, hero3 + Vector3(0, 0.5, 0), d)
 		_fx.append({"node": sp, "life": 0.3, "max": 0.3, "kind": "thorn", "dir": d, "r": radius * K})
 
 
@@ -1032,6 +1067,8 @@ func sync(rules, delta: float) -> void:
 	_t += delta
 	if prince3d.get_meta("hero", "prince") != rules.hero_id:
 		_swap_hero(rules.hero_id)
+	if _hero_id != rules.hero_id:
+		set_hero_fx(rules.hero_id)
 	HeroModels.apply_gear(prince3d, {"armor": int(rules.passives.get("armor", 0)), "cape": int(rules.passives.get("cape", 0)),
 		"crown": int(rules.passives.get("crown", 0)) if rules.hero_id == "prince" else 0, "thorns": int(rules.weapons.get("thorns", 0)), "equip": rules.equip_ids})
 	hero3 = to3(rules.hero)
@@ -1109,7 +1146,15 @@ func sync(rules, delta: float) -> void:
 		var br: float = sh.r * K * 1.7
 		var evo: bool = rules.evolved.has("boomerang")
 		var bp := to3(sh.pos, 0.55)
-		_put(bmm, bn, Basis(Vector3.UP, _t * 22.0 + bn) * Basis(Vector3.RIGHT, 0.25) * Basis.from_scale(Vector3.ONE * br), bp, Color(0.95, 0.62, 0.1) if evo else Color(0.62, 0.36, 0.13))
+		var bcol := Color(0.95, 0.62, 0.1) if evo else Color(0.62, 0.36, 0.13)
+		match _hero_id:
+			"kid":
+				bcol = Color(0.98, 0.95, 0.85)    # 종이
+			"runny":
+				bcol = Color(1, 1, 1)             # 휴지
+			"icy":
+				bcol = Color(0.75, 0.95, 1.0)     # 눈꽃
+		_put(bmm, bn, Basis(Vector3.UP, _t * 22.0 + bn) * Basis(Vector3.RIGHT, 0.25) * Basis.from_scale(Vector3.ONE * br), bp, bcol)
 		bn += 1
 		if trail and _fx.size() < 120:
 			var puff := MeshInstance3D.new()
@@ -1135,7 +1180,7 @@ func sync(rules, delta: float) -> void:
 		_puddles[i].visible = i < rules.puddles.size()
 		if i < rules.puddles.size():
 			var pd: Dictionary = rules.puddles[i]
-			var pcol: Color = pd.get("color", Color(0.35, 0.45, 0.12, 0.7))
+			var pcol: Color = pd.get("color", PUDDLE_COL.get(_hero_id, Color(0.35, 0.45, 0.12, 0.7)))
 			if _puddles[i].get_meta("col", Color(0.35, 0.45, 0.12, 0.7)) != pcol:
 				_puddles[i].set_meta("col", pcol)
 				_puddles[i].material_override = Kit.mat(pcol, 0.3 if pcol.a > 0.9 else 0.0, 0.5, true, false)
@@ -1167,8 +1212,18 @@ func sync(rules, delta: float) -> void:
 	# 똥폭탄 (날아가는 중)
 	while _bombs.size() < rules.bombs.size():
 		var b := Node3D.new()
-		Kit.sphere(b, 0.16, POOP)
-		Kit.sphere(b, 0.05, Color(1, 0.6, 0.1), Vector3(0, 0.18, 0), Vector3.ONE, 2.0, false)
+		match _hero_id:
+			"kid":    # 물풍선
+				Kit.sphere(b, 0.2, Color(0.35, 0.7, 1.0), Vector3.ZERO, Vector3(1, 1.15, 1), 0.3)
+				Kit.sphere(b, 0.05, Color(0.35, 0.7, 1.0), Vector3(0, 0.24, 0))
+			"gassy":  # 방귀 풍선
+				Kit.sphere(b, 0.22, Color(0.55, 0.85, 0.3), Vector3.ZERO, Vector3.ONE, 0.3)
+				Kit.sphere(b, 0.06, Color(0.4, 0.6, 0.2), Vector3(0, 0.24, 0))
+			"rock":   # 바위
+				Kit.sphere(b, 0.24, Color(0.55, 0.52, 0.5), Vector3.ZERO, Vector3(1.1, 0.85, 1))
+			_:
+				Kit.sphere(b, 0.16, POOP)
+				Kit.sphere(b, 0.05, Color(1, 0.6, 0.1), Vector3(0, 0.18, 0), Vector3.ONE, 2.0, false)
 		add_child(b)
 		_bombs.append(b)
 	for i in _bombs.size():
@@ -1180,3 +1235,30 @@ func sync(rules, delta: float) -> void:
 			var w: Vector2 = from.lerp(bb.pos, k)
 			_bombs[i].position = to3(w, 0.3 + sin(k * PI) * 1.6)
 	_step_fx(delta)
+
+
+## 고른 똥에 맞춰 무기 생김새를 바꿔요 (survivor.gd가 판을 시작할 때 불러요)
+func set_hero_fx(id: String) -> void:
+	_hero_id = id
+	_hero_fx = HERO_FX.get(id, {})
+	# 방귀 구름: 설사 똥은 누런 안개, 얼음 똥은 찬 안개
+	var cc := {"runny": Color(0.72, 0.6, 0.3), "icy": Color(0.75, 0.9, 1.0)}
+	if cc.has(id):
+		var c: Color = cc[id]
+		_cloud.material_override = Kit.mat(Color(c.r, c.g, c.b, 0.16), 0.2, 0.5, true, false)
+		for p in _cloud_puffs:
+			(p as MeshInstance3D).material_override = Kit.mat(c.darkened(0.05), 0.0)
+			(p as MeshInstance3D).transparency = 0.12
+	# 똥파리: 설사 파리는 누렇게, 냄새 파리는 초록, 친구 파리는 분홍 볼
+	var fc := {"runny": Color(0.55, 0.4, 0.12), "gassy": Color(0.3, 0.6, 0.2), "kid": Color(0.9, 0.45, 0.6)}
+	if fc.has(id):
+		for f in _flies:
+			var body := f.get_child(0) as MeshInstance3D
+			if body:
+				body.material_override = Kit.mat(fc[id])
+	# 돌 철퇴
+	if id == "rock":
+		for b in _balls:
+			for ch in b.get_children():
+				if ch is MeshInstance3D:
+					(ch as MeshInstance3D).material_override = Kit.mat(Color(0.55, 0.52, 0.5))

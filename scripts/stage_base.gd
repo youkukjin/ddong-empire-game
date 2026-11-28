@@ -207,7 +207,7 @@ func finish_win(stars: int, title: String, lines: String) -> void:
 	if unlocked.get("next_new", false) and chapter < Chapters.COUNT:
 		body += "\n\n%d장 '%s'이(가) 열렸어요!" % [chapter + 1, Chapters.title(chapter + 1)]
 	if unlocked.get("hero_new", false):
-		body += "\n\n스토리 완성 선물! 서바이버에서 똥 왕자를 쓸 수 있어요!"
+		body += "\n\n스토리 완성 선물! 서바이버에서 돌 똥을 쓸 수 있어요!"
 	var star_widget: Control = null
 	if stars > 0:
 		star_widget = StarRow.new()

@@ -63,9 +63,10 @@ static func record_chapter_win(n: int, stars: int) -> Dictionary:
 	if stars > best:
 		set_value("chapter%d_best_stars" % n, stars)
 	set_value(next_key, true)
-	# 스토리를 끝까지(8장) 깨면 서바이버에 똥 왕자가 공짜로 열려요 (2026-11-28 사용자 요청)
-	if n >= 8 and not bool(get_value("hero_prince", false, "survivor")):
-		set_value("hero_prince", true, "survivor")
+	# 스토리를 끝까지(8장) 깨면 서바이버에 돌 똥이 공짜로 열려요 (2026-11-28 사용자: "다 깨면 캐릭터 하나 해금",
+	# "똥 왕자는 너무 쉬워져서 안 돼" → 똥 왕자는 똥전으로만)
+	if n >= 8 and not bool(get_value("hero_rock", false, "survivor")):
+		set_value("hero_rock", true, "survivor")
 		result["hero_new"] = true
 	return result
 
