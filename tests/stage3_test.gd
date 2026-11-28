@@ -36,7 +36,7 @@ func _autoplay(r: Rules, perfect_forks := true) -> void:
 func _test_rules() -> void:
 	var r := Rules.new(7)
 	check(r.forks.size() == 3 and r.gem_total > 10, "굴은 4구간, 갈림길 3개, 반짝이는 돌 %d개" % r.gem_total)
-	check(r.speed() == 300.0, "처음 속도는 300")
+	check(r.speed() == 280.0, "처음 속도는 280")
 	# 아무것도 안 하면 첫 장애물에 부딪혀요
 	var r0 := Rules.new(7)
 	var first_x: float = 0.0
@@ -46,21 +46,21 @@ func _test_rules() -> void:
 			break
 	while r0.distance < first_x + 70.0:
 		r0.tick(1.0 / 60.0)
-	check(r0.hearts == 2 and r0.hearts_lost == 1, "피하지 않으면 장애물에 부딪혀 하트 1개를 잃어요")
+	check(r0.hearts == Rules.HEARTS - 1 and r0.hearts_lost == 1, "피하지 않으면 장애물에 부딪혀 하트 1개를 잃어요")
 	check(r0.invuln > 0.0, "부딪힌 뒤 잠깐은 다시 안 다쳐요")
 	check(r0.jump() and not r0.duck(), "뛰는 중에는 숙일 수 없어요")
 
 	_autoplay(r)
 	check(r.outcome() == Rules.Outcome.WIN, "잘 피하고 갈림길을 맞히면 본거지에 도착해요")
-	check(r.hearts == 3 and r.wrong_forks == 0, "완벽한 달리기: 하트 그대로, 갈림길 모두 맞힘")
+	check(r.hearts == Rules.HEARTS and r.wrong_forks == 0, "완벽한 달리기: 하트 그대로, 갈림길 모두 맞힘")
 	check(r.star_rating() == 3 and r.time_left > 15.0, "별 3개, 남은 시간 %s초" % int(r.time_left))
 
 	var r2 := Rules.new(7)
 	_autoplay(r2, false)
-	check(r2.wrong_forks == 3 and r2.outcome() == Rules.Outcome.FAIL and r2.fail_reason() == Rules.FailReason.TIME, "갈림길을 다 틀리면 시간이 모자라서 실패해요")
+	check(r2.wrong_forks == 3 and r2.outcome() == Rules.Outcome.WIN and r2.star_rating() < 3 and r2.time_left < r.time_left - 15.0, "갈림길을 다 틀리면 시간을 잃고 별 3개는 못 받아요 (쉽게: 실패는 아니에요)")
 
 	var r3 := Rules.new(7)
-	for i in 3:
+	for i in Rules.HEARTS:
 		r3._lose_heart()
 	check(r3.outcome() == Rules.Outcome.FAIL and r3.fail_reason() == Rules.FailReason.HEARTS, "하트 0개면 실패")
 
@@ -78,7 +78,7 @@ func _test_stage() -> void:
 	check(stage.rules.is_ducking(), "아래로 쓸면 숙여요")
 	# 첫 갈림길 앞까지 옮겨서 위/아래 고르기
 	var f: Dictionary = stage.rules.forks[0]
-	stage.rules.distance = f.x - 300.0
+	stage.rules.distance = f.x - 250.0
 	for it in stage.rules.items:
 		if it.x < f.x:
 			it.done = true
@@ -99,7 +99,7 @@ func _test_stage() -> void:
 	await frames(3)
 	stage = current_scene
 	stage.skip_intro()
-	for i in 3:
+	for i in Rules.HEARTS:
 		stage.rules._lose_heart()
 	stage._play_process(0.01)
 	check(stage.find_overlay_button("다시 하기") != null and stage.phase == stage.Phase.RESULT, "하트를 다 잃으면 아쉬워요 창이 나와요")

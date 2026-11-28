@@ -13,6 +13,7 @@ const Rules := preload("res://scenes/chapter4/stage4_rules.gd")
 const Prince := preload("res://scripts/art/prince.gd")
 const Backdrop := preload("res://scripts/art/backdrop.gd")
 const Gesture := preload("res://scripts/gesture.gd")
+const View3D := preload("res://scenes/chapter4/view3d_ch4.gd")
 
 const GROUND_Y := 600.0
 
@@ -32,6 +33,7 @@ func _init() -> void:
 
 func _setup() -> void:
 	rules = Rules.new()
+	add_view3d(View3D, "wall")
 	world.add_child(Backdrop.new("wall"))
 	_draw_node = Node2D.new()
 	_draw_node.draw.connect(_draw_wall)
@@ -70,12 +72,11 @@ func _play_process(delta: float) -> void:
 	for e in rules.tick(delta):
 		match e.type:
 			"land":
-				_float_small(Vector2(e.x - 40, GROUND_Y - 60), "쾅", Color(1, 0.8, 0.5))
+				impact(Vector2(e.x, GROUND_Y - 40), "쾅!", Color(1, 0.6, 0.2), 0.7)
 			"hurt":
 				prince.play_pose(Prince.Pose.HURT, 0.4)
 				prince.blink = Rules.HURT_INVULN
-				float_text(Vector2(rules.prince_x - 30, GROUND_Y - 220), "아야!", Color(1, 0.6, 0.6))
-				shake()
+				impact(Vector2(rules.prince_x, GROUND_Y - 120), "아야!", Color(1, 0.45, 0.4), 1.0)
 	if gesture.is_holding():
 		prince.charge = Rules.charge_ratio(gesture.held)
 		prince.pose = Prince.Pose.CHARGE
@@ -120,7 +121,10 @@ func tap_at(p: Vector2) -> void:
 		if rules.sword_hit(b.x, b.y):
 			prince.facing = signf(Rules.col_center_x(b.x) - rules.prince_x) if Rules.col_center_x(b.x) != rules.prince_x else prince.facing
 			prince.play_pose(Prince.Pose.SWING, 0.18)
-			_float_small(p + Vector2(-20, -40), "탁!" if rules.bricks[b.x][b.y] > 0 else "와르르!", Color(1, 1, 0.8))
+			if rules.bricks[b.x][b.y] > 0:
+				impact(p, "탁!", Color(1, 0.95, 0.5), 0.6)
+			else:
+				impact(p, "와르르!", Color(1, 0.7, 0.3), 1.1)
 			return
 		if b.y < Rules.ROWS - Rules.SWORD_ROWS:
 			_float_small(p + Vector2(-60, -40), "검이 안 닿아요", Color(1, 0.85, 0.6))
@@ -146,8 +150,7 @@ func release_chain(held: float) -> void:
 	if r.cannon:
 		float_text(Vector2(Rules.col_center_x(r.col) - 80, 60), "대포가 부서졌어요!", Color(0.6, 1, 0.6), 34)
 	if r.hit > 0 or r.cannon:
-		float_text(Vector2(Rules.col_center_x(r.col) - 70, 300), "콰지직!", Color(0.5, 1, 0.5), 46)
-		shake(6)
+		impact(Vector2(Rules.col_center_x(r.col), 300), "콰지직!", Color(0.45, 1, 0.4), 1.5)
 
 
 func _win() -> void:
@@ -197,6 +200,13 @@ func _brick_style(col: Color) -> StyleBoxFlat:
 
 func _draw_wall() -> void:
 	var n := _draw_node
+	var three := view3d != null      # 3D가 성벽·대포·대포알을 그려요
+	if not three:
+		_draw_wall_2d(n)
+	_draw_wall_fx(n, three)
+
+
+func _draw_wall_2d(n: Node2D) -> void:
 	# 성벽 뒤 어둠
 	n.draw_rect(Rect2(Rules.WALL_LEFT, Rules.WALL_TOP, Rules.COLS * Rules.BRICK_W, Rules.ROWS * Rules.BRICK_H), Color(0.3, 0.2, 0.36))
 	for c in Rules.COLS:
@@ -228,6 +238,9 @@ func _draw_wall() -> void:
 			n.draw_circle(Vector2(x + 8, Rules.WALL_TOP - 37), 3.5, Color.WHITE)
 		else:
 			n.draw_rect(Rect2(x - 40, Rules.WALL_TOP - 16, 80, 16), Color(0.6, 0.45, 0.38))
+
+
+func _draw_wall_fx(n: Node2D, three: bool) -> void:
 	# 대포알: 땅에 빨간 그림자, 위에서 떨어지는 알
 	for b in rules.balls:
 		var k: float = 1.0 - b.left / Rules.CANNON_WARN
@@ -235,6 +248,8 @@ func _draw_wall() -> void:
 		n.draw_arc(Vector2(b.x, GROUND_Y + 10), Rules.BALL_RADIUS, 0, TAU, 32, Color(1, 0.3, 0.2, 0.7), 3)
 		var from_x: float = Rules.col_center_x(b.from)
 		var bp := Vector2(lerpf(from_x, b.x, k), lerpf(Rules.WALL_TOP - 90, GROUND_Y - 20, k * k))
+		if three:
+			continue
 		n.draw_circle(bp, 22, Color(0.36, 0.34, 0.45))
 		n.draw_circle(bp + Vector2(-7, -7), 6, Color(1, 1, 1, 0.35))
 	# 초록 소용돌이

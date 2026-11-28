@@ -1,5 +1,5 @@
 extends Node2D
-## 불길: 줄기가 지나간 자리에 붙어요. 5초 동안 안 끄면 옆으로 번져요. 쓸면 꺼져요.
+## 불길: 줄기가 지나간 자리에 붙어요. 7초 동안 안 끄면 옆으로 번져요. 쓸면 꺼져요.
 
 signal spread_requested(fire: Node2D)
 

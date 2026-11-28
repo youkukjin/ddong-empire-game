@@ -12,6 +12,7 @@ const Rules := preload("res://scenes/chapter2/stage2_rules.gd")
 const Prince := preload("res://scripts/art/prince.gd")
 const Backdrop := preload("res://scripts/art/backdrop.gd")
 const Gesture := preload("res://scripts/gesture.gd")
+const View3D := preload("res://scenes/chapter2/view3d_ch2.gd")
 
 const PRINCE_POS := Vector2(300, 600)
 const RING_CENTER := Vector2(760, 360)
@@ -48,6 +49,7 @@ func _init() -> void:
 
 func _setup() -> void:
 	rules = Rules.new()
+	add_view3d(View3D, "yard")
 	world.add_child(Backdrop.new("yard"))
 	_draw_node = Node2D.new()
 	_draw_node.draw.connect(_draw_drill)
@@ -247,8 +249,7 @@ func _chain_step() -> void:
 		_vortex = {}
 		if hit:
 			_score += 1
-			float_text(Vector2(CHAIN_TARGET_X - 80, _chain_target_y - 100), "콰지직!", Color(0.6, 1, 0.6), 40)
-			shake(5)
+			impact(Vector2(CHAIN_TARGET_X, _chain_target_y), "콰지직!", Color(0.5, 1, 0.4), 1.2)
 		else:
 			float_text(Vector2(CHAIN_TARGET_X - 80, LANE_Y - 100), "빗나갔어요", Color(1, 0.8, 0.6))
 		if _count >= Rules.CHAIN_THROWS:
@@ -269,7 +270,7 @@ func _roll_step() -> void:
 		else:
 			prince.play_pose(Prince.Pose.HURT, 0.4)
 			prince.blink = 0.5
-			float_text(PRINCE_POS + Vector2(-30, -200), "콩!", Color(1, 0.7, 0.6))
+			impact(PRINCE_POS + Vector2(0, -80), "쿵!", Color(1, 0.5, 0.4), 0.8)
 	if _count >= _balls.size():
 		end_drill()
 
@@ -312,6 +313,7 @@ func press_dumbbell() -> void:
 		Rules.Judge.PERFECT:
 			prince.play_pose(Prince.Pose.CHEER, 0.3)
 			float_text(RING_CENTER + Vector2(-60, -120), "딱 좋아요!", Color(1, 0.9, 0.3), 40)
+			impact(PRINCE_POS + Vector2(0, -170), "불끈!", Color(1, 0.75, 0.2), 0.7)
 		Rules.Judge.GOOD:
 			prince.play_pose(Prince.Pose.CHEER, 0.2)
 			float_text(RING_CENTER + Vector2(-40, -120), "좋아요", Color(0.9, 1, 0.7))
@@ -329,10 +331,11 @@ func press_sword(p: Vector2) -> void:
 			if t.hp <= 0:
 				_targets.erase(t)
 				_score += 1
-				float_text(t.pos + Vector2(-30, -80), "탁!", Color(1, 1, 0.7))
+				impact(t.pos, "탁!", Color(1, 0.95, 0.4), 0.8)
 			else:
 				t.life += 0.4
 				float_text(t.pos + Vector2(-30, -80), "한 번 더!", Color(1, 0.85, 0.6), 28)
+				shake(4)
 			return
 
 
@@ -362,14 +365,16 @@ func _draw_drill() -> void:
 		return
 	var n := _draw_node
 	var font := ThemeDB.fallback_font
+	var three := view3d != null      # 3D가 아령·표적·공을 그려요
 	match rules.drill:
 		Rules.Drill.DUMBBELL:
 			# 아령 (원작 그림의 아령)
 			var lift := 30.0 if prince.pose == Prince.Pose.CHEER else 0.0
 			var bar_y := PRINCE_POS.y - 150 - lift
-			n.draw_line(Vector2(PRINCE_POS.x - 90, bar_y), Vector2(PRINCE_POS.x + 90, bar_y), Color(0.3, 0.3, 0.35), 10)
-			for sx in [-1, 1]:
-				n.draw_rect(Rect2(PRINCE_POS.x + sx * 90 - 18, bar_y - 34, 36, 68), Color(0.25, 0.25, 0.3))
+			if not three:
+				n.draw_line(Vector2(PRINCE_POS.x - 90, bar_y), Vector2(PRINCE_POS.x + 90, bar_y), Color(0.3, 0.3, 0.35), 10)
+				for sx in [-1, 1]:
+					n.draw_rect(Rect2(PRINCE_POS.x + sx * 90 - 18, bar_y - 34, 36, 68), Color(0.25, 0.25, 0.3))
 			n.draw_circle(RING_CENTER, RING_TARGET, Color(1, 0.9, 0.5, 0.35))
 			n.draw_arc(RING_CENTER, RING_TARGET, 0, TAU, 48, Color(0.5, 0.3, 0.1), 6)
 			for note in _notes:
@@ -382,6 +387,8 @@ func _draw_drill() -> void:
 				n.draw_arc(RING_CENTER, r, 0, TAU, 64, Color(0.95, 0.45, 0.2), 8)
 		Rules.Drill.SWORD:
 			for t in _targets:
+				if three:
+					continue
 				var a := clampf(t.life / 0.3, 0.0, 1.0)
 				n.draw_circle(t.pos, 56, Color(0.95, 0.95, 0.9, a))
 				n.draw_circle(t.pos, 38, Color(0.9, 0.3, 0.3, a))
@@ -391,8 +398,9 @@ func _draw_drill() -> void:
 		Rules.Drill.CHAIN:
 			n.draw_line(Vector2(PRINCE_POS.x + 60, LANE_Y), Vector2(1240, LANE_Y), Color(0.3, 0.9, 0.4, 0.6), 6)
 			var tp := Vector2(CHAIN_TARGET_X, _chain_target_y)
-			n.draw_rect(Rect2(tp - Vector2(40, 60), Vector2(80, 120)), Color(0.7, 0.5, 0.3))
-			n.draw_circle(tp, 26, Color(0.9, 0.3, 0.3))
+			if not three:
+				n.draw_rect(Rect2(tp - Vector2(40, 60), Vector2(80, 120)), Color(0.7, 0.5, 0.3))
+				n.draw_circle(tp, 26, Color(0.9, 0.3, 0.3))
 			if not _vortex.is_empty():
 				var k := clampf((_t - _vortex.t) / VORTEX_TIME, 0.0, 1.0)
 				var vp := Vector2(lerpf(PRINCE_POS.x + 60, CHAIN_TARGET_X, k), LANE_Y)
@@ -408,8 +416,9 @@ func _draw_drill() -> void:
 				if x > 1340:
 					continue
 				var bp := Vector2(x, PRINCE_POS.y - 36)
-				n.draw_circle(bp, 36, Color(0.85, 0.5, 0.25))
-				n.draw_arc(bp, 36, _t * 8, _t * 8 + 2, 12, Color(1, 0.8, 0.5), 5)
+				if not three:
+					n.draw_circle(bp, 36, Color(0.85, 0.5, 0.25))
+					n.draw_arc(bp, 36, _t * 8, _t * 8 + 2, 12, Color(1, 0.8, 0.5), 5)
 				if left <= Rules.ROLL_WARN:
 					n.draw_string(font, bp + Vector2(-12, -60), "!", HORIZONTAL_ALIGNMENT_LEFT, -1, 64, Color(1, 0.3, 0.2))
 

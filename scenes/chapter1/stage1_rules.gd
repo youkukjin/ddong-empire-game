@@ -8,18 +8,18 @@ enum FailReason { NONE, HEARTS, TIME, TOO_MANY_FLED }
 enum HeartReason { BEAM, NOSE }
 
 const TOTAL_CITIZENS := 15        # 모두 15명
-const WIN_RESCUED := 12           # 12명 이상 대피하면 승리
+const WIN_RESCUED := 10           # 10명 이상 대피하면 승리 (2026-11-28 쉽게: 12 → 10)
 const CHECKPOINT_RESCUED := 8     # 8명을 구한 순간 중간 저장
 const MAX_ON_FIELD := 4           # 도로 위에는 한 번에 최대 4명
-const TIME_NORMAL := 180.0        # 3분
+const TIME_NORMAL := 210.0        # 3분 30초 (쉽게: 3분 → 3분 30초)
 const TIME_HARD := 150.0          # 어려움 모드 2분 30초
 const HEARTS_NORMAL := 3
 const HEARTS_HARD := 1
 const PRACTICE_TIME := 20.0       # 처음 20초는 연습 (줄기 공격 없음)
 const FIRST_MOUTH_TIME := 20.0    # (제안) 첫 큰 입은 연습이 끝날 때
-const MOUTH_INTERVAL := 15.0      # 15초마다 큰 입
-const NOSE_WINDOW := 1.5          # 코가 빛나는 1.5초
-const FIRE_SPREAD_TIME := 5.0     # 5초 동안 안 끄면 번짐
+const MOUTH_INTERVAL := 18.0      # 18초마다 큰 입 (쉽게: 15 → 18)
+const NOSE_WINDOW := 2.0          # 코가 빛나는 2초 (쉽게: 1.5 → 2)
+const FIRE_SPREAD_TIME := 7.0     # 7초 동안 안 끄면 번짐 (쉽게: 5 → 7)
 const COMBO_MIN := 3              # 한 번에 3개 이상 쓸면 콤보
 const CHECKPOINT_MIN_TIME := 60.0 # (제안) 중간부터 할 때 최소 1분은 남겨 줘요
 
@@ -189,7 +189,7 @@ func star_rating() -> int:
 		return 0
 	if rescued >= TOTAL_CITIZENS and hearts_lost == 0 and not from_checkpoint:
 		return 3
-	if rescued >= 14:
+	if rescued >= 13:
 		return 2
 	return 1
 

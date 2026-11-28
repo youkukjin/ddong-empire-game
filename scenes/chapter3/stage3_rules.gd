@@ -16,14 +16,14 @@ enum Side { NONE, UP, DOWN }
 
 const SEGMENTS := 4                       # 굴 4구간. 앞 3구간 끝에 갈림길
 const SEGMENT_LENGTH := 4800.0
-const SPEEDS := [300.0, 340.0, 380.0, 420.0]   # 구간마다 조금씩 빨라져요
-const TIME_LIMIT := 75.0                # 끝까지 쉬지 않고 달리면 약 54초
-const HEARTS := 3
+const SPEEDS := [280.0, 310.0, 340.0, 370.0]   # 구간마다 조금씩 빨라져요 (쉽게: 조금 느리게)
+const TIME_LIMIT := 95.0                # 끝까지 쉬지 않고 달리면 약 60초
+const HEARTS := 4
 const JUMP_TIME := 0.65
 const JUMP_HEIGHT := 160.0
 const DUCK_TIME := 0.7
-const HURT_INVULN := 1.0
-const WRONG_PATH_PENALTY := 10.0          # 막다른 길: 10초 잃어요
+const HURT_INVULN := 1.2
+const WRONG_PATH_PENALTY := 6.0           # 막다른 길: 6초 잃어요
 const FORK_NOTICE := 3.0                  # 갈림길 3초 전부터 보여요
 const GEM_STARS_RATIO := 0.7              # 별 3개: 반짝이는 돌 70% 이상 + 하트 그대로
 

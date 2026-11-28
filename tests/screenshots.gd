@@ -30,7 +30,11 @@ func _main() -> void:
 		var stage := await _open(Chapters.scene(n), 5)
 		if stage.has_method("skip_intro"):
 			stage.skip_intro()
-		await _frames(90)
+		if n == 2:
+			# 2장: 검 연습 표적이 튀어나온 순간
+			stage.rules.drill = stage.Rules.Drill.SWORD
+			stage.begin_drill()
+		await _frames(30 if n == 3 or n == 4 else 90)
 		await _save("%d장-플레이" % n)
 	# 1장: 드래곤이 입을 벌리고 줄기를 쏘는 순간
 	var s1 := await _open(Chapters.scene(1), 5)
@@ -61,11 +65,35 @@ func _main() -> void:
 	s5.battle.spawn("demon", 1000.0)
 	await _frames(40)
 	await _save("5장-대마왕")
+	# 박력 연출: 사슬 무기가 맞는 순간 (제안)
+	s5.impact(Vector2(s5.battle.boss().x, 470), "콰지직!", Color(0.45, 1, 0.4), 1.4)
+	await _frames(3)
+	await _save("5장-타격")
 	# 6장 드래곤 싸움
 	var s6 := await _open("res://scenes/chapter6/dragon_battle.tscn", 5)
 	s6.skip_intro()
 	await _frames(40)
 	await _save("6장-드래곤")
+	# 보라색 광선 "콰앙"
+	if s6.view3d:
+		var dr: Dictionary = s6.battle.boss()
+		dr.target_x = s6.battle.hero_x
+		s6.view3d.on_event({"type": "strike", "enemy": dr, "attack": {"type": "beam"}})
+		Engine.time_scale = 0.05
+		await _frames(3)
+		await _save("6장-광선")
+		Engine.time_scale = 1.0
+	# 7장: 똥의 신으로 각성
+	var s7 := await _open(Chapters.scene(7), 5)
+	s7.skip_intro()
+	await _frames(5)
+	s7.battle.god_left = 12.0
+	s7.prince.god = true
+	s7.battle.hero_x = 500.0
+	await _frames(20)
+	s7.impact(Vector2(500, 400), "번쩍!!", Color(1, 0.85, 0.2), 2.4)
+	await _frames(2)
+	await _save("7장-각성")
 	# 결과 창
 	var st := current_scene
 	if st.has_method("finish_win"):

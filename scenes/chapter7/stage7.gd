@@ -63,8 +63,8 @@ func _on_gauge_used() -> void:
 		return
 	awakened_once = true
 	prince.god = true
-	shake(14)
 	float_text(Vector2(380, 230), "똥의 신으로 각성!", Color(1, 0.9, 0.4), 56)
+	impact(Vector2(battle.hero_x, GROUND_Y - 200), "번쩍!!", Color(1, 0.85, 0.2), 2.4)
 
 
 func _on_battle_event(e: Dictionary) -> void:
@@ -86,7 +86,7 @@ func _on_enemies_cleared() -> void:
 	phase = Phase.OUTRO
 	_refresh_pause_button()
 	float_text(Vector2(360, 230), "똥 드래곤을 완전히 물리쳤어요!", Color(1, 0.95, 0.6), 50)
-	shake(20)
+	impact(Vector2(800, 300), "콰과광!!", Color(1, 0.75, 0.2), 2.6)
 	var hits := 0
 	for k in battle.hits_taken:
 		hits += int(battle.hits_taken[k])

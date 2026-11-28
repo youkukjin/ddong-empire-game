@@ -12,6 +12,7 @@ const Rules := preload("res://scenes/chapter3/stage3_rules.gd")
 const Prince := preload("res://scripts/art/prince.gd")
 const Backdrop := preload("res://scripts/art/backdrop.gd")
 const Gesture := preload("res://scripts/gesture.gd")
+const View3D := preload("res://scenes/chapter3/view3d_ch3.gd")
 
 const PRINCE_X := 260.0
 const GROUND_Y := 600.0
@@ -35,6 +36,7 @@ func _init() -> void:
 
 func _setup() -> void:
 	rules = Rules.new(course_seed)
+	add_view3d(View3D, "tunnel")
 	world.add_child(Backdrop.new("tunnel"))
 	_draw_node = Node2D.new()
 	_draw_node.draw.connect(_draw_course)
@@ -81,13 +83,12 @@ func _play_process(delta: float) -> void:
 			"hit":
 				prince.play_pose(Prince.Pose.HURT, 0.4)
 				prince.blink = Rules.HURT_INVULN
-				float_text(Vector2(PRINCE_X - 20, GROUND_Y - 220), "아야!", Color(1, 0.6, 0.6))
-				shake()
+				impact(Vector2(PRINCE_X + 30, GROUND_Y - 80), "쾅!" if e.kind != Rules.Kind.PIT else "으악!", Color(1, 0.45, 0.3), 1.0)
 			"fork_ok":
 				float_text(Vector2(PRINCE_X + 60, 300), "맞는 길이에요!", Color(0.8, 0.6, 1), 40)
 			"fork_wrong":
 				float_text(Vector2(PRINCE_X + 60, 300), "막다른 길! 돌아와요 (-%d초)" % int(Rules.WRONG_PATH_PENALTY), Color(1, 0.7, 0.5), 36)
-				shake(5)
+				impact(Vector2(PRINCE_X + 120, 400), "쿵!", Color(1, 0.6, 0.4), 0.8)
 	prince.position.y = GROUND_Y - rules.jump_height()
 	if rules.is_ducking():
 		prince.pose = Prince.Pose.ROLL
@@ -169,6 +170,8 @@ func _sx(world_x: float) -> float:
 
 func _draw_course() -> void:
 	var n := _draw_node
+	if view3d:
+		return      # 3D가 굴과 장애물을 그려요
 	# 굴 벽 무늬가 지나가요
 	var off := fmod(rules.distance, 160.0)
 	for i in 10:

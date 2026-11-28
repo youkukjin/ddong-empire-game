@@ -13,31 +13,31 @@ const DRILL_NAMES := ["아령 들기", "검 연습", "사슬 무기 연습", "�
 const DUMBBELL_NOTES := 12
 const DUMBBELL_APPROACH := 1.2      # 고리가 다 줄어드는 데 걸리는 시간
 const DUMBBELL_GAP := 1.0           # 다음 고리까지 간격
-const PERFECT_WINDOW := 0.12        # ±0.12초 = 딱 좋아요 (2점)
-const GOOD_WINDOW := 0.25           # ±0.25초 = 좋아요 (1점)
+const PERFECT_WINDOW := 0.15        # ±0.15초 = 딱 좋아요 (2점)
+const GOOD_WINDOW := 0.3            # ±0.3초 = 좋아요 (1점)
 
 # 검 연습: 튀어나온 표적을 톡톡
 const SWORD_TIME := 25.0
-const SWORD_TARGET_LIFE := 1.4
+const SWORD_TARGET_LIFE := 1.8
 const SWORD_SPAWN_GAP := 0.7
-const SWORD_HARD_CHANCE := 0.25     # 단단한 표적(두 번 쳐야 해요)이 나올 확률
+const SWORD_HARD_CHANCE := 0.15     # 단단한 표적(두 번 쳐야 해요)이 나올 확률
 
 # 사슬 무기 연습: 길게 눌러 힘을 모으고, 움직이는 표적이 줄 위에 올 때 떼기
 const CHAIN_THROWS := 6
 const CHAIN_CHARGE_TIME := 1.7      # 6장 설계: 민첩 10일 때 모으기 1.7초
-const CHAIN_TIME := 50.0
+const CHAIN_TIME := 60.0
 
 # 구르기 연습: 굴러오는 연습 공을 쓸어서 굴러 피하기
 const ROLL_BALLS := 10
-const ROLL_INVULN := 0.4            # 6장 설계: 민첩 10일 때 무적 0.4초
-const ROLL_WARN := 0.9              # 공이 닿기 0.9초 전에 "!" 표시
+const ROLL_INVULN := 0.5            # 연습이라 조금 넉넉하게 (6장 설계 민첩 10은 0.4초)
+const ROLL_WARN := 1.1              # 공이 닿기 1.1초 전에 "!" 표시
 
 # 연습마다 [통과 점수, 별 2개 점수, 별 3개 점수]
 const THRESHOLDS := {
-	Drill.DUMBBELL: [12, 17, 21],   # 24점 만점
-	Drill.SWORD: [12, 18, 24],      # 맞힌 표적 수
+	Drill.DUMBBELL: [10, 15, 20],   # 24점 만점
+	Drill.SWORD: [10, 16, 22],      # 맞힌 표적 수
 	Drill.CHAIN: [3, 4, 6],         # 6번 중 맞힌 수
-	Drill.ROLL: [6, 8, 10],         # 10개 중 피한 수
+	Drill.ROLL: [5, 7, 10],         # 10개 중 피한 수
 }
 
 var drill := Drill.DUMBBELL
