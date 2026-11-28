@@ -13,8 +13,17 @@ const HURT_INVULN := 0.8
 const REGEN := 0.6                    # 1초에 체력 회복
 const MAGNET := 140.0                 # 구슬을 끌어오는 거리
 const ENEMY_CAP := 150
-const MID_BOSS_TIME := 300.0
+const MID_BOSS_TIME := 240.0          # 똥 무사 대장 (예전 이름 그대로 둬요)
 const BOSS_TIME := 600.0
+## 중간 보스 4마리 (2026-11-28 사용자: 중간 보스 3마리 더)
+const MID_BOSSES := [
+	[120.0, "bat", "똥 박쥐 왕이 날아왔어요!"],
+	[240.0, "captain", "똥 무사 대장이 나타났어요!"],
+	[360.0, "golem", "바위 똥 골렘이 쿵쿵 걸어와요!"],
+	[480.0, "wyrm", "꼬마 보라 드래곤이 돌진해요!"],
+]
+const BOSS_NAMES := {"bat": "똥 박쥐 왕", "captain": "똥 무사 대장", "golem": "바위 똥 골렘", "wyrm": "꼬마 보라 드래곤", "demon": "똥 대마왕"}
+const ENDLESS_EVERY := 75.0           # 무한 모드에서 중간 보스가 다시 오는 간격
 const GOD_TIME := 10.0
 const GOD_KILLS := 120                # 각성 게이지가 차는 처치 수
 const MAX_WEAPONS := 6
@@ -69,6 +78,9 @@ var weapons := {"sword": 1}          # 이름 -> 레벨
 var passives := {}                   # 이름 -> 단계
 var enemies: Array = []              # {id, kind, pos, hp, max_hp, speed, dmg, radius, boss, hit_cd: {}}
 var gems: Array = []                 # {pos, value}
+var items: Array = []                # {kind: "heal"|"magnet", pos, age}
+var vacuum := 0.0                    # 자석 똥을 먹으면 잠깐 모든 구슬이 날아와요
+const ITEM_HEAL := 30.0
 var bombs: Array = []                # {pos, target, t}
 var shots: Array = []                # 날아가는 것 {kind, pos, vel, life, r, dmg, pierce, hit}
 var puddles: Array = []              # {pos, r, life, dmg}
@@ -81,6 +93,9 @@ var god_gauge := 0.0
 var boss_spawned := false
 var mid_spawned := false
 var boss_defeated := false
+var endless := false                 # 대마왕을 물리치면 무한 모드: 적이 점점 세져요
+var _mid_index := 0
+var _endless_boss_t := 0.0
 var chain_angle := 0.0
 var bonus := {"dmg": 1.0, "speed": 1.0, "magnet": 1.0, "cool": 1.0, "area": 1.0, "amount": 0, "armor": 0.0, "luck": 1.0, "regen": 0.0, "xp": 1.0}
 
@@ -101,9 +116,14 @@ func _init(seed_value := -1) -> void:
 func outcome() -> int:
 	if hp <= 0.0:
 		return Outcome.LOSE
-	if boss_defeated:
-		return Outcome.WIN
 	return Outcome.ONGOING
+
+
+## 무한 모드에서 적이 얼마나 센지 (1분마다 +35%)
+func power_mult() -> float:
+	if not endless:
+		return 1.0
+	return 1.0 + maxf(time - BOSS_TIME, 0.0) / 60.0 * 0.35
 
 
 func xp_needed() -> int:
@@ -115,7 +135,16 @@ func minute() -> int:
 
 
 func damage_mult() -> float:
-	return bonus.dmg * (3.0 if god_left > 0.0 else 1.0)
+	return bonus.dmg * (GOD_DMG if god_left > 0.0 else 1.0)
+
+
+## 똥의 신 각성 (10초): 공격 3배, 무기 2배 빨리, 이동 1.4배, 무적,
+## 시작할 때 큰 충격파로 주변 적을 날리고 모든 구슬을 끌어와요.
+const GOD_DMG := 3.0
+const GOD_COOL := 0.5
+const GOD_SPEED := 1.4
+const GOD_WAVE_R := 460.0
+var _god_wave := false
 
 
 func awaken() -> bool:
@@ -123,7 +152,18 @@ func awaken() -> bool:
 		return false
 	god_gauge = 0.0
 	god_left = GOD_TIME
+	vacuum = 2.5
+	_god_wave = true
 	return true
+
+
+func _god_burst(ev: Array) -> void:
+	_god_wave = false
+	for e in enemies:
+		var d: float = e.pos.distance_to(hero)
+		if d < GOD_WAVE_R:
+			damage(e, (200.0 if e.boss else 80.0) * damage_mult() / GOD_DMG, ev, 0.0 if e.boss else 260.0)
+	ev.append({"type": "god_wave", "r": GOD_WAVE_R})
 
 
 ## 레벨업 카드 하나를 골라요.
@@ -139,9 +179,8 @@ func choose(i: int) -> void:
 		"passive":
 			passives[c.id] = int(passives.get(c.id, 0)) + 1
 			_apply_passive(c.id)
-		"heal":
-			hp = minf(max_hp, hp + 40.0)
-			coins += 10
+		"coins":
+			coins += 20
 	choices = []
 	if xp >= xp_needed():
 		_level_up()
@@ -159,10 +198,12 @@ func tick(delta: float, move: Vector2) -> Array:
 	# 왕자 움직이기
 	if move.length() > 0.05:
 		var m := move.limit_length(1.0)
-		hero += m * HERO_SPEED * bonus.speed * delta
+		hero += m * HERO_SPEED * bonus.speed * (GOD_SPEED if god_left > 0.0 else 1.0) * delta
 		facing = m.normalized()
 		var half := ARENA / 2.0 - 40.0
 		hero = hero.clamp(Vector2(-half, -half), Vector2(half, half))
+	if _god_wave:
+		_god_burst(ev)
 	_spawn(delta, ev)
 	_move_enemies(delta, ev)
 	_weapons(delta, ev)
@@ -196,18 +237,42 @@ func spawn_enemy(kind: String, pos: Vector2) -> Dictionary:
 			e.speed = 55.0 + m * 3.0
 			e.dmg = 8.0 + m * 0.8
 			e.radius = 34.0
+		"bat":
+			e.hp = 520.0
+			e.speed = 125.0
+			e.dmg = 9.0
+			e.radius = 42.0
+			e.boss = true
 		"captain":
 			e.hp = 900.0
 			e.speed = 80.0
 			e.dmg = 12.0
 			e.radius = 48.0
 			e.boss = true
+		"golem":
+			e.hp = 2000.0
+			e.speed = 50.0
+			e.dmg = 18.0
+			e.radius = 62.0
+			e.boss = true
+		"wyrm":
+			e.hp = 1500.0
+			e.speed = 85.0
+			e.dmg = 14.0
+			e.radius = 52.0
+			e.boss = true
+			e.dash = 3.0
 		"demon":
 			e.hp = 4000.0
 			e.speed = 75.0
 			e.dmg = 16.0
 			e.radius = 64.0
 			e.boss = true
+	var pm := power_mult()
+	e.hp *= pm
+	e.dmg *= sqrt(pm)
+	if not e.boss:
+		e.speed *= minf(1.0 + (pm - 1.0) * 0.25, 1.6)
 	e.max_hp = e.hp
 	enemies.append(e)
 	return e
@@ -221,15 +286,25 @@ func boss() -> Dictionary:
 
 
 func _spawn(delta: float, ev: Array) -> void:
-	if not mid_spawned and time >= MID_BOSS_TIME:
-		mid_spawned = true
-		var c := spawn_enemy("captain", _edge_point())
-		ev.append({"type": "boss", "enemy": c, "text": "똥 무사 대장이 나타났어요!"})
+	while _mid_index < MID_BOSSES.size() and time >= MID_BOSSES[_mid_index][0]:
+		var mb: Array = MID_BOSSES[_mid_index]
+		_mid_index += 1
+		if mb[1] == "captain":
+			mid_spawned = true
+		var c := spawn_enemy(mb[1], _edge_point())
+		ev.append({"type": "boss", "enemy": c, "text": mb[2]})
 	if not boss_spawned and time >= BOSS_TIME:
 		boss_spawned = true
 		var d := spawn_enemy("demon", _edge_point())
 		ev.append({"type": "boss", "enemy": d, "text": "똥 대마왕이 나타났어요!"})
-	if boss_spawned:
+	if endless:
+		_endless_boss_t += delta
+		if _endless_boss_t >= ENDLESS_EVERY:
+			_endless_boss_t = 0.0
+			var mb2: Array = MID_BOSSES[rng.randi() % MID_BOSSES.size()]
+			var c2 := spawn_enemy(mb2[1], _edge_point())
+			ev.append({"type": "boss", "enemy": c2, "text": "더 센 " + mb2[2]})
+	elif boss_spawned:
 		return
 	# 1분마다 조금씩 더 많이 (처음 1초에 1.2마리 → 9분에 약 6마리)
 	var rate := 0.9 + time / 60.0 * 0.45
@@ -283,6 +358,16 @@ func _move_enemies(delta: float, ev: Array) -> void:
 		var spd: float = e.speed
 		if time < float(e.get("slow_until", 0.0)):
 			spd *= float(e.get("slow", 1.0))
+		# 꼬마 드래곤: 가끔 확 돌진해요
+		if e.has("dash"):
+			e.dash -= delta
+			if e.dash < 0.0:
+				spd *= 3.2
+				if e.dash < -0.6:
+					e.dash = 3.0
+					ev.append({"type": "dash", "enemy": e})
+		elif e.kind == "bat":
+			to = to.rotated(sin(time * 3.0 + e.id) * 0.9)
 		if d > 1.0:
 			e.pos += to / d * spd * delta
 		# 너무 멀리 떨어진 적은 앞쪽으로 다시 데려와요
@@ -331,28 +416,32 @@ func _on_kill(e: Dictionary, ev: Array) -> void:
 	match e.kind:
 		"brute":
 			value = 5
-		"captain":
+		"captain", "bat", "golem", "wyrm":
 			value = 40
 		"demon":
 			value = 0
 	if value > 0:
 		gems.append({"pos": e.pos, "value": value})
-	# 가끔 똥빵이 떨어져요 (먹으면 체력 25)
 	if not e.boss and value == 1 and rng.randf() < 0.03 * (bonus.luck - 1.0):
 		gems[gems.size() - 1].value = 5
-	if not e.boss and rng.randf() < 0.012 * bonus.luck:
-		gems.append({"pos": e.pos + Vector2(14, 0), "value": 0, "heal": 25.0})
+	# 가끔 아이템 똥이 떨어져요: 생명력 똥(체력 30), 자석 똥(구슬을 몽땅 끌어와요)
+	if e.boss or rng.randf() < 0.015 * bonus.luck:
+		drop_item("heal", e.pos + Vector2(18, 0))
+	if e.boss or rng.randf() < 0.004 * bonus.luck:
+		drop_item("magnet", e.pos + Vector2(-18, 0))
 	if e.boss:
-		coins += 50 if e.kind == "captain" else 200
-	if e.kind == "demon":
+		coins += 200 if e.kind == "demon" else 50
+	if e.kind == "demon" and not boss_defeated:
 		boss_defeated = true
+		endless = true
+		ev.append({"type": "endless"})
 	ev.append({"type": "kill", "enemy": e})
 
 
 # ------------------------------------------------------------------ 무기
 
 func _cool(base: float) -> float:
-	return base * bonus.cool
+	return base * bonus.cool * (GOD_COOL if god_left > 0.0 else 1.0)
 
 
 func _ready_weapon(id: String, base: float, delta: float) -> bool:
@@ -658,23 +747,39 @@ func _enemy_by_id(id: int) -> Dictionary:
 
 # ------------------------------------------------------------------ 구슬과 레벨업
 
+## 아이템 똥: "heal"(생명력 똥) 또는 "magnet"(자석 똥). 땅에 떨어져 있다가 주우면 효과가 나요.
+func drop_item(kind: String, pos: Vector2) -> void:
+	if items.size() < 12:
+		items.append({"kind": kind, "pos": pos, "age": 0.0})
+
+
 func _collect(delta: float, ev: Array) -> void:
+	vacuum = maxf(vacuum - delta, 0.0)
 	var mag: float = MAGNET * bonus.magnet
+	for it in items.duplicate():
+		it.age += delta
+		if hero.distance_to(it.pos) < HERO_RADIUS + 26.0:
+			items.erase(it)
+			if it.kind == "heal":
+				var amount := minf(ITEM_HEAL, max_hp - hp)
+				hp += amount
+				ev.append({"type": "heal", "amount": ITEM_HEAL})
+			else:
+				vacuum = 2.5
+				ev.append({"type": "magnet"})
 	for g in gems.duplicate():
 		var to: Vector2 = hero - g.pos
 		var d := to.length()
-		if d < mag:
+		if vacuum > 0.0:
+			g.pos += to.normalized() * minf(d, maxf(900.0, d * 2.5) * delta)
+		elif d < mag:
 			g.pos += to.normalized() * minf(d, 520.0 * delta)
 		if d < HERO_RADIUS + 10.0:
 			gems.erase(g)
 			xp_frac += float(g.value) * bonus.xp
 			xp += int(xp_frac)
 			xp_frac -= int(xp_frac)
-			if g.has("heal"):
-				hp = minf(max_hp, hp + float(g.heal))
-				ev.append({"type": "heal", "amount": g.heal})
-			else:
-				ev.append({"type": "gem"})
+			ev.append({"type": "gem"})
 	if xp >= xp_needed() and choices.is_empty():
 		_level_up()
 		ev.append({"type": "levelup", "level": level})
@@ -712,7 +817,7 @@ func make_choices() -> Array:
 			continue
 		out.append(c)
 	while out.size() < 3:
-		out.append({"kind": "heal", "id": "heal", "name": "똥빵", "level": 0, "title": "똥빵", "desc": "체력 40 회복, 똥전 +10"})
+		out.append({"kind": "coins", "id": "coins", "name": "똥전 주머니", "level": 0, "title": "똥전 주머니", "desc": "똥전 +20"})
 	return out
 
 
@@ -724,7 +829,7 @@ func _apply_passive(id: String) -> void:
 			bonus.speed += 0.10
 		"heart":
 			max_hp += 25.0
-			hp = max_hp
+			hp += 25.0
 		"magnet":
 			bonus.magnet += 0.30
 		"dumbbell":

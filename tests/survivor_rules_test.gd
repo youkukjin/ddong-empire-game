@@ -114,7 +114,7 @@ func _run() -> void:
 	for ev in r6.tick(0.1, Vector2.ZERO):
 		if ev.type == "boss":
 			texts.append(ev.text)
-	check(texts.size() == 1 and r6.mid_spawned, "5분에 중간 보스가 나와요")
+	check(texts.size() >= 1 and r6.mid_spawned, "4분에 똥 무사 대장이 나와요")
 	r6.time = Rules.BOSS_TIME - 0.05
 	r6.tick(0.1, Vector2.ZERO)
 	var boss: Dictionary = r6.boss()
@@ -126,15 +126,59 @@ func _run() -> void:
 		r6.tick(0.1, Vector2.ZERO)
 		while not r6.choices.is_empty():
 			r6.choose(0)
-		if r6.outcome() == Rules.Outcome.WIN:
+		if r6.endless:
 			break
-	check(r6.outcome() == Rules.Outcome.WIN, "대마왕을 물리치면 이겨요")
+	check(r6.endless and r6.boss_defeated and r6.outcome() == Rules.Outcome.ONGOING, "대마왕을 물리치면 무한 모드로 이어져요")
+	var w0: Dictionary = r6.spawn_enemy("warrior", Vector2(900, 0))
+	r6.time += 300.0
+	var w1: Dictionary = r6.spawn_enemy("warrior", Vector2(900, 0))
+	check(w1.hp > w0.hp * 2.0, "무한 모드에서는 시간이 갈수록 적이 세져요")
+	var r11 = Rules.new(21)
+	r11.hp = 1e9
+	r11.max_hp = 1e9
+	var kinds_seen := {}
+	r11.time = 100.0
+	for i in 520:
+		r11.time += 1.0
+		for ev in r11.tick(0.0, Vector2.ZERO):
+			if ev.type == "boss":
+				kinds_seen[ev.enemy.kind] = true
+		r11.enemies = []
+	check(kinds_seen.has("bat") and kinds_seen.has("captain") and kinds_seen.has("golem") and kinds_seen.has("wyrm") and kinds_seen.has("demon"), "중간 보스 4마리와 대마왕이 차례로 나와요")
+	Save.add_survivor_rank({"time": 50.0, "level": 3, "kills": 10})
+	var place: int = Save.add_survivor_rank({"time": 700.0, "level": 20, "kills": 900, "cleared": true})
+	check(place == 1 and Save.survivor_ranks().size() == 2, "순위표: 오래 버틴 판이 1위")
 
 	# 각성
 	var r7 = Rules.new(1)
 	check(not r7.awaken(), "게이지가 안 차면 각성할 수 없어요")
 	r7.god_gauge = 1.0
 	check(r7.awaken() and r7.damage_mult() > 2.0, "게이지가 차면 똥의 신으로 각성해 공격이 세져요")
+	r7.spawn_enemy("warrior", r7.hero + Vector2(200, 0))
+	var wave_seen := false
+	for ev in r7.tick(0.05, Vector2.ZERO):
+		wave_seen = wave_seen or ev.type == "god_wave"
+	check(wave_seen and r7._cool(1.0) < 0.6, "각성하면 충격파가 터지고 무기가 2배 빨라져요")
+
+	# 레벨업은 체력을 채우지 않고, 아이템 똥이 채워줘요
+	var ri = Rules.new(4)
+	ri.weapons = {}
+	ri.hp = 50.0
+	ri.xp = 999
+	ri.tick(0.01, Vector2.ZERO)
+	ri.choose(0)
+	check(ri.hp < 60.0, "레벨업해도 체력이 꽉 차지 않아요 (%.0f)" % ri.hp)
+	ri.drop_item("heal", ri.hero)
+	ri.choices = []
+	ri.tick(0.01, Vector2.ZERO)
+	check(ri.hp >= 75.0 and ri.items.is_empty(), "생명력 똥을 주우면 체력 +30")
+	ri.xp = -9999
+	ri.choices = []
+	ri.gems.append({"pos": ri.hero + Vector2(1500, 0), "value": 1})
+	ri.drop_item("magnet", ri.hero)
+	for i in 30:
+		ri.tick(0.05, Vector2.ZERO)
+	check(ri.gems.is_empty(), "자석 똥을 주우면 멀리 있는 구슬까지 몽땅 와요")
 
 	# 적 수 제한과 기록
 	var r8 = Rules.new(9)

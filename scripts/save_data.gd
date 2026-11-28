@@ -108,3 +108,20 @@ static func record_survivor(coins: int, survived: float, cleared: bool) -> bool:
 		set_value("best_time", survived, "survivor")
 		return true
 	return false
+
+
+## 버틴 시간 순위표 (위에서부터 오래 버틴 순, 10개까지). 각 칸: {time, level, kills, cleared, date}
+static func survivor_ranks() -> Array:
+	return get_value("ranks", [], "survivor")
+
+
+## 순위표에 넣고 몇 위인지 돌려줘요 (1부터, 10위 밖이면 0)
+static func add_survivor_rank(entry: Dictionary) -> int:
+	var ranks: Array = survivor_ranks()
+	ranks.append(entry)
+	ranks.sort_custom(func(a, b): return float(a.time) > float(b.time))
+	var place := ranks.find(entry) + 1
+	if ranks.size() > 10:
+		ranks.resize(10)
+	set_value("ranks", ranks, "survivor")
+	return place if place <= 10 else 0

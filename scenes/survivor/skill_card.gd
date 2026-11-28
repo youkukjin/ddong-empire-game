@@ -72,7 +72,7 @@ func _draw() -> void:
 	draw_icon(self, String(card.id), box.get_center(), box.size.x * 0.34, _t)
 	# 글자
 	var tx := box.end.x + 18
-	var tag: String = {"evolve": "진화!", "weapon": "새 무기" if level <= 1 else "무기 강화", "passive": "능력치", "heal": "회복"}.get(card.kind, "")
+	var tag: String = {"evolve": "진화!", "weapon": "새 무기" if level <= 1 else "무기 강화", "passive": "능력치", "coins": "보너스"}.get(card.kind, "")
 	var tag_w := FONT.get_string_size(tag, HORIZONTAL_ALIGNMENT_LEFT, -1, 22).x + 20
 	_round(Rect2(Vector2(tx, page.position.y + 12), Vector2(tag_w, 32)), 10, kc)
 	draw_string(FONT, Vector2(tx + 10, page.position.y + 36), tag, HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color.WHITE)

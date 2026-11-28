@@ -28,9 +28,11 @@ var xp_bar: ProgressBar
 var time_label: Label
 var info_label: Label
 var god_button: Button
+var god_info: Label
 var boss_bar: ProgressBar
 var boss_label: Label
 var skills_label: Label
+var hp_text: Label
 
 
 func _init() -> void:
@@ -46,7 +48,7 @@ func _setup() -> void:
 func _intro_pages() -> Array:
 	return [
 		"똥제국 서바이버\n\n성 안 마당에 똥 무사들이 끝없이 몰려와요!\n10분을 버티면 똥 대마왕이 나타나요.",
-		"어떻게 할까요?\n\n• 손가락으로 화면을 끌면 그쪽으로 걸어요\n• 공격은 똥 왕자가 알아서 해요\n• 적이 떨어뜨린 똥 구슬을 모으면 레벨 업!\n  카드 3장 중 하나를 골라 강해져요\n• 게이지가 차면 '각성!' 버튼: 10초 동안 똥의 신",
+		"어떻게 할까요?\n\n• 손가락으로 화면을 끌면 그쪽으로 걸어요\n• 공격은 똥 왕자가 알아서 해요\n• 적이 떨어뜨린 똥 구슬을 모으면 레벨 업!\n  카드 3장 중 하나를 골라 강해져요\n• 빨간 생명력 똥은 체력, 파란 자석 똥은 구슬을 몽땅 끌어와요\n• 게이지가 차면 '각성!' 버튼: 10초 동안 똥의 신\n  공격 3배, 무기 2배 빨리, 발 빨라짐, 무적!",
 	]
 
 
@@ -57,6 +59,9 @@ func _build_hud() -> void:
 	hud_bar(Vector2(14, 26), Vector2(330, 84))
 	hp_bar = _bar(Vector2(28, 40), Vector2(300, 24), Color(0.95, 0.3, 0.3))
 	info_label = hud_label(Vector2(28, 66), 26)
+	hp_text = hud_label(Vector2(28, 36), 22)
+	hp_text.size = Vector2(300, 30)
+	hp_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	time_label = hud_label(Vector2(380, 30), 54)
 	time_label.size = Vector2(220, 64)
 	time_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -71,6 +76,12 @@ func _build_hud() -> void:
 	god_button.position = Vector2(520, 1150)
 	god_button.pressed.connect(_on_awaken)
 	hud_root.add_child(god_button)
+	# 각성 중에 무엇이 좋아졌는지 크게 보여줘요
+	god_info = hud_label(Vector2(20, 196), 30, Color(1, 0.88, 0.3))
+	god_info.size = Vector2(680, 90)
+	god_info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	god_info.text = "★ 똥의 신 ★\n공격 ×3 · 무기 ×2 빨리 · 발 ×1.4 · 무적"
+	god_info.visible = false
 	skills_label = hud_label(Vector2(20, 1150), 22)
 	skills_label.size = Vector2(480, 110)
 	skills_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -103,10 +114,14 @@ func _bar(pos: Vector2, size: Vector2, color: Color) -> ProgressBar:
 func _refresh_hud() -> void:
 	hp_bar.max_value = rules.max_hp
 	hp_bar.value = maxf(rules.hp, 0.0)
+	hp_text.text = "%d / %d" % [int(ceil(maxf(rules.hp, 0.0))), int(rules.max_hp)]
 	xp_bar.max_value = rules.xp_needed()
 	xp_bar.value = rules.xp
 	var left: float = maxf(Rules.BOSS_TIME - rules.time, 0.0)
-	time_label.text = time_text(left) if not rules.boss_spawned else "보스!"
+	if rules.endless:
+		time_label.text = "∞ " + time_text(rules.time)
+	else:
+		time_label.text = time_text(left) if not rules.boss_spawned else "보스!"
 	info_label.text = "Lv %d   물리친 적 %d" % [rules.level, rules.kills]
 	var parts: Array = []
 	for id in rules.weapons:
@@ -117,6 +132,9 @@ func _refresh_hud() -> void:
 	var ready: bool = rules.god_gauge >= 1.0 and rules.god_left <= 0.0
 	god_button.visible = phase == Phase.PLAY
 	god_button.disabled = not ready
+	god_info.visible = rules.god_left > 0.0 and phase == Phase.PLAY
+	if god_info.visible:
+		god_info.modulate.a = 0.75 + sin(Time.get_ticks_msec() * 0.008) * 0.25
 	if rules.god_left > 0.0:
 		god_button.text = "신 %d" % int(ceil(rules.god_left))
 	elif ready:
@@ -127,7 +145,7 @@ func _refresh_hud() -> void:
 	boss_label.visible = not b.is_empty()
 	boss_bar.visible = boss_label.visible
 	if not b.is_empty():
-		boss_label.text = "똥 대마왕" if b.kind == "demon" else "똥 무사 대장"
+		boss_label.text = Rules.BOSS_NAMES.get(b.kind, "보스")
 		boss_bar.max_value = b.max_hp
 		boss_bar.value = maxf(b.hp, 0.0)
 
@@ -174,10 +192,8 @@ func _play_process(delta: float) -> void:
 	_refresh_hud()
 	joy.set_state(_touching, _origin, _finger)
 	match rules.outcome():
-		Rules.Outcome.WIN:
-			_finish(true)
 		Rules.Outcome.LOSE:
-			_finish(false)
+			_finish(rules.boss_defeated)
 	if phase == Phase.PLAY and not rules.choices.is_empty() and not overlay_root.has_node("Cards"):
 		_show_cards()
 
@@ -199,6 +215,14 @@ func _on_event(ev: Dictionary) -> void:
 			Sound.play("swing", randf_range(0.95, 1.1), -8.0)
 			if view3d:
 				view3d.on_swing(ev.dirs, ev.reach)
+		"god_wave":
+			Sound.play("boom", 0.7, 0.0)
+			if view3d:
+				view3d.on_god_wave(ev.r)
+		"magnet":
+			Sound.play("power", 0.8, -4.0)
+			if view3d:
+				view3d.comic(CENTER + Vector2(0, -120), "자석 똥! 구슬이 몽땅 와요", Color(0.5, 0.75, 1.0), 0.7)
 		"slam":
 			impact(CENTER, "쾅!", Color(1, 0.8, 0.25), 0.9)
 			if view3d:
@@ -228,12 +252,23 @@ func _on_event(ev: Dictionary) -> void:
 				Sound.play("clang" if ev.evolved else "hit", randf_range(0.6, 0.8), -5.0)
 			if view3d:
 				view3d.on_bhit(ev.pos, ev.evolved)
+		"endless":
+			Sound.play("roar", 0.8, 0.0)
+			impact(CENTER + Vector2(0, -240), "무한 모드!", Color(1, 0.4, 0.35), 2.0)
+			if view3d:
+				view3d.comic(CENTER + Vector2(0, -100), "적이 점점 세져요!", Color(1, 0.85, 0.4), 0.7)
+		"dash":
+			Sound.play("roar", 1.4, -8.0)
 		"heal":
 			Sound.play("power", 1.4, -6.0)
+			_hurt_number(float(ev.amount), Color(0.45, 1, 0.45))
+			if view3d:
+				view3d.comic(CENTER + Vector2(0, -120), "생명력 똥!", Color(1, 0.5, 0.55), 0.6)
 		"gem":
 			Sound.play("coin", randf_range(1.0, 1.3), -14.0)
 		"hurt":
 			Sound.play("hurt", 1.0, -4.0)
+			_hurt_number(-float(ev.dmg), Color(1, 0.3, 0.25))
 			shake(5.0)
 			if view3d:
 				view3d.flash(Color(1, 0.2, 0.2), 0.25)
@@ -242,6 +277,27 @@ func _on_event(ev: Dictionary) -> void:
 		"boss":
 			Sound.play("roar", 1.0, 0.0)
 			impact(CENTER + Vector2(0, -260), ev.text, Color(1, 0.35, 0.35), 1.6)
+
+
+## 왕자 머리 위에 -2, +25 같은 숫자가 톡 튀어 올라요
+func _hurt_number(v: float, color: Color) -> void:
+	var l := Label.new()
+	l.text = ("%+d" % int(round(v))) if absf(v) >= 1.0 else ("%+.1f" % v)
+	l.add_theme_font_size_override("font_size", 44)
+	l.add_theme_color_override("font_color", color)
+	l.add_theme_color_override("font_outline_color", Color(0.07, 0.035, 0.05))
+	l.add_theme_constant_override("outline_size", 12)
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hud_root.add_child(l)
+	var p := world_to_screen(rules.hero) + Vector2(randf_range(-30, 10), -130)
+	l.position = p
+	l.pivot_offset = l.get_minimum_size() * 0.5
+	l.scale = Vector2.ONE * 1.6
+	var tw := l.create_tween()
+	tw.tween_property(l, "scale", Vector2.ONE, 0.12).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.parallel().tween_property(l, "position:y", p.y - 70.0, 0.8)
+	tw.parallel().tween_property(l, "modulate:a", 0.0, 0.4).set_delay(0.5)
+	tw.tween_callback(l.queue_free)
 
 
 func _play_input(event: InputEvent) -> void:
@@ -278,6 +334,7 @@ func _can_pause() -> bool:
 func _on_awaken() -> void:
 	if rules.awaken():
 		impact(CENTER + Vector2(0, -140), "똥의 신 각성!!", Color(1, 0.85, 0.2), 1.8)
+		god_info.visible = true
 		Sound.play("flash", 1.0, 0.0)
 
 
@@ -343,24 +400,33 @@ func _finish(win: bool) -> void:
 	god_button.visible = false
 	var earned: int = rules.earned_coins()
 	var best: bool = Save.record_survivor(earned, rules.time, win)
-	Sound.jingle(win)
+	var place: int = Save.add_survivor_rank({"time": rules.time, "level": rules.level, "kills": rules.kills, "cleared": win,
+		"date": Time.get_date_string_from_system()})
+	Sound.jingle(win or place == 1)
 	if view3d:
 		view3d.sync(rules, 0.0)
 	var lines := "버틴 시간 %s   레벨 %d   물리친 적 %d\n똥전 +%d (모은 똥전 %d)" % [time_text(rules.time), rules.level, rules.kills, earned, Save.survivor_coins()]
-	if best:
-		lines += "\n새 기록!"
-	var weapons: Array = []
-	for id in rules.weapons:
-		weapons.append("%s Lv%d" % [Rules.WEAPONS[id].name, rules.weapons[id]])
-	lines += "\n무기: " + ", ".join(weapons)
-	var title := "똥 대마왕을 물리쳤어요!" if win else "쓰러졌어요!"
+	if place > 0:
+		lines += "\n순위 %d위!%s" % [place, " 새 기록!" if best else ""]
+	lines += "\n\n" + rank_text(place)
+	var title := "무한 모드에서 쓰러졌어요!" if win else "쓰러졌어요!"
 	if not win:
-		lines += "\n\n팁: 멈추지 말고 빙글빙글 돌면서 구슬을 모아요"
+		lines += "\n팁: 멈추지 말고 빙글빙글 돌면서 구슬을 모아요"
 	show_panel(title, lines, [
 		["다시 하기", restart],
 		["장 고르기", go_select],
 		["처음으로", go_title],
 	])
+
+
+## 순위표 (5위까지, 이번 판은 ▶ 표시)
+static func rank_text(place: int) -> String:
+	var out: Array = ["순위표"]
+	var ranks: Array = Save.survivor_ranks()
+	for i in mini(ranks.size(), 5):
+		var r: Dictionary = ranks[i]
+		out.append("%s%d위  %s  Lv%d%s" % ["▶ " if i + 1 == place else "", i + 1, time_text(float(r.time)), int(r.level), "  (대마왕 ★)" if r.get("cleared", false) else ""])
+	return "\n".join(out)
 
 
 func go_select() -> void:

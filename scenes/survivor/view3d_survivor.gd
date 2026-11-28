@@ -32,6 +32,10 @@ var _boomers: MultiMeshInstance3D
 var _trail_acc := 0.0
 var _puddles: Array[MeshInstance3D] = []
 var _cloud: MeshInstance3D
+var _cloud_ring: MeshInstance3D
+var _cloud_puffs: Array[MeshInstance3D] = []
+var _items: Array[Node3D] = []
+var _item_kinds: Array[String] = []
 var _fx: Array = []             # {"node", "life", "max", "kind"}
 var _swing_left := 0.0
 var _ground: MeshInstance3D
@@ -66,9 +70,22 @@ func _ready() -> void:
 	# 방귀 구름 (반투명 초록 공)
 	_cloud = MeshInstance3D.new()
 	_cloud.mesh = SphereMesh.new()
-	_cloud.material_override = Kit.mat(Color(0.55, 0.8, 0.3, 0.22), 0.0, 0.5, true, false)
+	_cloud.material_override = Kit.mat(Color(0.5, 0.78, 0.22, 0.34), 0.4, 0.5, true, false)
 	_cloud.visible = false
 	add_child(_cloud)
+	# 방귀 구름 테두리(땅 위 초록 고리)와 둥실둥실 연기 뭉치
+	_cloud_ring = MeshInstance3D.new()
+	var rt := TorusMesh.new()
+	rt.inner_radius = 0.9
+	rt.outer_radius = 1.0
+	_cloud_ring.mesh = rt
+	_cloud_ring.material_override = Kit.mat(Color(0.55, 0.95, 0.2, 0.75), 1.2, 0.5, true, false)
+	_cloud_ring.visible = false
+	add_child(_cloud_ring)
+	for i in 8:
+		var puff := Kit.sphere(self, 1.0, Color(0.55, 0.8, 0.25), Vector3.ZERO, Vector3.ONE, 0.3, true)
+		puff.visible = false
+		_cloud_puffs.append(puff)
 	for i in 3:
 		var b := Node3D.new()
 		Kit.sphere(b, 0.26, Color(0.25, 0.7, 0.25))
@@ -330,7 +347,17 @@ func _sync_enemies(rules) -> void:
 
 func _sync_boss(e: Dictionary) -> void:
 	if not _bosses.has(e.id):
-		_bosses[e.id] = _make_demon() if e.kind == "demon" else _make_captain()
+		match e.kind:
+			"demon":
+				_bosses[e.id] = _make_demon()
+			"bat":
+				_bosses[e.id] = _make_bat()
+			"golem":
+				_bosses[e.id] = _make_golem()
+			"wyrm":
+				_bosses[e.id] = _make_wyrm()
+			_:
+				_bosses[e.id] = _make_captain()
 	var n: Node3D = _bosses[e.id]
 	var p := to3(e.pos)
 	n.position = p
@@ -343,7 +370,12 @@ func _sync_boss(e: Dictionary) -> void:
 	var white: bool = e.flash > 0.0
 	for part in n.get_meta("parts"):
 		var mi: MeshInstance3D = part
-		mi.material_override = Kit.mat(Color(1, 1, 1) if white else POOP)
+		mi.material_override = Kit.mat(Color(1, 1, 1) if white else n.get_meta("color", POOP))
+	if n.has_meta("wings"):
+		for w in n.get_meta("wings"):
+			(w as Node3D).rotation.z = (w as Node3D).get_meta("side") * (-0.3 + sin(_t * 14.0) * 0.5)
+	if e.has("dash") and e.dash < 0.0:
+		n.scale *= Vector3(0.9, 0.9, 1.25)
 	body.position.y = absf(sin(_t * 5.0)) * 0.08
 
 
@@ -372,6 +404,94 @@ func _make_captain() -> Node3D:
 	var blade := Kit.box(body, Vector3(0.12, 1.6, 0.05), Color(0.85, 0.9, 1.0), Vector3(0.85, 1.2, 0.3))
 	blade.material_override = Kit.metal(Color(0.85, 0.9, 1.0))
 	n.set_meta("parts", parts)
+	return n
+
+
+## 똥 박쥐 왕: 커다란 박쥐 날개를 퍼덕이며 지그재그로 날아와요
+func _make_bat() -> Node3D:
+	var n := Node3D.new()
+	add_child(n)
+	Kit.shadow(n, 0.8)
+	var body := Node3D.new()
+	body.name = "Body"
+	body.position.y = 0.7
+	n.add_child(body)
+	var parts: Array = []
+	for t in [[0.55, 0.3, 0.6], [0.42, 0.75, 0.65], [0.28, 1.05, 0.7]]:
+		parts.append(Kit.sphere(body, t[0], Color(0.42, 0.25, 0.3), Vector3(0, t[1], 0), Vector3(1, t[2], 0.9)))
+	for sx in [-1.0, 1.0]:
+		Kit.spike(body, 0.1, 0.4, Color(0.3, 0.12, 0.2), Vector3(sx * 0.22, 1.2, 0), Vector3(sx * 0.3, 1, 0))
+		Kit.fierce_eye(body, Vector3(sx * 0.16, 0.85, 0.42), 0.11, Color(1, 0.9, 0.3), Color(0.7, 0.05, 0.05))
+	var wings: Array = []
+	for sx in [-1.0, 1.0]:
+		var w := Node3D.new()
+		w.position = Vector3(sx * 0.4, 0.7, -0.1)
+		w.set_meta("side", sx)
+		body.add_child(w)
+		var mem := Kit.prism(w, Vector3(1.6, 0.9, 0.05), Color(0.35, 0.1, 0.3), Vector3(sx * 0.85, 0.1, 0))
+		mem.rotation.z = sx * -0.25
+		for i in 3:
+			Kit.spike(w, 0.04, 1.3 - i * 0.3, Color(0.18, 0.05, 0.15), Vector3.ZERO, Vector3(sx * (1.0 - i * 0.15), 0.6 - i * 0.4, 0))
+		wings.append(w)
+	n.set_meta("parts", parts)
+	n.set_meta("wings", wings)
+	n.set_meta("color", Color(0.42, 0.25, 0.3))
+	return n
+
+
+## 바위 똥 골렘: 회색 돌 덩어리 똥, 이끼와 빛나는 눈
+func _make_golem() -> Node3D:
+	var n := Node3D.new()
+	add_child(n)
+	Kit.shadow(n, 1.1)
+	var body := Node3D.new()
+	body.name = "Body"
+	n.add_child(body)
+	var stone := Color(0.5, 0.48, 0.5)
+	var parts: Array = []
+	for t in [[0.95, 0.5, 0.6], [0.75, 1.2, 0.62], [0.52, 1.75, 0.7]]:
+		parts.append(Kit.sphere(body, t[0], stone, Vector3(0, t[1], 0), Vector3(1, t[2], 0.95)))
+	for i in 7:
+		var a := i * 0.9
+		Kit.box(body, Vector3(0.3, 0.25, 0.3), stone.darkened(0.25), Vector3(cos(a) * 0.8, 0.4 + (i % 3) * 0.45, sin(a) * 0.7)).rotation = Vector3(a, a * 0.5, 0)
+	Kit.sphere(body, 0.4, Color(0.35, 0.5, 0.22), Vector3(0.2, 2.0, 0.1), Vector3(1.2, 0.35, 1.0))
+	for sx in [-0.22, 0.22]:
+		Kit.sphere(body, 0.11, Color(1, 0.55, 0.1), Vector3(sx, 1.5, 0.55), Vector3.ONE, 2.5, false)
+	for sx in [-1.0, 1.0]:
+		Kit.sphere(body, 0.38, stone.darkened(0.1), Vector3(sx * 1.05, 1.0, 0.2), Vector3(1, 1.2, 1))
+	n.set_meta("parts", parts)
+	n.set_meta("color", stone)
+	return n
+
+
+## 꼬마 보라 드래곤: 가시 머리, 가끔 확 돌진
+func _make_wyrm() -> Node3D:
+	var n := Node3D.new()
+	add_child(n)
+	Kit.shadow(n, 0.9)
+	var body := Node3D.new()
+	body.name = "Body"
+	n.add_child(body)
+	var purple := Color(0.5, 0.25, 0.7)
+	var parts: Array = []
+	for i in 5:
+		parts.append(Kit.sphere(body, 0.5 - i * 0.07, purple, Vector3(0, 0.55 + i * 0.05, 0.3 - i * 0.45), Vector3(1, 0.85, 1)))
+	parts.append(Kit.sphere(body, 0.48, purple, Vector3(0, 0.9, 0.75), Vector3(1, 0.9, 1.2)))
+	Kit.sphere(body, 0.3, purple.lightened(0.15), Vector3(0, 0.78, 1.15), Vector3(1, 0.7, 1))
+	for i in 4:
+		Kit.spike(body, 0.12, 0.4, Color(0.2, 0.45, 1.0), Vector3(0, 1.3 - i * 0.05, 0.6 - i * 0.4), Vector3(0, 1, -0.3))
+	for sx in [-0.2, 0.2]:
+		Kit.fierce_eye(body, Vector3(sx, 1.05, 1.1), 0.1, Color(1, 0.9, 0.2), Color(0.6, 0.0, 0.1))
+	for sx in [-1.0, 1.0]:
+		var w := Node3D.new()
+		w.position = Vector3(sx * 0.4, 1.0, 0.2)
+		w.set_meta("side", sx)
+		body.add_child(w)
+		var mem := Kit.prism(w, Vector3(1.0, 0.6, 0.04), purple.darkened(0.3), Vector3(sx * 0.5, 0.1, 0))
+		mem.rotation.z = sx * -0.3
+	n.set_meta("parts", parts)
+	n.set_meta("color", purple)
+	n.set_meta("wings", [body.get_child(body.get_child_count() - 2), body.get_child(body.get_child_count() - 1)])
 	return n
 
 
@@ -460,6 +580,67 @@ func on_swing(dirs: Array, reach: float) -> void:
 		var r := reach * K
 		add_child(arc)
 		_fx.append({"node": arc, "life": 0.2, "max": 0.2, "kind": "swing", "dir": dir, "r": r, "mat": m})
+
+
+## 생명력 똥(빨간 하트 똥)과 자석 똥(파란 똥 + 말굽 자석)
+func _sync_items(rules) -> void:
+	var list: Array = rules.items
+	for i in list.size():
+		var it: Dictionary = list[i]
+		if i >= _items.size():
+			_items.append(null)
+			_item_kinds.append("")
+		if _items[i] == null or _item_kinds[i] != it.kind:
+			if _items[i] != null:
+				_items[i].queue_free()
+			_items[i] = _make_item(it.kind)
+			_item_kinds[i] = it.kind
+		var n := _items[i]
+		n.visible = true
+		n.position = to3(it.pos, 0.25 + absf(sin(_t * 3.0 + i)) * 0.25)
+		n.rotation.y = _t * 1.5 + i
+	for i in range(list.size(), _items.size()):
+		if _items[i] != null:
+			_items[i].visible = false
+
+
+func _make_item(kind: String) -> Node3D:
+	var n := Node3D.new()
+	add_child(n)
+	var c := Color(0.95, 0.25, 0.3) if kind == "heal" else Color(0.3, 0.55, 1.0)
+	for t in [[0.32, 0.0, 0.55], [0.24, 0.22, 0.6], [0.15, 0.4, 0.7]]:
+		Kit.sphere(n, t[0], c, Vector3(0, t[1], 0), Vector3(1, t[2], 1), 0.6)
+	Kit.spike(n, 0.08, 0.2, c, Vector3(0, 0.48, 0), Vector3(0.3, 1, 0))
+	if kind == "heal":
+		# 하얀 십자
+		Kit.box(n, Vector3(0.28, 0.08, 0.05), Color(1, 1, 1), Vector3(0, 0.12, 0.3), 1.0, false)
+		Kit.box(n, Vector3(0.08, 0.28, 0.05), Color(1, 1, 1), Vector3(0, 0.12, 0.3), 1.0, false)
+	else:
+		# 빨강·은색 말굽 자석
+		for sx in [-1.0, 1.0]:
+			Kit.box(n, Vector3(0.1, 0.32, 0.1), Color(0.9, 0.2, 0.2), Vector3(sx * 0.14, 0.75, 0), 0.4)
+			Kit.box(n, Vector3(0.1, 0.1, 0.1), Color(0.9, 0.9, 0.95), Vector3(sx * 0.14, 0.56, 0), 0.6)
+		Kit.box(n, Vector3(0.38, 0.1, 0.1), Color(0.9, 0.2, 0.2), Vector3(0, 0.92, 0), 0.4)
+	var glow := Kit.sphere(n, 0.5, c, Vector3(0, 0.02, 0), Vector3(1, 0.08, 1), 0.5, false)
+	glow.transparency = 0.6
+	return n
+
+
+## 똥의 신 각성 충격파: 금빛 고리 두 겹 + 번쩍
+func on_god_wave(radius: float) -> void:
+	for k in 2:
+		var ring := MeshInstance3D.new()
+		var tm := TorusMesh.new()
+		tm.inner_radius = 0.82
+		tm.outer_radius = 1.0
+		ring.mesh = tm
+		ring.material_override = Kit.mat(Color(1, 0.85, 0.25, 0.9), 3.0, 0.5, true, false)
+		ring.position = hero3 + Vector3(0, 0.15 + k * 0.3, 0)
+		add_child(ring)
+		_fx.append({"node": ring, "life": 0.5 + k * 0.2, "max": 0.5 + k * 0.2, "kind": "ring", "r": radius * K * (1.0 - k * 0.25)})
+	burst(hero3 + Vector3(0, 0.6, 0), Color(1, 0.85, 0.3), 24, 1.6)
+	flash(Color(1, 0.9, 0.4), 0.5)
+	shake(0.35, 0.4)
 
 
 func on_slam(radius: float) -> void:
@@ -731,9 +912,21 @@ func sync(rules, delta: float) -> void:
 	# 방귀 구름
 	var cr: float = rules.cloud_radius() * K
 	_cloud.visible = cr > 0.0
+	_cloud_ring.visible = cr > 0.0
+	for i in _cloud_puffs.size():
+		_cloud_puffs[i].visible = cr > 0.0
 	if cr > 0.0:
 		_cloud.position = hero3 + Vector3(0, 0.2, 0)
 		_cloud.scale = Vector3(cr, cr * 0.35, cr) * (1.0 + sin(_t * 4.0) * 0.05)
+		_cloud_ring.position = hero3 + Vector3(0, 0.06, 0)
+		_cloud_ring.scale = Vector3(cr, 0.6, cr)
+		for i in _cloud_puffs.size():
+			var a := _t * 0.9 + i * TAU / _cloud_puffs.size()
+			var rr := cr * (0.7 + sin(_t * 2.0 + i) * 0.12)
+			var ps := cr * 0.16 * (1.0 + sin(_t * 3.0 + i * 1.7) * 0.25)
+			_cloud_puffs[i].position = hero3 + Vector3(cos(a) * rr, 0.35 + sin(_t * 2.5 + i) * 0.12, sin(a) * rr)
+			_cloud_puffs[i].scale = Vector3(ps, ps * 0.8, ps)
+	_sync_items(rules)
 	# 똥폭탄 (날아가는 중)
 	while _bombs.size() < rules.bombs.size():
 		var b := Node3D.new()

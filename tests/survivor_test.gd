@@ -68,10 +68,15 @@ func _run() -> void:
 		await create_timer(0.05).timeout
 		while not s.rules.choices.is_empty():
 			s.choose_card(0)
-		if s.phase == s.Phase.RESULT:
+		if s.rules.endless:
 			break
-	check(s.phase == s.Phase.RESULT and s.find_overlay_button("다시 하기") != null, "대마왕을 물리치면 결과 창")
-	check(Save.survivor_coins() > 0 and Save.survivor_best() > 600.0, "똥전과 기록이 남아요")
+	check(s.rules.endless and s.phase == s.Phase.PLAY, "대마왕을 물리치면 무한 모드로 계속해요")
+	await frames(3)
+	check(s.time_label.text.begins_with("∞"), "무한 모드 시간이 보여요")
+	s.rules.hp = 0.0
+	await frames(3)
+	check(s.phase == s.Phase.RESULT and s.find_overlay_button("다시 하기") != null, "무한 모드에서 쓰러지면 결과 창")
+	check(Save.survivor_coins() > 0 and Save.survivor_best() > 600.0 and Save.survivor_ranks().size() == 1, "똥전과 기록, 순위가 남아요")
 
 	# 다시 하기 → 지면 결과 창
 	s.find_overlay_button("다시 하기").pressed.emit()
