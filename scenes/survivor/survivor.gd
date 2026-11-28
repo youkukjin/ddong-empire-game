@@ -12,6 +12,7 @@ const View := preload("res://scenes/survivor/view3d_survivor.gd")
 const SkillCard := preload("res://scenes/survivor/skill_card.gd")
 const Ads := preload("res://scripts/ads.gd")
 const SELECT_SCENE := "res://scenes/title/chapter_select.tscn"
+const FORGE_SCENE := "res://scenes/survivor/forge.tscn"
 const CENTER := Vector2(360, 640)    # 세로 화면 가운데
 const JOY_R := 90.0
 
@@ -43,6 +44,10 @@ func _init() -> void:
 
 func _setup() -> void:
 	rules = Rules.new()
+	var forge := {}
+	for id in Rules.FORGE:
+		forge[id] = Save.forge_level(id)
+	rules.apply_forge(forge)
 	add_view3d(View)
 	_build_hud()
 
@@ -50,7 +55,7 @@ func _setup() -> void:
 func _intro_pages() -> Array:
 	return [
 		"똥제국 서바이버\n\n성 안 마당에 똥 무사들이 끝없이 몰려와요!\n10분을 버티면 똥 대마왕이 나타나요.",
-		"어떻게 할까요?\n\n• 손가락으로 화면을 끌면 그쪽으로 걸어요\n• 공격은 똥 왕자가 알아서 해요\n• 적이 떨어뜨린 똥 구슬을 모으면 레벨 업!\n  카드 3장 중 하나를 골라 강해져요\n• 빨간 생명력 똥은 체력, 파란 자석 똥은 구슬을 몽땅 끌어와요\n• 게이지가 차면 '각성!' 버튼: 10초 동안 똥의 신\n  공격 3배, 무기 2배 빨리, 발 빨라짐, 무적!",
+		"어떻게 할까요?\n\n• 손가락으로 화면을 끌면 그쪽으로 걸어요\n• 공격은 똥 왕자가 알아서 해요\n• 적이 떨어뜨린 똥 구슬을 모으면 레벨 업!\n  카드 3장 중 하나를 골라 강해져요\n• 빨간 생명력 똥은 체력, 파란 자석 똥은 구슬을 몽땅 끌어와요\n• 게이지가 차면 '각성!' 버튼: 10초 동안 똥의 신\n  공격력 3배, 공격 속도 2배, 이동 속도 UP, 안 아파요!",
 	]
 
 
@@ -82,7 +87,7 @@ func _build_hud() -> void:
 	god_info = hud_label(Vector2(20, 196), 30, Color(1, 0.88, 0.3))
 	god_info.size = Vector2(680, 90)
 	god_info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	god_info.text = "★ 똥의 신 ★\n공격 ×3 · 무기 ×2 빨리 · 발 ×1.4 · 무적"
+	god_info.text = "★ 똥의 신 10초 ★\n공격력 3배, 공격 속도 2배, 이동 속도 UP, 안 아파요!"
 	god_info.visible = false
 	skills_label = hud_label(Vector2(20, 1150), 22)
 	skills_label.size = Vector2(480, 110)
@@ -494,6 +499,7 @@ func _show_result() -> void:
 		buttons.append(["광고 보고 똥전 2배", _watch_double_ad.bind(earned)])
 	show_panel(title, lines, buttons + [
 		["다시 하기", restart],
+		["똥 대장간", func() -> void: get_tree().change_scene_to_file(FORGE_SCENE)],
 		["장 고르기", go_select],
 		["처음으로", go_title],
 	])

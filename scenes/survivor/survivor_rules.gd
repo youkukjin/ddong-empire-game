@@ -26,7 +26,7 @@ const MID_BOSSES := [
 const BOSS_NAMES := {"bat": "똥 박쥐 왕", "captain": "똥 무사 대장", "golem": "바위 똥 골렘", "wyrm": "꼬마 보라 드래곤", "demon": "똥 대마왕"}
 const ENDLESS_EVERY := 75.0           # 무한 모드에서 중간 보스가 다시 오는 간격
 const GOD_TIME := 10.0
-const GOD_KILLS := 120                # 각성 게이지가 차는 처치 수
+const GOD_KILLS := 300                # 각성 게이지가 차는 처치 수
 const MAX_WEAPONS := 6
 const MAX_LEVEL := 5
 
@@ -49,14 +49,14 @@ const WEAPONS := {
 }
 ## 능력치 11개 (한 판에 6개까지)
 const PASSIVES := {
-	"power": {"name": "힘", "desc": "모든 공격 +12%", "max": 5},
+	"power": {"name": "힘", "desc": "공격력 +12%", "max": 5},
 	"swift": {"name": "민첩", "desc": "이동 속도 +10%", "max": 5},
 	"heart": {"name": "체력", "desc": "최대 체력 +25, 바로 회복", "max": 5},
 	"magnet": {"name": "자석", "desc": "구슬 줍는 거리 +30%", "max": 5},
-	"dumbbell": {"name": "아령", "desc": "공격 간격 -8%", "max": 5},
+	"dumbbell": {"name": "아령", "desc": "공격 속도 +8%", "max": 5},
 	"cape": {"name": "왕 망토", "desc": "공격 범위 +12%", "max": 5},
 	"crown": {"name": "금왕관", "desc": "던지고 쏘는 개수 +1", "max": 3},
-	"armor": {"name": "갑옷", "desc": "받는 피해 -8%", "max": 5},
+	"armor": {"name": "갑옷", "desc": "방어력 +8%", "max": 5},
 	"luck": {"name": "행운 네잎", "desc": "큰 구슬과 똥빵이 더 자주", "max": 5},
 	"milk": {"name": "똥우유", "desc": "체력이 더 빨리 차요", "max": 5},
 	"book": {"name": "지혜의 책", "desc": "구슬 경험치 +12%", "max": 5},
@@ -460,7 +460,8 @@ func crit_chance() -> float:
 func _on_kill(e: Dictionary, ev: Array) -> void:
 	enemies.erase(e)
 	kills += 1
-	god_gauge = minf(god_gauge + 1.0 / GOD_KILLS, 1.0)
+	if god_left <= 0.0:    # 각성 중에 물리친 적은 게이지에 안 쳐요
+		god_gauge = minf(god_gauge + (8.0 if e.boss else 1.0) / GOD_KILLS, 1.0)
 	var value := 1
 	match e.kind:
 		"brute":
@@ -801,8 +802,8 @@ func _enemy_by_id(id: int) -> Dictionary:
 
 ## 똥 특성 (중간 보스를 물리치면 둘 중 하나): 체력형 "튼튼한 똥", 공격형 "매운 똥". 겹쳐서 쌓여요.
 const TRAITS := {
-	"trait_hp": {"name": "튼튼한 똥", "desc": "최대 체력 +40, 방어 +6%, 회복 조금 더"},
-	"trait_atk": {"name": "매운 똥", "desc": "공격 +25%, 크리티컬 +5%, 무기 8% 빨리"},
+	"trait_hp": {"name": "튼튼한 똥", "desc": "최대 체력 +40, 방어력 +6%, 체력 회복 UP"},
+	"trait_atk": {"name": "매운 똥", "desc": "공격력 +25%, 크리티컬 +5%, 공격 속도 +8%"},
 }
 var traits := {}
 var pending_traits := 0
@@ -828,6 +829,46 @@ func _apply_trait(id: String) -> void:
 		bonus.dmg += 0.25
 		bonus.cool = maxf(bonus.cool - 0.08, 0.45)
 		bonus.area += 0.08
+
+
+## 똥 대장간 영구 강화 (똥전으로 사요, 판이 시작할 때 적용)
+const FORGE := {
+	"heart": {"name": "튼튼 심장", "per": "최대 체력 +12", "max": 5, "cost": 60},
+	"power": {"name": "단단한 주먹", "per": "공격력 +6%", "max": 5, "cost": 80},
+	"armor": {"name": "똥 갑옷", "per": "방어력 +4%", "max": 5, "cost": 80},
+	"swift": {"name": "빠른 신발", "per": "이동 속도 +5%", "max": 5, "cost": 60},
+	"magnet": {"name": "자석 반지", "per": "줍는 거리 +15%", "max": 5, "cost": 40},
+	"luck": {"name": "행운 네잎", "per": "행운 +10% (아이템·크리티컬)", "max": 5, "cost": 90},
+	"book": {"name": "공부 책", "per": "경험치 +6%", "max": 5, "cost": 70},
+	"dumbbell": {"name": "아령 연습", "per": "공격 속도 +4%", "max": 5, "cost": 100},
+}
+
+
+static func forge_cost(id: String, lv: int) -> int:
+	return int(FORGE[id].cost) * (lv + 1)
+
+
+func apply_forge(levels: Dictionary) -> void:
+	for id in levels:
+		var n := int(levels[id])
+		match id:
+			"heart":
+				max_hp += 12.0 * n
+				hp = max_hp
+			"power":
+				bonus.dmg += 0.06 * n
+			"armor":
+				bonus.armor += 0.04 * n
+			"swift":
+				bonus.speed += 0.05 * n
+			"magnet":
+				bonus.magnet += 0.15 * n
+			"luck":
+				bonus.luck += 0.10 * n
+			"book":
+				bonus.xp += 0.06 * n
+			"dumbbell":
+				bonus.cool = maxf(bonus.cool - 0.04 * n, 0.5)
 
 
 ## 아이템 똥: "heal"(생명력 똥) 또는 "magnet"(자석 똥). 땅에 떨어져 있다가 주우면 효과가 나요.

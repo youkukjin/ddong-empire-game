@@ -110,6 +110,20 @@ static func record_survivor(coins: int, survived: float, cleared: bool) -> bool:
 	return false
 
 
+## 똥 대장간: 똥전으로 산 영구 강화 단계 (0부터)
+static func forge_level(id: String) -> int:
+	return int(get_value("forge_" + id, 0, "survivor"))
+
+
+## 똥전이 충분하면 빼고 한 단계 올려요. 샀으면 true.
+static func buy_forge(id: String, cost: int) -> bool:
+	if survivor_coins() < cost:
+		return false
+	set_value("coins", survivor_coins() - cost, "survivor")
+	set_value("forge_" + id, forge_level(id) + 1, "survivor")
+	return true
+
+
 ## 버틴 시간 순위표 (위에서부터 오래 버틴 순, 10개까지). 각 칸: {time, level, kills, cleared, date}
 static func survivor_ranks() -> Array:
 	return get_value("ranks", [], "survivor")

@@ -63,7 +63,7 @@ func _run() -> void:
 			r4.choose(0)
 	check(kinds.has("swing") and kinds.has("slam") and kinds.has("boom"), "검 베기, 주먹 쾅, 똥폭탄 펑이 모두 나와요")
 	check(r4.kills >= 20, "다섯 무기가 함께 적을 쓸어요 (%d마리)" % r4.kills)
-	check(r4.chain_balls().size() == 3 and r4.flies.size() == 10, "철퇴 공 3개, 파리 10마리")
+	check(r4.chain_balls().size() >= 3 and r4.flies.size() >= 10, "철퇴 공 3개 이상, 파리 10마리 이상 (왕관이면 더)")
 
 	# 새 무기 12개가 모두 돌아가고, 진화도 돼요
 	var r9 = Rules.new(13)
@@ -159,6 +159,16 @@ func _run() -> void:
 	for ev in r7.tick(0.05, Vector2.ZERO):
 		wave_seen = wave_seen or ev.type == "god_wave"
 	check(wave_seen and r7._cool(1.0) < 0.6, "각성하면 충격파가 터지고 무기가 2배 빨라져요")
+
+	# 똥 대장간
+	Save.set_value("coins", 100, "survivor")
+	check(Save.buy_forge("heart", Rules.forge_cost("heart", 0)) and Save.forge_level("heart") == 1 and Save.survivor_coins() == 40, "대장간에서 똥전으로 튼튼 심장을 사요")
+	check(not Save.buy_forge("heart", Rules.forge_cost("heart", 1)), "똥전이 모자라면 못 사요")
+	var rf = Rules.new(3)
+	rf.apply_forge({"heart": 2, "power": 1})
+	check(rf.max_hp == Rules.HERO_HP + 24.0 and rf.hp == rf.max_hp and rf.bonus.dmg > 1.05, "산 강화는 판이 시작할 때 적용돼요")
+	Save.set_value("coins", 0, "survivor")
+	Save.set_value("forge_heart", 0, "survivor")
 
 	# 레벨업은 체력을 채우지 않고, 아이템 똥이 채워줘요
 	var ri = Rules.new(4)

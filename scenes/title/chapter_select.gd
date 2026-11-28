@@ -7,6 +7,7 @@ const Session := preload("res://scripts/game_session.gd")
 const Chapters := preload("res://scripts/chapters.gd")
 const TITLE_SCENE := "res://scenes/title/title_screen.tscn"
 const SURVIVOR_SCENE := "res://scenes/survivor/survivor.tscn"
+const FORGE_SCENE := "res://scenes/survivor/forge.tscn"
 const Cute := preload("res://scripts/art/cute.gd")
 const ScreenMode := preload("res://scripts/screen_mode.gd")
 
@@ -41,11 +42,16 @@ func _ready() -> void:
 	var label := "똥제국 서바이버!"
 	if coins > 0 or best > 0.0:
 		label += "  (최고 %d:%02d, 똥전 %d)" % [int(best) / 60, int(best) % 60, coins]
-	var surv := Cute.button(label.replace("  (", "\n("), Vector2(660, 130), 34, Color(1, 0.72, 0.25))
+	var surv := Cute.button(label.replace("  (", "\n("), Vector2(450, 130), 30, Color(1, 0.72, 0.25))
 	surv.name = "Btn_서바이버"
 	surv.position = Vector2(30, 1000)
 	surv.pressed.connect(func() -> void: get_tree().change_scene_to_file(SURVIVOR_SCENE))
 	add_child(surv)
+	var forge := Cute.button("똥 대장간", Vector2(200, 130), 30, Color(0.62, 0.5, 0.4))
+	forge.name = "Btn_대장간"
+	forge.position = Vector2(490, 1000)
+	forge.pressed.connect(func() -> void: get_tree().change_scene_to_file(FORGE_SCENE))
+	add_child(forge)
 
 
 func _chapter_button(n: int) -> Button:
