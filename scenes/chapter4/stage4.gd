@@ -268,6 +268,6 @@ func _float_small(p: Vector2, text: String, color: Color) -> void:
 func _update_hud() -> void:
 	if not _time_label:
 		return
-	_time_label.text = "⏱ " + time_text(rules.time_left)
+	_time_label.text = "남은 시간 " + time_text(rules.time_left)
 	_hearts_label.text = "♥".repeat(rules.hearts) + "♡".repeat(Rules.HEARTS - rules.hearts)
 	_info_label.text = "4장 성벽 돌파 · 부순 벽돌 %d · 남은 대포 %d" % [rules.bricks_broken, rules.live_cannons().size()]

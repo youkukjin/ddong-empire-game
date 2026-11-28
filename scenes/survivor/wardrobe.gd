@@ -48,7 +48,7 @@ func _ready() -> void:
 	var y := 392.0
 	for slot in Rules.EQUIP_SLOTS:
 		var head := Label.new()
-		head.text = "— %s —" % Rules.EQUIP_SLOTS[slot]
+		head.text = String(Rules.EQUIP_SLOTS[slot])
 		head.position = Vector2(0, y)
 		head.size = Vector2(720, 34)
 		head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
