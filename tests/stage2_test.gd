@@ -11,9 +11,9 @@ func _run() -> void:
 
 
 func _test_rules() -> void:
-	check(Rules.judge_tap(0.05) == Rules.Judge.PERFECT and Rules.judge_tap(-0.2) == Rules.Judge.GOOD and Rules.judge_tap(0.3) == Rules.Judge.MISS, "아령: ±0.12초 딱 좋아요, ±0.25초 좋아요, 그 밖은 놓침")
-	check(Rules.drill_stars(Rules.Drill.DUMBBELL, 11) == 0 and Rules.drill_stars(Rules.Drill.DUMBBELL, 12) == 1 and Rules.drill_stars(Rules.Drill.DUMBBELL, 24) == 3, "아령: 12점 통과, 21점 이상 별 3개")
-	check(Rules.roll_dodged(1.0, 1.3) and not Rules.roll_dodged(1.0, 1.5) and not Rules.roll_dodged(-1.0, 1.0), "구르기: 무적 0.4초 안에 닿으면 피해요")
+	check(Rules.judge_tap(0.05) == Rules.Judge.PERFECT and Rules.judge_tap(-0.2) == Rules.Judge.GOOD and Rules.judge_tap(0.35) == Rules.Judge.MISS, "아령: ±0.15초 딱 좋아요, ±0.3초 좋아요, 그 밖은 놓침")
+	check(Rules.drill_stars(Rules.Drill.DUMBBELL, 9) == 0 and Rules.drill_stars(Rules.Drill.DUMBBELL, 10) == 1 and Rules.drill_stars(Rules.Drill.DUMBBELL, 24) == 3, "아령: 10점 통과, 20점 이상 별 3개")
+	check(Rules.roll_dodged(1.0, 1.4) and not Rules.roll_dodged(1.0, 1.6) and not Rules.roll_dodged(-1.0, 1.0), "구르기: 무적 0.5초 안에 닿으면 피해요")
 	check(is_equal_approx(Rules.charge_ratio(0.85), 0.5) and Rules.charge_ratio(3.0) == 1.0, "사슬: 1.7초 누르면 다 차요")
 	var r := Rules.new()
 	check(r.finish_drill(24) and r.stars[Rules.Drill.DUMBBELL] == 3, "통과하면 별을 기록해요")

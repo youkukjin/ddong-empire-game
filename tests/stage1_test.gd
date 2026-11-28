@@ -36,7 +36,7 @@ func _run() -> void:
 
 func _test_rules() -> void:
 	var r := Rules.new()
-	_check(r.time_left == 180.0 and r.hearts == 3, "보통 모드: 3분, 하트 3개")
+	_check(r.time_left == 210.0 and r.hearts == 3, "보통 모드: 3분 30초, 하트 3개")
 	_check(r.is_practice() and r.beam_interval() == 0.0 and r.max_fires() == 2, "처음 20초는 연습: 줄기 없음, 불 2개")
 	r.tick(21.0)
 	_check(r.beam_interval() == 4.0 and r.warning_time() == 1.0 and r.max_fires() == 3, "초반: 4초마다 줄기, 1초 전 점선, 불 3개")
@@ -62,16 +62,16 @@ func _test_rules() -> void:
 	_check(r2.outcome() == Rules.Outcome.WIN and r2.star_rating() == 2, "14명 = 별 2개")
 
 	var r3 := Rules.new()
-	for i in 12:
+	for i in 10:
 		r3.on_rescued()
-	r3.tick(200.0)
-	_check(r3.outcome() == Rules.Outcome.WIN and r3.star_rating() == 1, "시간 끝 + 12명 = 승리, 별 1개")
+	r3.tick(230.0)
+	_check(r3.outcome() == Rules.Outcome.WIN and r3.star_rating() == 1, "시간 끝 + 10명 = 승리, 별 1개")
 
 	var r4 := Rules.new()
-	for i in 11:
+	for i in 9:
 		r4.on_rescued()
-	r4.tick(200.0)
-	_check(r4.outcome() == Rules.Outcome.FAIL and r4.fail_reason() == Rules.FailReason.TIME, "시간 끝 + 11명 = 실패")
+	r4.tick(230.0)
+	_check(r4.outcome() == Rules.Outcome.FAIL and r4.fail_reason() == Rules.FailReason.TIME, "시간 끝 + 9명 = 실패")
 
 	var r5 := Rules.new()
 	for i in 3:
@@ -80,9 +80,9 @@ func _test_rules() -> void:
 	_check(r5.fail_tip().contains("코"), "코를 놓쳐 졌으면 코 팁을 보여줘요")
 
 	var r6 := Rules.new()
-	for i in 4:
+	for i in 6:
 		r6.on_citizen_fled()
-	_check(r6.outcome() == Rules.Outcome.FAIL, "4명이 도망가면 12명을 못 채워서 바로 실패")
+	_check(r6.outcome() == Rules.Outcome.FAIL, "6명이 도망가면 10명을 못 채워서 바로 실패")
 
 	var r7 := Rules.new()
 	r7.start_from_checkpoint(30.0, 9)

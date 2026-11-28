@@ -17,7 +17,7 @@ const SWORD_REACH := 110.0
 const CHAIN_RANGE := 520.0
 const PIERCE_RANGE := 900.0
 const SPIN_RANGE := 220.0
-const HURT_INVULN := 0.6
+const HURT_INVULN := 0.9
 const FIST_PER_HIT := 0.05          # 6장: 때리면 +5%
 const FIST_PER_DODGE := 0.10        # 6장: 아슬아슬하게 피하면 +10%
 const FIST_DOWN_TIME := 3.0         # 근육 주먹에 맞으면 3초 쓰러져요
@@ -66,9 +66,9 @@ func _init(p_stats: Dictionary = {}, seed_value := 0) -> void:
 static func enemy_config(kind: String) -> Dictionary:
 	match kind:
 		"warrior":
-			return {"name": "똥 무사", "hp": 40, "radius": 40.0, "speed": 120.0, "boss": false}
+			return {"name": "똥 무사", "hp": 32, "radius": 40.0, "speed": 120.0, "boss": false}
 		"demon":
-			return {"name": "똥 대마왕", "hp": 500, "radius": 70.0, "speed": 90.0, "boss": true}
+			return {"name": "똥 대마왕", "hp": 420, "radius": 70.0, "speed": 90.0, "boss": true}
 		"dragon":
 			return {"name": "똥 드래곤", "hp": 1500, "radius": 110.0, "speed": 60.0, "boss": true}
 		"dragon_final":
@@ -121,24 +121,24 @@ static func dragon_phase(hp: int) -> int:
 func _choose_attack(e: Dictionary) -> Dictionary:
 	match e.kind:
 		"warrior":
-			return {"name": "칼 휘두르기", "type": "melee", "dmg": 12, "warn": 0.9, "range": 70.0, "recover": 1.4}
+			return {"name": "칼 휘두르기", "type": "melee", "dmg": 9, "warn": 1.1, "range": 70.0, "recover": 1.4}
 		"demon":
 			if e.phase >= 2 and e.summon_cd <= 0.0 and _count_kind("warrior") < 2:
 				return {"name": "무사 부르기", "type": "summon", "dmg": 0, "warn": 0.8, "range": 0.0, "recover": 1.0}
 			if absf(hero_x - e.x) > 260.0 or rng.randf() < 0.4:
-				return {"name": "뿔 박치기", "type": "charge", "dmg": 25, "warn": 1.0, "range": 640.0, "recover": 1.6}
-			return {"name": "내려찍기", "type": "slam_self", "dmg": 20, "warn": 1.0, "range": 230.0, "recover": 1.6}
+				return {"name": "뿔 박치기", "type": "charge", "dmg": 18, "warn": 1.2, "range": 640.0, "recover": 1.6}
+			return {"name": "내려찍기", "type": "slam_self", "dmg": 15, "warn": 1.2, "range": 230.0, "recover": 1.6}
 		"dragon", "dragon_final":
 			var ph: int = e.phase
 			if e.kind == "dragon_final":
 				ph = 3
 			if ph == 3 and rng.randf() < 0.45:
-				return {"name": "연속 광선", "type": "beam", "dmg": 40, "warn": 0.8, "range": 80.0, "recover": 2.0, "repeat": 3}
+				return {"name": "연속 광선", "type": "beam", "dmg": 30, "warn": 1.0, "range": 80.0, "recover": 2.0, "repeat": 3}
 			if ph >= 2 and rng.randf() < 0.4:
-				return {"name": "꼬리치기", "type": "fly_tail", "dmg": 25, "warn": 0.7, "range": 200.0, "recover": 3.0}
+				return {"name": "꼬리치기", "type": "fly_tail", "dmg": 18, "warn": 0.9, "range": 200.0, "recover": 3.0}
 			if absf(hero_x - e.x) < e.radius + 220.0 and rng.randf() < 0.6:
-				return {"name": "발톱 할퀴기", "type": "melee", "dmg": 15, "warn": 0.8, "range": 150.0, "recover": 2.0}
-			return {"name": "보라색 광선", "type": "beam", "dmg": 40, "warn": 1.0, "range": 80.0, "recover": 2.0}
+				return {"name": "발톱 할퀴기", "type": "melee", "dmg": 11, "warn": 1.0, "range": 150.0, "recover": 2.0}
+			return {"name": "보라색 광선", "type": "beam", "dmg": 30, "warn": 1.2, "range": 80.0, "recover": 2.0}
 	return {}
 
 

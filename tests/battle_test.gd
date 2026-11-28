@@ -19,29 +19,29 @@ func _run() -> void:
 		if wound:
 			break
 	check(wound and w.state == "windup", "무사가 다가와서 칼을 들어요 (경고)")
-	b.tick(0.95)
-	check(b.hero_hp == 88 and b.hits_taken.get("칼 휘두르기", 0) == 1, "경고 뒤에 안 피하면 맞아요 (-12)")
+	b.tick(1.15)
+	check(b.hero_hp == 91 and b.hits_taken.get("칼 휘두르기", 0) == 1, "경고 뒤에 안 피하면 맞아요 (-9)")
 	# 다음 공격은 직전에 굴러서 피해요
 	while w.state != "windup":
 		b.tick(0.05)
-	b.tick(0.8)
+	b.tick(1.0)
 	b.roll(1.0)
 	var dodged := false
 	for e in b.tick(0.15):
 		if e.type == "dodge":
 			dodged = true
-	check(dodged and b.hero_hp == 88 and b.gauge > 0.0, "경고 끝에 구르면 안 다치고 게이지가 차요")
+	check(dodged and b.hero_hp == 91 and b.gauge > 0.0, "경고 끝에 구르면 안 다치고 게이지가 차요")
 	b.roll_left = 0.0
 	b.hero_x = w.x - 100.0
 	b.sword_cd = 0.0
-	check(not b.sword().is_empty() and w.hp == 30, "검이 닿으면 10 피해")
+	check(not b.sword().is_empty() and w.hp == 22, "검이 닿으면 10 피해")
 	b.sword_cd = 0.0
 	b.facing = 1.0
 	w.state = "windup"
 	w.attack = {"name": "칼 휘두르기", "type": "melee", "dmg": 10, "warn": 0.9, "range": 70.0, "recover": 1.4}
 	var old_x: float = w.x
 	var r := b.chain()
-	check(r.hit.size() == 1 and w.hp == 10 and w.x > old_x and w.state == "recover", "사슬 무기: 20 피해, 무사를 밀고 공격을 끊어요")
+	check(r.hit.size() == 1 and w.hp == 2 and w.x > old_x and w.state == "recover", "사슬 무기: 20 피해, 무사를 밀고 공격을 끊어요")
 
 	var d := Battle.new({"chain_kind": "pierce", "fist": true, "str": 30}, 5)
 	var dr := d.spawn("dragon", 1000.0)
@@ -82,7 +82,7 @@ func _run() -> void:
 	m.secrets["보라색 광선"] = true
 	check(is_equal_approx(m.warn_time({"name": "보라색 광선", "warn": 1.0}), 1.3), "작전 회의로 알아낸 공격은 경고가 0.3초 일찍")
 	var dm := m.spawn("demon", 900.0)
-	dm.hp = 240
+	dm.hp = 200
 	m.tick(0.01)
 	check(dm.phase == 2, "대마왕은 체력 절반 아래면 화가 나요")
 	var summoned := false
