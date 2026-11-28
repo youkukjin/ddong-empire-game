@@ -205,7 +205,7 @@ func _test_win_flow() -> void:
 	_check(Save.hard_unlocked() and int(Save.get_value("chapter1_best_stars", 0)) == 3, "별 3개로 깨면 어려움 모드가 열려요")
 	stage.find_overlay_button("처음으로").pressed.emit()
 	await _frames(2)
-	_check(current_scene.get_node("%HardButton").visible, "타이틀에 어려움 모드 버튼이 보여요")
+	_check(not current_scene.get_node("%HardButton").visible, "어려움 모드는 없어요 (타이틀에 버튼이 안 보여요)")
 
 
 func _test_fail_and_checkpoint() -> void:

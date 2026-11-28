@@ -1,7 +1,6 @@
 extends Control
 ## 타이틀 화면: 게임 제목과 시작 버튼을 보여줘요.
 ## 시작하기를 누르면 1장 '등장' 스테이지로 가요.
-## 1장을 별 3개로 깨면 "어려움 모드" 버튼이 나타나요.
 ## "장 고르기"를 누르면 열린 장을 골라서 할 수 있어요.
 ## 배경은 3D 무대예요 (제안): 불타는 밤 마을, 거대한 보라색 가시 드래곤, 검을 치켜든 3D 똥 왕자.
 
@@ -43,7 +42,7 @@ func _ready() -> void:
 	start_button.visible = Save.has_progress()
 	start_button.pressed.connect(_on_start_pressed.bind(false))
 	hard_button.pressed.connect(_on_start_pressed.bind(true))
-	hard_button.visible = Save.hard_unlocked()
+	hard_button.visible = false    # 어려움 모드는 없앴어요 (2026-11-28 사용자 요청)
 	select_button.text = "장 고르기"
 	select_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(SELECT_SCENE))
 	_play_title_bounce()

@@ -345,3 +345,7 @@ func _run() -> void:
 	check(Save.equipped("hat") == "hat_pirate", "산 모자를 끼워요")
 	Save.set_value("coins", 0, "survivor")
 	Save.set_equipped("hat", "")
+	Save.set_value("hero_prince", false, "survivor")
+	var u8: Dictionary = Save.record_chapter_win(8, 3)
+	check(u8.get("hero_new", false) and Save.hero_unlocked("prince", 2000), "스토리 8장을 깨면 똥 왕자가 열려요")
+	Save.set_value("hero_prince", false, "survivor")

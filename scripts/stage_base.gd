@@ -36,7 +36,7 @@ var portrait_layout := false   # 세로 화면 전용으로 새로 만든 장(�
 ## 세로 화면 맞추기 (2026-11-28): 가로로 만든 장은 1280x720 판을 그대로 두고,
 ## 세로 화면이 그 판의 한 부분(가로 720)을 왕자를 따라 보여줘요. 위아래는 하늘과 땅이 더 보여요.
 ## 화면 점 = 판 점 - view_offset
-var fit_portrait := true
+var fit_portrait := false    # 2026-11-28: 잘라 보여주기 대신 판 전체를 너비에 맞춰 보여줘요 (ScreenMode.fit_landscape)
 var view_offset := Vector2(0, -280)
 var _world_base := Vector2.ZERO
 var view3d: Node3D = null       # 3D 화면 (제안). 규칙과 터치는 2D 화면 좌표 그대로예요.
@@ -47,7 +47,10 @@ var _pages_done: Callable
 
 
 func _ready() -> void:
-	ScreenMode.portrait(get_tree())
+	if portrait_layout:
+		ScreenMode.portrait(get_tree())
+	else:
+		ScreenMode.fit_landscape(get_tree())
 	Sound.ensure()
 	Session.restore()
 	if chapter > 0:
@@ -203,6 +206,8 @@ func finish_win(stars: int, title: String, lines: String) -> void:
 	var body := lines
 	if unlocked.get("next_new", false) and chapter < Chapters.COUNT:
 		body += "\n\n%d장 '%s'이(가) 열렸어요!" % [chapter + 1, Chapters.title(chapter + 1)]
+	if unlocked.get("hero_new", false):
+		body += "\n\n스토리 완성 선물! 서바이버에서 똥 왕자를 쓸 수 있어요!"
 	var star_widget: Control = null
 	if stars > 0:
 		star_widget = StarRow.new()
