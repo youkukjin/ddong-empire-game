@@ -32,7 +32,13 @@ var hud_root: Control
 var overlay_root: Control
 var pause_button: Button
 
-var portrait_layout := false   # 세로 화면으로 만든 장이면 true (아직 아닌 장은 가로로 돌려요)
+var portrait_layout := false   # 세로 화면 전용으로 새로 만든 장(서바이버)이면 true
+## 세로 화면 맞추기 (2026-11-28): 가로로 만든 장은 1280x720 판을 그대로 두고,
+## 세로 화면이 그 판의 한 부분(가로 720)을 왕자를 따라 보여줘요. 위아래는 하늘과 땅이 더 보여요.
+## 화면 점 = 판 점 - view_offset
+var fit_portrait := true
+var view_offset := Vector2(0, -280)
+var _world_base := Vector2.ZERO
 var view3d: Node3D = null       # 3D 화면 (제안). 규칙과 터치는 2D 화면 좌표 그대로예요.
 
 var _pages: Array = []
@@ -41,10 +47,7 @@ var _pages_done: Callable
 
 
 func _ready() -> void:
-	if portrait_layout:
-		ScreenMode.portrait(get_tree())
-	else:
-		ScreenMode.landscape(get_tree())
+	ScreenMode.portrait(get_tree())
 	Sound.ensure()
 	Session.restore()
 	if chapter > 0:
@@ -66,6 +69,8 @@ func _ready() -> void:
 	overlay_root = _full_control()
 	overlay.add_child(overlay_root)
 	_setup()
+	if _band():
+		_fit_hud()
 	if view3d:
 		# 3D가 대신 그리는 2D 배경과 2D 왕자는 숨겨요 (규칙 계산용으로는 그대로 있어요)
 		for c in world.get_children():
@@ -129,10 +134,59 @@ func start_play() -> void:
 func _process(delta: float) -> void:
 	if phase == Phase.PLAY and not paused:
 		_play_process(delta)
+	if _band():
+		_follow(delta)
+
+
+## 가로 판을 세로 화면에 보여주는 중인지
+func _band() -> bool:
+	return fit_portrait and not portrait_layout
+
+
+## 세로 화면이 따라갈 판 위 x (장마다 바꿀 수 있어요). 기본: 2D 왕자
+func focus_x() -> float:
+	for c in world.get_children():
+		if c.get_script() == PrinceArt:
+			return c.position.x
+	return 640.0
+
+
+func _follow(delta: float) -> void:
+	var target := clampf(focus_x() - 360.0, 0.0, 560.0)
+	var k := clampf(delta * 6.0, 0.0, 1.0) if delta > 0.0 else 1.0
+	view_offset.x = lerpf(view_offset.x, target, k)
+	_world_base = -view_offset
+	if not _shaking:
+		world.position = _world_base
+	if view3d and view3d.has_method("set_view_offset"):
+		view3d.set_view_offset(view_offset)
+
+
+## 화면 위 표시를 세로 화면에 맞게 옮겨요: 위쪽 것은 위에, 아래쪽 것은 맨 아래로, 가로는 좁혀요.
+func _fit_hud() -> void:
+	for c in hud_root.get_children():
+		var ctl := c as Control
+		if ctl == null or ctl == pause_button:
+			continue
+		if ctl.get_anchor(SIDE_RIGHT) > 0.5 and ctl.get_anchor(SIDE_LEFT) < 0.5:
+			continue   # 화면 가득 채우는 것
+		var p := ctl.position
+		var w := ctl.size.x
+		var cx := p.x + w * 0.5
+		var nx := cx * 720.0 / 1280.0 - w * 0.5
+		ctl.position = Vector2(clampf(nx, 6.0, maxf(720.0 - w - 6.0, 6.0)), p.y + (560.0 if p.y > 360.0 else 0.0))
+
+
+## 판 점 → 세로 화면 점
+func to_screen(p: Vector2) -> Vector2:
+	return p - view_offset if _band() else p
 
 
 func _unhandled_input(event: InputEvent) -> void:
 	if phase == Phase.PLAY and not paused:
+		if _band():
+			# 세로 화면 점 → 가로 판 점
+			event = event.xformed_by(Transform2D(0.0, view_offset))
 		_play_input(event)
 
 
@@ -324,13 +378,18 @@ func impact(p: Vector2, text := "", color := Color(1, 0.85, 0.2), power := 1.0) 
 	shake(5.0 * power)
 
 
+var _shaking := false
+
+
 func shake(strength := 8.0) -> void:
 	if view3d:
 		view3d.shake(strength * 0.012, 0.15 + strength * 0.01)
+	_shaking = true
 	var tw := create_tween()
 	for i in 4:
-		tw.tween_property(world, "position", Vector2(rng.randf_range(-strength, strength), rng.randf_range(-strength, strength) * 0.75), 0.04)
-	tw.tween_property(world, "position", Vector2.ZERO, 0.04)
+		tw.tween_property(world, "position", _world_base + Vector2(rng.randf_range(-strength, strength), rng.randf_range(-strength, strength) * 0.75), 0.04)
+	tw.tween_property(world, "position", _world_base, 0.04)
+	tw.tween_callback(func() -> void: _shaking = false)
 
 
 static func time_text(sec: float) -> String:
