@@ -141,6 +141,14 @@ const HERO_KITS := {
 	"icy": ["ice", "beam", "lightning", "boomerang", "sword", "thorns"],
 	"rock": ["fist", "thorns", "bomb", "sword", "chain", "puddle"],
 }
+## 캐릭터마다 나오는 능력치 카드도 달라요 (8개씩, 똥 왕자만 11개 전부). 진화 짝은 꼭 들어 있어요.
+const HERO_PASSIVES := {
+	"kid": ["book", "cape", "heart", "luck", "magnet", "power", "milk", "crown"],
+	"runny": ["book", "cape", "crown", "luck", "magnet", "milk", "swift", "heart"],
+	"gassy": ["book", "cape", "crown", "magnet", "milk", "power", "heart", "armor"],
+	"icy": ["armor", "book", "crown", "dumbbell", "luck", "power", "magnet", "swift"],
+	"rock": ["armor", "cape", "dumbbell", "heart", "power", "swift", "milk", "crown"],
+}
 ## 캐릭터 특기와 어울리는 능력치 카드가 더 자주 나와요
 const HERO_FAVORITE := {"kid": "book", "runny": "swift", "gassy": "cape", "icy": "dumbbell", "rock": "armor", "prince": "power"}
 var hero_id := "prince"
@@ -621,6 +629,8 @@ func _move_enemies(delta: float, ev: Array) -> void:
 			invuln = HURT_INVULN
 			ev.append({"type": "hurt", "dmg": taken, "pos": hero})
 			_thorn_burst(ev)
+			if trait_lv("trait_rock") > 0:
+				damage(e, 20.0 * trait_lv("trait_rock"), ev, 120.0)
 	# 적끼리 살짝 밀어내기 (겹쳐 뭉치지 않게, 가까운 몇 마리만)
 	var n := enemies.size()
 	for i in n:
@@ -649,6 +659,8 @@ func damage(e: Dictionary, amount: float, ev: Array, knock := 0.0) -> void:
 		knock = maxf(knock, 30.0)
 	e.hp -= dmg
 	e.flash = 0.12
+	if trait_lv("trait_icy") > 0 and not e.boss:
+		_slow(e, maxf(0.65 - 0.1 * trait_lv("trait_icy"), 0.35), 0.8)
 	if knock > 0.0 and not e.boss:
 		var dir: Vector2 = (e.pos - hero).normalized()
 		e.pos += dir * knock
@@ -662,7 +674,7 @@ const CRIT_MULT := 2.5
 func fart_blast() -> Array:
 	var ev: Array = []
 	var r := 150.0 if hero_id == "gassy" else 110.0
-	var amount := 14.0 if hero_id == "gassy" else 8.0
+	var amount := (14.0 if hero_id == "gassy" else 8.0) * (1.0 + trait_lv("trait_gassy"))
 	for e in enemies:
 		if e.hp > 0.0 and e.pos.distance_to(hero) < r + float(e.radius):
 			damage(e, amount, ev, 45.0)
@@ -670,7 +682,7 @@ func fart_blast() -> Array:
 
 
 func crit_chance() -> float:
-	return 0.08 + crit_bonus + (bonus.luck - 1.0) * 0.1 + int(traits.get("trait_atk", 0)) * 0.05
+	return 0.08 + crit_bonus + (bonus.luck - 1.0) * 0.1 + (trait_lv("trait_atk") + trait_lv("trait_icy")) * 0.05
 
 
 func _on_kill(e: Dictionary, ev: Array) -> void:
@@ -1022,22 +1034,54 @@ func _enemy_by_id(id: int) -> Dictionary:
 const TRAITS := {
 	"trait_hp": {"name": "튼튼한 똥", "desc": "최대 체력 +40, 방어력 +6%, 체력 회복 UP"},
 	"trait_atk": {"name": "매운 똥", "desc": "공격력 +25%, 크리티컬 +5%, 공격 속도 +8%"},
+	"trait_kid": {"name": "쑥쑥 똥", "desc": "경험치 +20%, 구슬 줍는 거리 +30%, 체력 +20"},
+	"trait_runny": {"name": "주르륵 똥", "desc": "이동 속도 +12%, 지나간 자리에 설사 웅덩이"},
+	"trait_gassy": {"name": "독가스 똥", "desc": "뿡! 방귀가 2배 자주, 2배 세게"},
+	"trait_icy": {"name": "냉동 똥", "desc": "때린 적이 꽁꽁 느려져요, 크리티컬 +5%"},
+	"trait_rock": {"name": "바위 똥", "desc": "방어력 +10%, 부딪힌 적이 아파하고 튕겨 나가요"},
+	"trait_prince": {"name": "황금 똥", "desc": "공격력 +15%, 각성 게이지 1.5배 빨리"},
 }
 var traits := {}
 var pending_traits := 0
 
 
+## 중간 보스 뒤 특성: 튼튼한 똥, 매운 똥, 그리고 캐릭터마다 다른 특성 하나 (2026-11-28 사용자: "각 똥들의 특성")
 func trait_choices() -> Array:
 	var out: Array = []
-	for id in TRAITS:
+	for id in ["trait_hp", "trait_atk", "trait_" + hero_id]:
+		if not TRAITS.has(id):
+			continue
 		var n := int(traits.get(id, 0)) + 1
 		out.append({"kind": "trait", "id": id, "name": TRAITS[id].name, "level": n,
 			"title": TRAITS[id].name + ("" if n == 1 else " ×%d" % n), "desc": TRAITS[id].desc})
 	return out
 
 
+func trait_lv(id: String) -> int:
+	return int(traits.get(id, 0))
+
+
 func _apply_trait(id: String) -> void:
 	traits[id] = int(traits.get(id, 0)) + 1
+	match id:
+		"trait_kid":
+			bonus.xp += 0.2
+			bonus.magnet += 0.3
+			max_hp += 20.0
+			hp += 20.0
+			return
+		"trait_runny":
+			bonus.speed += 0.12
+			return
+		"trait_gassy", "trait_icy":
+			return
+		"trait_rock":
+			bonus.armor += 0.1
+			return
+		"trait_prince":
+			bonus.dmg += 0.15
+			god_rate *= 1.5
+			return
 	if id == "trait_hp":
 		max_hp += 40.0
 		hp += 40.0
@@ -1097,7 +1141,16 @@ var tummy := 0.0
 var _tummy_t := 0.0
 
 
+var _trail_t := 0.0
+
+
 func _tummy_tick(delta: float) -> void:
+	var rt := trait_lv("trait_runny")
+	if rt > 0:
+		_trail_t -= delta
+		if _trail_t <= 0.0:
+			_trail_t = 0.5
+			puddles.append({"pos": hero, "r": 42.0 * bonus.area, "life": 2.0, "dmg": 4.0 + rt * 3.0, "follow": false})
 	if tummy <= 0.0:
 		return
 	tummy = maxf(tummy - delta, 0.0)
@@ -1175,11 +1228,15 @@ func make_choices() -> Array:
 		elif lv > 0 and lv < MAX_LEVEL:
 			pool.append({"kind": "weapon", "id": id, "name": WEAPONS[id].name, "level": lv + 1, "title": "%s Lv%d" % [WEAPONS[id].name, lv + 1], "desc": WEAPONS[id].desc})
 			pool.append(pool[pool.size() - 1])   # 가진 무기 강화가 조금 더 자주 나와요
+	var pkit: Array = HERO_PASSIVES.get(hero_id, PASSIVES.keys())
 	for id in PASSIVES:
 		var pl := int(passives.get(id, 0))
+		if pl == 0 and not pkit.has(id):
+			continue
 		if pl < int(PASSIVES[id].max) and (pl > 0 or passives.size() < MAX_PASSIVES):
-			var t: String = PASSIVES[id].name if pl == 0 else "%s Lv%d" % [PASSIVES[id].name, pl + 1]
-			pool.append({"kind": "passive", "id": id, "name": PASSIVES[id].name, "level": pl + 1, "max": int(PASSIVES[id].max), "title": t, "desc": PASSIVES[id].desc})
+			var pn := passive_name(id)
+			var t: String = pn if pl == 0 else "%s Lv%d" % [pn, pl + 1]
+			pool.append({"kind": "passive", "id": id, "icon": passive_icon(id), "name": pn, "level": pl + 1, "max": int(PASSIVES[id].max), "title": t, "desc": PASSIVES[id].desc})
 			if HERO_FAVORITE.get(hero_id, "") == id:
 				pool.append(pool[pool.size() - 1])
 	while out.size() < 3 and not pool.is_empty():
@@ -1190,6 +1247,20 @@ func make_choices() -> Array:
 	while out.size() < 3:
 		out.append({"kind": "coins", "id": "coins", "name": "똥전 주머니", "level": 0, "title": "똥전 주머니", "desc": "똥전 +20"})
 	return out
+
+
+## 왕관·왕 망토는 똥 왕자 것이에요. 다른 똥에겐 '쌍둥이 똥', '망토'로 나와요 (2026-11-28 사용자: "일반 똥에 금왕관").
+func passive_name(id: String) -> String:
+	if hero_id != "prince":
+		if id == "crown":
+			return "쌍둥이 똥"
+		if id == "cape":
+			return "망토"
+	return String(PASSIVES[id].name)
+
+
+func passive_icon(id: String) -> String:
+	return "twin" if id == "crown" and hero_id != "prince" else id
 
 
 func _apply_passive(id: String) -> void:

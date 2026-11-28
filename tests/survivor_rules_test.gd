@@ -279,3 +279,22 @@ func _run() -> void:
 	for i in 10:
 		rbr.tick(0.05, Vector2.RIGHT)
 	check(got_bread and rbr.tummy > 10.0 and rbr.puddles.size() >= 2, "썩은 빵을 먹으면 배탈: 지나간 자리에 설사 웅덩이")
+	for hid in Rules.HERO_PASSIVES:
+		var rp = Rules.new(36)
+		rp.set_hero(hid)
+		var badp := false
+		for k in 40:
+			for c in rp.make_choices():
+				if c.kind == "passive" and not Rules.HERO_PASSIVES[hid].has(c.id):
+					badp = true
+		var tc: Array = rp.trait_choices()
+		check(not badp and tc.size() == 3 and tc[2].id == "trait_" + hid, "%s: 자기 능력치 카드와 자기 특성이 나와요" % hid)
+		for w in Rules.HERO_KITS[hid]:
+			check(Rules.HERO_PASSIVES[hid].has(Rules.WEAPONS[w].pair), "%s의 %s 진화 짝이 능력치에 있어요" % [hid, w])
+	var rr = Rules.new(37)
+	rr.set_hero("runny")
+	rr.weapons = {}
+	rr._apply_trait("trait_runny")
+	for i in 20:
+		rr.tick(0.05, Vector2.RIGHT)
+	check(rr.puddles.size() >= 1, "주르륵 똥 특성: 지나간 자리에 웅덩이")

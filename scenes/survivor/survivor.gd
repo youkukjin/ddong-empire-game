@@ -159,7 +159,7 @@ func _refresh_hud() -> void:
 	for id in rules.weapons:
 		parts.append((Rules.WEAPONS[id].evo + "★") if rules.evolved.has(id) else "%s%d" % [Rules.WEAPONS[id].name, rules.weapons[id]])
 	for id in rules.passives:
-		parts.append("%s%d" % [Rules.PASSIVES[id].name, rules.passives[id]])
+		parts.append("%s%d" % [rules.passive_name(id), rules.passives[id]])
 	for id in rules.traits:
 		parts.append("%s×%d" % [Rules.TRAITS[id].name, rules.traits[id]])
 	skills_label.text = "  ".join(parts)
@@ -234,6 +234,8 @@ func _play_process(delta: float) -> void:
 		_fart_t -= delta
 		if _fart_t <= 0.0:
 			_fart_t = randf_range(6.0, 12.0) * (0.5 if rules.hero_id == "gassy" else 1.0)
+			if rules.trait_lv("trait_gassy") > 0:
+				_fart_t *= 0.5
 			if rules.tummy > 0.0:
 				_fart_t = randf_range(0.8, 1.6)    # 썩은 빵 배탈: 방귀가 마구 나와요
 			Sound.play("fart", randf_range(0.85, 1.25), -5.0)
@@ -264,17 +266,31 @@ func _play_process(delta: float) -> void:
 		_show_cards()
 
 
+## 적이 우르르 몰려올 때 소리가 너무 크지 않게 (2026-11-28 사용자: "무리지어서 올 때 소리가 너무 커"):
+## 같은 소리는 짧은 간격 안에 한 번만, 적이 많을수록 효과음을 조금씩 줄여요.
+var _sfx_last := {}
+
+
+func _sfx(n: String, pitch := 1.0, db := 0.0, gap := 0.1) -> void:
+	var now := Time.get_ticks_msec()
+	if now - int(_sfx_last.get(n, -100000)) < int(gap * 1000.0):
+		return
+	_sfx_last[n] = now
+	var crowd := minf(float(rules.enemies.size()) / 15.0, 8.0) if rules else 0.0
+	Sound.play(n, pitch, db - crowd)
+
+
 func _on_event(ev: Dictionary) -> void:
 	match ev.type:
 		"hit":
 			if _hit_sound_cd <= 0.0:
 				_hit_sound_cd = 0.09
-				Sound.play("hit", randf_range(0.9, 1.2), -9.0)
+				_sfx("hit", randf_range(0.9, 1.2), -9.0)
 			if ev.boss and view3d:
 				view3d.hit_boss(ev.enemy)
 			if ev.crit and _crit_cd <= 0.0 and view3d:
 				_crit_cd = 0.12
-				Sound.play("boom", randf_range(1.5, 1.8), -6.0)
+				_sfx("boom", randf_range(1.5, 1.8), -6.0)
 				view3d.on_crit(ev.enemy.pos, float(ev.dmg))
 		"kill":
 			if view3d:
@@ -286,11 +302,11 @@ func _on_event(ev: Dictionary) -> void:
 			if ev.enemy.boss:
 				impact(world_to_screen(ev.enemy.pos), "콰앙!!", Color(1, 0.6, 0.2), 2.0)
 		"swing":
-			Sound.play("swing", randf_range(0.95, 1.1), -8.0)
+			_sfx("swing", randf_range(0.95, 1.1), -8.0)
 			if view3d:
 				view3d.on_swing(ev.dirs, ev.reach)
 		"god_fart":
-			Sound.play("fart", randf_range(0.6, 0.8), 0.0)
+			_sfx("fart", randf_range(0.6, 0.8), 0.0)
 			if view3d:
 				view3d.on_god_wave(ev.r)
 				view3d.fart_puff()
@@ -299,15 +315,15 @@ func _on_event(ev: Dictionary) -> void:
 			if view3d:
 				view3d.on_ice_hit(rules.hero, true)
 		"god_wave":
-			Sound.play("boom", 0.7, 0.0)
+			_sfx("boom", 0.7, 0.0)
 			if view3d:
 				view3d.on_god_wave(ev.r)
 		"bread":
-			Sound.play("fart", 0.7, 0.0)
+			_sfx("fart", 0.7, 0.0)
 			_fart_t = 0.5
 			impact(CENTER + Vector2(0, -150), "썩은 빵! 배가 꾸르륵~", Color(0.7, 0.9, 0.4), 1.0)
 		"magnet":
-			Sound.play("power", 0.8, -4.0)
+			_sfx("power", 0.8, -4.0)
 			if view3d:
 				view3d.comic(CENTER + Vector2(0, -120), "자석 똥! 구슬이 몽땅 와요", Color(0.5, 0.75, 1.0), 0.7)
 		"slam":
@@ -315,56 +331,56 @@ func _on_event(ev: Dictionary) -> void:
 			if view3d:
 				view3d.on_slam(ev.radius)
 		"boom":
-			Sound.play("boom", randf_range(0.9, 1.15), -6.0)
+			_sfx("boom", randf_range(0.9, 1.15), -6.0)
 			if view3d:
 				view3d.on_boom(ev.pos, ev.radius)
 		"beam":
-			Sound.play("laser", randf_range(0.92, 1.08), -10.0)
+			_sfx("laser", randf_range(0.92, 1.08), -10.0)
 			if view3d:
 				view3d.on_beam(ev.from, ev.dir, ev.length, ev.width, ev.evolved, ev.hits)
 		"bolt":
-			Sound.play("boom", randf_range(1.3, 1.6), -10.0)
+			_sfx("boom", randf_range(1.3, 1.6), -10.0)
 			if view3d:
 				view3d.on_bolt(ev.pos, ev.radius)
 		"thorns":
-			Sound.play("clang", 1.0, -6.0)
+			_sfx("clang", 1.0, -6.0)
 			if view3d:
 				view3d.on_thorns(ev.radius)
 		"ice":
-			Sound.play("swing", 1.6, -12.0)
+			_sfx("swing", 1.6, -12.0)
 		"ice_hit":
 			if _hit_sound_cd <= 0.0:
 				_hit_sound_cd = 0.07
-				Sound.play("coin", randf_range(1.7, 2.0), -8.0)
+				_sfx("coin", randf_range(1.7, 2.0), -8.0)
 			if view3d:
 				view3d.on_ice_hit(ev.pos, ev.evo)
 		"bhit":
 			if _hit_sound_cd <= 0.0:
 				_hit_sound_cd = 0.07
-				Sound.play("clang" if ev.evolved else "hit", randf_range(0.6, 0.8), -5.0)
+				_sfx("clang" if ev.evolved else "hit", randf_range(0.6, 0.8), -5.0)
 			if view3d:
 				view3d.on_bhit(ev.pos, ev.evolved)
 		"endless":
-			Sound.play("roar", 0.8, 0.0)
+			_sfx("roar", 0.8, 0.0)
 			impact(CENTER + Vector2(0, -240), "무한 모드!", Color(1, 0.4, 0.35), 2.0)
 			if Save.clear_survivor_stage(rules.stage, Rules.STAGES.size()) and view3d:
 				view3d.comic(CENTER + Vector2(0, 60), "새 무대 열림: " + String(Rules.STAGES[rules.stage + 1].name), Color(0.6, 1, 0.6), 0.9)
 			if view3d:
 				view3d.comic(CENTER + Vector2(0, -100), "적이 점점 세져요!", Color(1, 0.85, 0.4), 0.7)
 		"surround":
-			Sound.play("roar", 1.2, -4.0)
+			_sfx("roar", 1.2, -12.0, 1.0)
 			impact(CENTER + Vector2(0, -260), "포위됐어요! 뚫고 나가요!", Color(1, 0.55, 0.35), 1.3)
 		"dash":
-			Sound.play("roar", 1.4, -8.0)
+			_sfx("roar", 1.4, -15.0, 0.6)
 		"heal":
-			Sound.play("power", 1.4, -6.0)
+			_sfx("power", 1.4, -6.0)
 			_hurt_number(float(ev.amount), Color(0.45, 1, 0.45))
 			if view3d:
 				view3d.comic(CENTER + Vector2(0, -120), "생명력 똥!", Color(1, 0.5, 0.55), 0.6)
 		"gem":
-			Sound.play("coin", randf_range(1.0, 1.3), -14.0)
+			_sfx("coin", randf_range(1.0, 1.3), -14.0)
 		"hurt":
-			Sound.play("hurt", 1.0, -4.0)
+			_sfx("hurt", 1.0, -6.0, 0.25)
 			_hurt_number(-float(ev.dmg), Color(1, 0.3, 0.25))
 			if view3d and _gag_cd <= 0.0 and randf() < 0.3:
 				_gag_cd = 1.2
@@ -373,11 +389,11 @@ func _on_event(ev: Dictionary) -> void:
 			if view3d:
 				view3d.flash(Color(1, 0.2, 0.2), 0.25)
 		"levelup":
-			Sound.play("power", 1.2, -3.0)
+			_sfx("power", 1.2, -3.0)
 			if randf() < 0.5:
-				Sound.play("fart", 1.3, -6.0)
+				_sfx("fart", 1.3, -6.0)
 		"boss":
-			Sound.play("roar", 1.0, 0.0)
+			_sfx("roar", 1.0, 0.0)
 			if ev.text != "":
 				impact(CENTER + Vector2(0, -260), ev.text, Color(1, 0.35, 0.35), 1.6)
 

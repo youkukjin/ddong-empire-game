@@ -5,6 +5,7 @@ extends RefCounted
 ## 모형은 반지름 1 정도 안에 들어가게 만들어요.
 
 const Kit := preload("res://scripts/view3d/kit3d.gd")
+const HeroModels := preload("res://scenes/survivor/hero_models.gd")
 
 const POOP := Color(0.56, 0.33, 0.15)
 const GOLD := Color(0.9, 0.68, 0.2)
@@ -161,6 +162,11 @@ static func build(p: Node3D, id: String) -> void:
 			var cp := Kit.prism(p, Vector3(1.1, 1.2, 0.12), Color(0.75, 0.15, 0.2), Vector3(0, -0.15, 0))
 			cp.rotation.x = 0.15
 			Kit.torus(p, 0.15, 0.28, GOLD, Vector3(0, 0.5, 0.05))
+		"twin":    # 쌍둥이 똥: 똑같은 똥 둘
+			_poop(p, 0.5, POOP, Vector3(-0.32, -0.45, 0))
+			_poop(p, 0.5, POOP.lightened(0.12), Vector3(0.32, -0.45, 0))
+			Kit.box(p, Vector3(0.16, 0.05, 0.05), Color(1, 0.85, 0.3), Vector3(0, 0.25, 0.2), 1.2, false)
+			Kit.box(p, Vector3(0.05, 0.16, 0.05), Color(1, 0.85, 0.3), Vector3(0, 0.25, 0.2), 1.2, false)
 		"crown":
 			Kit.cylinder(p, 0.55, 0.5, 0.35, GOLD, Vector3(0, -0.2, 0))
 			for i in 5:
@@ -202,5 +208,13 @@ static func build(p: Node3D, id: String) -> void:
 			for i in 4:
 				Kit.cylinder(p, 0.4, 0.4, 0.12, GOLD, Vector3(i * 0.05, -0.5 + i * 0.14, 0), 0.3)
 			Kit.cylinder(p, 0.4, 0.4, 0.12, GOLD, Vector3(0.5, 0.0, 0.1), 0.3).rotation.x = PI / 2
+		"trait_kid", "trait_runny", "trait_gassy", "trait_icy", "trait_rock", "trait_prince":
+			# 캐릭터 특성: 그 똥 캐릭터 모형 + 반짝이 별
+			var h := HeroModels.make(id.trim_prefix("trait_"))
+			h.position = Vector3(0, -0.9, 0)
+			h.scale = Vector3.ONE * 1.05
+			p.add_child(h)
+			Kit.sphere(p, 0.1, GOLD, Vector3(0.65, 0.65, 0.2), Vector3.ONE, 1.8, false)
+			Kit.sphere(p, 0.07, GOLD, Vector3(-0.7, 0.4, 0.2), Vector3.ONE, 1.8, false)
 		_:
 			_poop(p, 0.8, POOP, Vector3(0, -0.5, 0))

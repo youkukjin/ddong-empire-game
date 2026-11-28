@@ -30,7 +30,7 @@ func _init(c: Dictionary, lv: int, max_lv: int) -> void:
 
 
 func _ready() -> void:
-	_icon_view = Icon3D.make_view(String(card.id), Vector2(180, 180))
+	_icon_view = Icon3D.make_view(String(card.get("icon", card.id)), Vector2(180, 180))
 	add_child(_icon_view)
 
 

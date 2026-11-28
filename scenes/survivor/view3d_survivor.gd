@@ -348,6 +348,23 @@ func _build_enemy_meshes() -> void:
 
 const TIERS := [[0.62, 0.32, 0.55], [0.48, 0.78, 0.6], [0.34, 1.12, 0.65]]
 
+## 무대마다 졸개 똥의 모습이 달라요 (2026-11-28 사용자: "적들도 챕터에 맞춰서 이미지도 다르게").
+## body/hat: [보통, 빠른, 덩치] 순서
+const ENEMY_LOOKS := {
+	"yard": {"hat_kind": "helmet", "top": Color(0.85, 0.05, 0.1),
+		"body": [Color(0.56, 0.33, 0.15), Color(0.72, 0.45, 0.18), Color(0.4, 0.22, 0.1)],
+		"hat": [Color(0.62, 0.66, 0.74), Color(0.85, 0.3, 0.2), Color(0.35, 0.35, 0.4)]},
+	"forest": {"hat_kind": "mushroom", "top": Color(0.45, 0.85, 0.25),
+		"body": [Color(0.45, 0.5, 0.2), Color(0.62, 0.6, 0.22), Color(0.3, 0.36, 0.14)],
+		"hat": [Color(0.9, 0.2, 0.15), Color(0.95, 0.6, 0.15), Color(0.55, 0.25, 0.6)]},
+	"ice": {"hat_kind": "beanie", "top": Color(0.85, 0.97, 1.0),
+		"body": [Color(0.6, 0.72, 0.85), Color(0.75, 0.88, 0.98), Color(0.4, 0.5, 0.7)],
+		"hat": [Color(0.2, 0.45, 0.9), Color(0.95, 0.35, 0.45), Color(0.3, 0.3, 0.55)]},
+	"lava": {"hat_kind": "horns", "top": Color(1.0, 0.85, 0.6),
+		"body": [Color(0.32, 0.16, 0.12), Color(0.85, 0.35, 0.1), Color(0.18, 0.1, 0.1)],
+		"hat": [Color(1.0, 0.5, 0.1), Color(1.0, 0.8, 0.2), Color(0.9, 0.2, 0.1)]},
+}
+
 
 func _put(mm: MultiMesh, i: int, basis: Basis, origin: Vector3, color: Color) -> void:
 	mm.set_instance_transform(i, Transform3D(basis, origin))
@@ -375,16 +392,11 @@ func _sync_enemies(rules) -> void:
 		var s: float = e.radius * 3.2 * K / 1.4
 		var bob := absf(sin(_t * 9.0 + e.id)) * 0.08
 		var rot := Basis(Vector3.UP, yaw)
-		var col := POOP
-		var hcol := STEEL
-		match e.kind:
-			"runner":
-				col = Color(0.72, 0.45, 0.18)
-				hcol = Color(0.85, 0.3, 0.2)
-			"brute":
-				col = Color(0.4, 0.22, 0.1)
-				hcol = Color(0.35, 0.35, 0.4)
-		col = Color(col.r * ST.tint.r, col.g * ST.tint.g, col.b * ST.tint.b)
+		var look: Dictionary = ENEMY_LOOKS.get(String(ST.props), ENEMY_LOOKS.yard)
+		var ki := 1 if e.kind == "runner" else (2 if e.kind == "brute" else 0)
+		var col: Color = look.body[ki]
+		var hcol: Color = look.hat[ki]
+		var tcol: Color = look.top
 		if float(e.get("slow_until", 0.0)) > rules.time:
 			col = col.lerp(Color(0.62, 0.86, 1.0), 0.65)
 			hcol = hcol.lerp(Color(0.8, 0.95, 1.0), 0.6)
@@ -395,8 +407,24 @@ func _sync_enemies(rules) -> void:
 		for ti in 3:
 			var t: Array = TIERS[ti]
 			_put(body, n * 3 + ti, rot * Basis.from_scale(Vector3(t[0], t[0] * t[2], t[0] * 0.9) * s), base + Vector3(0, t[1], 0) * s, col)
-		_put(helmet, n, rot * Basis.from_scale(Vector3(0.36, 0.2, 0.36) * s), base + Vector3(0, 1.32, 0) * s, hcol)
-		_put(plume, n, rot * Basis.from_scale(Vector3(0.1, 0.2, 0.1) * s), base + Vector3(0, 1.6, 0) * s, Color(0.85, 0.05, 0.1))
+		match String(look.hat_kind):
+			"mushroom":    # 방귀 숲: 커다란 버섯 갓 + 새싹
+				_put(helmet, n, rot * Basis.from_scale(Vector3(0.58, 0.26, 0.58) * s), base + Vector3(0, 1.34, 0) * s, hcol)
+				_put(plume, n * 2, rot * Basis(Vector3.RIGHT, 0.4) * Basis.from_scale(Vector3(0.07, 0.16, 0.07) * s), base + rot * (Vector3(0.12, 1.66, 0) * s), tcol)
+				_put(plume, n * 2 + 1, rot * Basis(Vector3.RIGHT, -0.4) * Basis.from_scale(Vector3(0.07, 0.16, 0.07) * s), base + rot * (Vector3(-0.12, 1.66, 0) * s), tcol)
+			"beanie":      # 얼음 동굴: 털모자 + 고드름 뿔
+				_put(helmet, n, rot * Basis.from_scale(Vector3(0.38, 0.3, 0.38) * s), base + Vector3(0, 1.32, 0) * s, hcol)
+				_put(plume, n * 2, rot * Basis.from_scale(Vector3(0.09, 0.24, 0.09) * s), base + Vector3(0, 1.68, 0) * s, tcol)
+				_put(plume, n * 2 + 1, Basis.from_scale(Vector3.ZERO), base, tcol)
+			"horns":       # 똥 화산: 불꽃 왕관 + 뿔 두 개
+				_put(helmet, n, rot * Basis.from_scale(Vector3(0.3, 0.12, 0.3) * s), base + Vector3(0, 1.3, 0) * s, hcol)
+				for k3 in 2:
+					var hx := -0.2 if k3 == 0 else 0.2
+					_put(plume, n * 2 + k3, rot * Basis(Vector3.BACK, -hx * 2.2) * Basis.from_scale(Vector3(0.08, 0.22, 0.08) * s), base + rot * (Vector3(hx, 1.45, 0) * s), tcol)
+			_:             # 성 안 마당: 투구 + 빨간 깃털
+				_put(helmet, n, rot * Basis.from_scale(Vector3(0.36, 0.2, 0.36) * s), base + Vector3(0, 1.32, 0) * s, hcol)
+				_put(plume, n * 2, rot * Basis.from_scale(Vector3(0.1, 0.2, 0.1) * s), base + Vector3(0, 1.6, 0) * s, tcol)
+				_put(plume, n * 2 + 1, Basis.from_scale(Vector3.ZERO), base, tcol)
 		for k2 in 2:
 			var sx := -0.17 if k2 == 0 else 0.17
 			_put(eye, n * 2 + k2, Basis.from_scale(Vector3.ONE * 0.13 * s), base + rot * (Vector3(sx, 1.0, 0.38) * s), Color(1, 0.95, 0.8))
@@ -404,7 +432,7 @@ func _sync_enemies(rules) -> void:
 		n += 1
 	body.visible_instance_count = n * 3
 	helmet.visible_instance_count = n
-	plume.visible_instance_count = n
+	plume.visible_instance_count = n * 2
 	eye.visible_instance_count = n * 2
 	pupil.visible_instance_count = n * 2
 	for id in _bosses.keys():
@@ -970,7 +998,7 @@ func sync(rules, delta: float) -> void:
 	if prince3d.get_meta("hero", "prince") != rules.hero_id:
 		_swap_hero(rules.hero_id)
 	HeroModels.apply_gear(prince3d, {"armor": int(rules.passives.get("armor", 0)), "cape": int(rules.passives.get("cape", 0)),
-		"crown": int(rules.passives.get("crown", 0)), "thorns": int(rules.weapons.get("thorns", 0))})
+		"crown": int(rules.passives.get("crown", 0)) if rules.hero_id == "prince" else 0, "thorns": int(rules.weapons.get("thorns", 0))})
 	hero3 = to3(rules.hero)
 	prince3d.position = hero3
 	var f: Vector2 = rules.facing
