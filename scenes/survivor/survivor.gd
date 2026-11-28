@@ -234,7 +234,11 @@ func _play_process(delta: float) -> void:
 		_fart_t -= delta
 		if _fart_t <= 0.0:
 			_fart_t = randf_range(6.0, 12.0) * (0.5 if rules.hero_id == "gassy" else 1.0)
+			if rules.tummy > 0.0:
+				_fart_t = randf_range(0.8, 1.6)    # 썩은 빵 배탈: 방귀가 마구 나와요
 			Sound.play("fart", randf_range(0.85, 1.25), -5.0)
+			for fev in rules.fart_blast():
+				_on_event(fev)
 			if view3d:
 				view3d.fart_puff()
 				view3d.comic(CENTER + Vector2(-80, -40), ["뿡!", "뿌웅~", "뽀옹!", "푸쉬익"].pick_random(), Color(0.7, 0.9, 0.4), 0.5)
@@ -285,10 +289,23 @@ func _on_event(ev: Dictionary) -> void:
 			Sound.play("swing", randf_range(0.95, 1.1), -8.0)
 			if view3d:
 				view3d.on_swing(ev.dirs, ev.reach)
+		"god_fart":
+			Sound.play("fart", randf_range(0.6, 0.8), 0.0)
+			if view3d:
+				view3d.on_god_wave(ev.r)
+				view3d.fart_puff()
+				view3d.comic(CENTER + Vector2(randf_range(-120, 120), -60), ["뿌우우웅!!", "뿡뿡뿡!", "푸와앙!"].pick_random(), Color(0.7, 0.9, 0.4), 0.7)
+		"god_freeze":
+			if view3d:
+				view3d.on_ice_hit(rules.hero, true)
 		"god_wave":
 			Sound.play("boom", 0.7, 0.0)
 			if view3d:
 				view3d.on_god_wave(ev.r)
+		"bread":
+			Sound.play("fart", 0.7, 0.0)
+			_fart_t = 0.5
+			impact(CENTER + Vector2(0, -150), "썩은 빵! 배가 꾸르륵~", Color(0.7, 0.9, 0.4), 1.0)
 		"magnet":
 			Sound.play("power", 0.8, -4.0)
 			if view3d:
@@ -419,7 +436,9 @@ func _can_pause() -> bool:
 
 func _on_awaken() -> void:
 	if rules.awaken():
-		impact(CENTER + Vector2(0, -140), "똥의 신 각성!!", Color(1, 0.85, 0.2), 1.8)
+		var gi: Dictionary = rules.god_info_of()
+		god_info.text = "★ %s 10초 ★\n%s, 안 아파요!" % [String(gi.name).trim_suffix("!"), gi.desc]
+		impact(CENTER + Vector2(0, -140), String(gi.name), Color(1, 0.85, 0.2), 1.8)
 		god_info.visible = true
 		Sound.play("flash", 1.0, 0.0)
 

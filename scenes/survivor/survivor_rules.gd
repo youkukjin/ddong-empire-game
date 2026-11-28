@@ -80,7 +80,7 @@ var weapons := {"sword": 1}          # 이름 -> 레벨
 var passives := {}                   # 이름 -> 단계
 var enemies: Array = []              # {id, kind, pos, hp, max_hp, speed, dmg, radius, boss, hit_cd: {}}
 var gems: Array = []                 # {pos, value}
-var items: Array = []                # {kind: "heal"|"magnet", pos, age}
+var items: Array = []                # {kind: "heal"|"magnet"|"bread", pos, age}
 var vacuum := 0.0
 var _ring_t := 0.0                    # 자석 똥을 먹으면 잠깐 모든 구슬이 날아와요
 const ITEM_HEAL := 30.0
@@ -132,7 +132,25 @@ const HEROES := {
 	"prince": {"name": "똥 왕자", "hp": 120.0, "speed": 1.1, "weapon": "sword", "cost": 2000,
 		"skill": "왕의 힘: 공격력+25%, 크리티컬+8%, 각성 2배", "desc": "철퇴도 들고 시작! 똥 제국에서 가장 강해요"},
 }
+## 캐릭터마다 레벨업 카드에 나오는 무기가 달라요 (2026-11-28 사용자: "케릭터마다 스킬이 달라야").
+## 똥 왕자만 12개 전부 나와요.
+const HERO_KITS := {
+	"kid": ["bomb", "boomerang", "puddle", "flies", "lightning", "fist"],
+	"runny": ["flies", "puddle", "boomerang", "beam", "cloud", "lightning"],
+	"gassy": ["cloud", "puddle", "beam", "flies", "bomb", "lightning"],
+	"icy": ["ice", "beam", "lightning", "boomerang", "sword", "thorns"],
+	"rock": ["fist", "thorns", "bomb", "sword", "chain", "puddle"],
+}
+## 캐릭터 특기와 어울리는 능력치 카드가 더 자주 나와요
+const HERO_FAVORITE := {"kid": "book", "runny": "swift", "gassy": "cape", "icy": "dumbbell", "rock": "armor", "prince": "power"}
 var hero_id := "prince"
+
+
+## 이 캐릭터가 레벨업에서 얻을 수 있는 무기들
+static func hero_kit(id: String) -> Array:
+	if HERO_KITS.has(id):
+		return HERO_KITS[id]
+	return WEAPONS.keys()
 var crit_bonus := 0.0
 var god_rate := 1.0
 
@@ -213,7 +231,68 @@ func pace() -> float:
 
 
 func damage_mult() -> float:
-	return bonus.dmg * (GOD_DMG if god_left > 0.0 else 1.0)
+	return bonus.dmg * (god_dmg() if god_left > 0.0 else 1.0)
+
+
+## 캐릭터마다 각성이 달라요 (2026-11-28 사용자: "각성효과도 다 다르게"). 모두 10초 동안 안 아파요.
+const GOD_INFO := {
+	"kid": {"name": "왕똥 변신!", "desc": "몸이 커져요, 구슬이 날아와요, 경험치 2배"},
+	"runny": {"name": "설사 폭주!", "desc": "엄청 빨라지고, 지나간 자리에 웅덩이"},
+	"gassy": {"name": "방귀 핵폭탄!", "desc": "1초마다 큰 방귀가 터져 적을 날려요"},
+	"icy": {"name": "꽁꽁 얼음 왕국!", "desc": "화면의 적이 전부 얼어서 못 움직여요"},
+	"rock": {"name": "돌 거인!", "desc": "몸이 커지고, 부딪힌 적이 튕겨 나가요"},
+	"prince": {"name": "똥의 신!", "desc": "공격력 3배, 공격 속도 2배, 이동 속도 UP"},
+}
+var _god_fx_t := 0.0
+
+
+func god_info_of(id := "") -> Dictionary:
+	return GOD_INFO.get(hero_id if id == "" else id, GOD_INFO.prince)
+
+
+func god_dmg() -> float:
+	return GOD_DMG if hero_id == "prince" else 2.0
+
+
+func god_speed() -> float:
+	match hero_id:
+		"runny":
+			return 2.0
+		"prince":
+			return GOD_SPEED
+		"rock":
+			return 1.15
+	return 1.2
+
+
+## 각성 중 캐릭터마다 다른 특별한 힘
+func _god_special(delta: float, ev: Array) -> void:
+	_god_fx_t -= delta
+	match hero_id:
+		"kid":
+			vacuum = maxf(vacuum, 0.3)
+		"runny":
+			if _god_fx_t <= 0.0:
+				_god_fx_t = 0.15
+				puddles.append({"pos": hero, "r": 60.0, "life": 2.5, "dmg": 12.0, "follow": false})
+		"gassy":
+			if _god_fx_t <= 0.0:
+				_god_fx_t = 1.0
+				for e in enemies:
+					if e.hp > 0.0 and e.pos.distance_to(hero) < 300.0 + float(e.radius):
+						damage(e, 30.0, ev, 130.0)
+				ev.append({"type": "god_fart", "r": 300.0})
+		"icy":
+			for e in enemies:
+				if e.pos.distance_to(hero) < 900.0:
+					_slow(e, 0.0, 0.3)
+			if _god_fx_t <= 0.0:
+				_god_fx_t = 1.5
+				ev.append({"type": "god_freeze"})
+		"rock":
+			for e in enemies:
+				if e.hp > 0.0 and e.pos.distance_to(hero) < HERO_RADIUS + float(e.radius) + 30.0 and _hit_once(e, "rock_god", 0.3):
+					damage(e, 45.0, ev, 160.0)
 
 
 ## 똥의 신 각성 (10초): 공격 3배, 무기 2배 빨리, 이동 1.4배, 무적,
@@ -240,7 +319,7 @@ func _god_burst(ev: Array) -> void:
 	for e in enemies:
 		var d: float = e.pos.distance_to(hero)
 		if d < GOD_WAVE_R:
-			damage(e, (200.0 if e.boss else 80.0) * damage_mult() / GOD_DMG, ev, 0.0 if e.boss else 260.0)
+			damage(e, (200.0 if e.boss else 80.0) * damage_mult() / god_dmg(), ev, 0.0 if e.boss else 260.0)
 	ev.append({"type": "god_wave", "r": GOD_WAVE_R})
 
 
@@ -278,13 +357,16 @@ func tick(delta: float, move: Vector2) -> Array:
 	# 왕자 움직이기
 	if move.length() > 0.05:
 		var m := move.limit_length(1.0)
-		hero += m * HERO_SPEED * bonus.speed * (GOD_SPEED if god_left > 0.0 else 1.0) * delta
+		hero += m * HERO_SPEED * bonus.speed * (god_speed() if god_left > 0.0 else 1.0) * delta
 		facing = m.normalized()
 		var half := ARENA / 2.0 - 40.0
 		hero = hero.clamp(Vector2(-half, -half), Vector2(half, half))
 		hero = push_out(hero, HERO_RADIUS)
 	if _god_wave:
 		_god_burst(ev)
+	if god_left > 0.0:
+		_god_special(delta, ev)
+	_tummy_tick(delta)
 	_spawn(delta, ev)
 	_move_enemies(delta, ev)
 	_weapons(delta, ev)
@@ -576,6 +658,17 @@ func damage(e: Dictionary, amount: float, ev: Array, knock := 0.0) -> void:
 const CRIT_MULT := 2.5
 
 
+## 가끔 나오는 장난 방귀 "뿡!": 가까운 적을 살짝 아프게 하고 밀어내요 (방귀 똥은 더 세고 넓게)
+func fart_blast() -> Array:
+	var ev: Array = []
+	var r := 150.0 if hero_id == "gassy" else 110.0
+	var amount := 14.0 if hero_id == "gassy" else 8.0
+	for e in enemies:
+		if e.hp > 0.0 and e.pos.distance_to(hero) < r + float(e.radius):
+			damage(e, amount, ev, 45.0)
+	return ev
+
+
 func crit_chance() -> float:
 	return 0.08 + crit_bonus + (bonus.luck - 1.0) * 0.1 + int(traits.get("trait_atk", 0)) * 0.05
 
@@ -602,6 +695,8 @@ func _on_kill(e: Dictionary, ev: Array) -> void:
 		drop_item("heal", e.pos + Vector2(18, 0))
 	if (e.boss and e.kind != "bat") or rng.randf() < 0.0015 * bonus.luck:
 		drop_item("magnet", e.pos + Vector2(-18, 0))
+	if rng.randf() < 0.003 * bonus.luck:
+		drop_item("bread", e.pos + Vector2(0, 18))
 	if e.boss:
 		coins += 200 if e.kind == "demon" else 50
 		if e.kind != "demon":
@@ -616,7 +711,7 @@ func _on_kill(e: Dictionary, ev: Array) -> void:
 # ------------------------------------------------------------------ 무기
 
 func _cool(base: float) -> float:
-	return base * bonus.cool * (GOD_COOL if god_left > 0.0 else 1.0)
+	return base * bonus.cool * ((GOD_COOL if hero_id == "prince" else 0.75) if god_left > 0.0 else 1.0)
 
 
 func _ready_weapon(id: String, base: float, delta: float) -> bool:
@@ -995,6 +1090,23 @@ func apply_forge(levels: Dictionary) -> void:
 
 
 ## 아이템 똥: "heal"(생명력 똥) 또는 "magnet"(자석 똥). 땅에 떨어져 있다가 주우면 효과가 나요.
+## 썩은 빵 (2026-11-28 사용자: "썩은 빵 먹으면 방귀랑 설사가 더 잘 나오게"):
+## 먹으면 배탈(15초) → 장난 방귀가 자주 뿡! 지나간 자리에 설사 웅덩이가 생겨 적이 미끄러지고 아파요.
+const TUMMY_TIME := 15.0
+var tummy := 0.0
+var _tummy_t := 0.0
+
+
+func _tummy_tick(delta: float) -> void:
+	if tummy <= 0.0:
+		return
+	tummy = maxf(tummy - delta, 0.0)
+	_tummy_t -= delta
+	if _tummy_t <= 0.0:
+		_tummy_t = 0.3
+		puddles.append({"pos": hero, "r": 48.0 * bonus.area, "life": 2.5, "dmg": 7.0, "follow": false})
+
+
 func drop_item(kind: String, pos: Vector2) -> void:
 	if items.size() < 12:
 		items.append({"kind": kind, "pos": pos, "age": 0.0})
@@ -1011,6 +1123,9 @@ func _collect(delta: float, ev: Array) -> void:
 				var amount := minf(ITEM_HEAL, max_hp - hp)
 				hp += amount
 				ev.append({"type": "heal", "amount": ITEM_HEAL})
+			elif it.kind == "bread":
+				tummy = TUMMY_TIME
+				ev.append({"type": "bread"})
 			else:
 				vacuum = 2.5
 				ev.append({"type": "magnet"})
@@ -1023,7 +1138,7 @@ func _collect(delta: float, ev: Array) -> void:
 			g.pos += to.normalized() * minf(d, 520.0 * delta)
 		if d < HERO_RADIUS + 10.0:
 			gems.erase(g)
-			xp_frac += float(g.value) * bonus.xp
+			xp_frac += float(g.value) * bonus.xp * (2.0 if god_left > 0.0 and hero_id == "kid" else 1.0)
 			xp += int(xp_frac)
 			xp_frac -= int(xp_frac)
 			ev.append({"type": "gem"})
@@ -1050,8 +1165,11 @@ func make_choices() -> Array:
 		if int(weapons[id]) >= MAX_LEVEL and not evolved.has(id) and passives.has(WEAPONS[id].pair) and out.size() < 3:
 			out.append({"kind": "evolve", "id": id, "name": WEAPONS[id].evo, "level": 0, "title": "진화! " + WEAPONS[id].evo, "desc": WEAPONS[id].evo_desc})
 	var pool: Array = []
+	var kit := hero_kit(hero_id)
 	for id in WEAPONS:
 		var lv := int(weapons.get(id, 0))
+		if lv == 0 and not kit.has(id):
+			continue
 		if lv == 0 and weapons.size() < MAX_WEAPONS:
 			pool.append({"kind": "weapon", "id": id, "name": WEAPONS[id].name, "level": 1, "title": "새 무기: " + WEAPONS[id].name, "desc": WEAPONS[id].desc})
 		elif lv > 0 and lv < MAX_LEVEL:
@@ -1062,6 +1180,8 @@ func make_choices() -> Array:
 		if pl < int(PASSIVES[id].max) and (pl > 0 or passives.size() < MAX_PASSIVES):
 			var t: String = PASSIVES[id].name if pl == 0 else "%s Lv%d" % [PASSIVES[id].name, pl + 1]
 			pool.append({"kind": "passive", "id": id, "name": PASSIVES[id].name, "level": pl + 1, "max": int(PASSIVES[id].max), "title": t, "desc": PASSIVES[id].desc})
+			if HERO_FAVORITE.get(hero_id, "") == id:
+				pool.append(pool[pool.size() - 1])
 	while out.size() < 3 and not pool.is_empty():
 		var c: Dictionary = pool.pop_at(rng.randi() % pool.size())
 		if out.any(func(o): return o.kind == c.kind and o.id == c.id):

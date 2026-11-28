@@ -679,6 +679,8 @@ func _sync_items(rules) -> void:
 func _make_item(kind: String) -> Node3D:
 	var n := Node3D.new()
 	add_child(n)
+	if kind == "bread":
+		return _make_bread(n)
 	var c := Color(0.95, 0.25, 0.3) if kind == "heal" else Color(0.3, 0.55, 1.0)
 	for t in [[0.32, 0.0, 0.55], [0.24, 0.22, 0.6], [0.15, 0.4, 0.7]]:
 		Kit.sphere(n, t[0], c, Vector3(0, t[1], 0), Vector3(1, t[2], 1), 0.6)
@@ -694,6 +696,22 @@ func _make_item(kind: String) -> Node3D:
 			Kit.box(n, Vector3(0.1, 0.1, 0.1), Color(0.9, 0.9, 0.95), Vector3(sx * 0.14, 0.56, 0), 0.6)
 		Kit.box(n, Vector3(0.38, 0.1, 0.1), Color(0.9, 0.2, 0.2), Vector3(0, 0.92, 0), 0.4)
 	var glow := Kit.sphere(n, 0.5, c, Vector3(0, 0.02, 0), Vector3(1, 0.08, 1), 0.5, false)
+	glow.transparency = 0.6
+	return n
+
+
+## 썩은 빵: 갈색 식빵에 초록 곰팡이, 냄새 김이 모락모락
+func _make_bread(n: Node3D) -> Node3D:
+	var crust := Color(0.62, 0.42, 0.2)
+	Kit.box(n, Vector3(0.62, 0.5, 0.36), crust, Vector3(0, 0.3, 0), 0.6)
+	Kit.sphere(n, 0.33, crust, Vector3(0, 0.56, 0), Vector3(1, 0.55, 0.58), 0.6)
+	Kit.box(n, Vector3(0.52, 0.42, 0.02), Color(0.93, 0.85, 0.6), Vector3(0, 0.3, 0.185), 0.8, false)
+	for sp in [Vector3(-0.15, 0.4, 0.2), Vector3(0.12, 0.22, 0.2), Vector3(0.05, 0.62, 0.12), Vector3(0.22, 0.48, 0.1), Vector3(-0.2, 0.15, 0.19)]:
+		Kit.sphere(n, 0.07, Color(0.45, 0.75, 0.2), sp, Vector3(1, 1, 0.5), 0.7)
+	for k in 3:
+		var puff := Kit.sphere(n, 0.1 + k * 0.03, Color(0.65, 0.85, 0.35), Vector3(-0.1 + k * 0.1, 0.85 + k * 0.17, 0), Vector3.ONE, 0.6, false)
+		puff.transparency = 0.45
+	var glow := Kit.sphere(n, 0.5, Color(0.5, 0.8, 0.2), Vector3(0, 0.02, 0), Vector3(1, 0.08, 1), 0.5, false)
 	glow.transparency = 0.6
 	return n
 
@@ -963,6 +981,12 @@ func sync(rules, delta: float) -> void:
 			prince3d.pose = Prince3D.Pose.IDLE
 	prince3d.blink = rules.invuln
 	prince3d.god = rules.god_left > 0.0
+	# 꼬마 똥 각성: 왕똥으로 크게 변신 / 돌 똥 각성: 조금 커져요
+	var god_big := 1.0
+	if rules.god_left > 0.0:
+		god_big = 2.0 if rules.hero_id == "kid" else (1.35 if rules.hero_id == "rock" else 1.0)
+	var sc: float = lerpf(prince3d.scale.x, 0.62 * god_big, clampf(delta * 6.0, 0.0, 1.0))
+	prince3d.scale = Vector3(sc, sc, sc)
 	if rules.hp <= 0.0:
 		prince3d.pose = Prince3D.Pose.HURT
 	_place_camera()

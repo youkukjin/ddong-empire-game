@@ -224,3 +224,58 @@ func _run() -> void:
 	check(r8.enemies.size() <= Rules.ENEMY_CAP, "적은 최대 %d마리까지만 (%d)" % [Rules.ENEMY_CAP, r8.enemies.size()])
 	check(Save.record_survivor(30, 125.0, false) and Save.survivor_coins() == 30, "똥전과 버틴 시간이 기기에 남아요")
 	check(not Save.record_survivor(5, 60.0, false) and Save.survivor_coins() == 35 and Save.survivor_best() == 125.0, "더 짧게 버티면 기록은 그대로, 똥전은 더해져요")
+
+	# 캐릭터마다 레벨업 카드 무기와 각성이 달라요
+	for hid in Rules.HERO_KITS:
+		var rk = Rules.new(31)
+		rk.set_hero(hid)
+		var bad := false
+		for k in 40:
+			for c in rk.make_choices():
+				if c.kind == "weapon" and int(rk.weapons.get(c.id, 0)) == 0 and not Rules.HERO_KITS[hid].has(c.id):
+					bad = true
+		check(not bad, "%s 레벨업 카드엔 자기 무기만 나와요" % hid)
+	var rg = Rules.new(32)
+	rg.set_hero("icy")
+	rg.weapons = {}
+	rg.hp = 1e9
+	var fe: Dictionary = rg.spawn_enemy("warrior", rg.hero + Vector2(300, 0))
+	rg.god_gauge = 1.0
+	rg.awaken()
+	rg.tick(0.05, Vector2.ZERO)
+	var fx: float = fe.pos.x
+	for i in 10:
+		rg.tick(0.05, Vector2.ZERO)
+	check(absf(fe.pos.x - fx) < 1.0, "얼음 똥 각성: 적이 얼어서 못 움직여요")
+	var rgas = Rules.new(33)
+	rgas.set_hero("gassy")
+	rgas.weapons = {}
+	rgas.hp = 1e9
+	rgas.god_gauge = 1.0
+	rgas.awaken()
+	rgas.tick(0.05, Vector2.ZERO)
+	var fg: Dictionary = rgas.spawn_enemy("brute", rgas.hero + Vector2(200, 0))
+	var fh: float = fg.hp
+	var farts := 0
+	for i in 30:
+		for ev in rgas.tick(0.05, Vector2.ZERO):
+			if ev.type == "god_fart":
+				farts += 1
+	check(farts >= 1 and fg.hp < fh, "방귀 똥 각성: 큰 방귀가 터져 적이 아파요")
+	var rb = Rules.new(34)
+	rb.weapons = {}
+	var be: Dictionary = rb.spawn_enemy("brute", rb.hero + Vector2(60, 0))
+	var bh: float = be.hp
+	for ev in rb.fart_blast():
+		pass
+	check(be.hp < bh, "장난 방귀 뿡!도 가까운 적을 살짝 아프게 해요")
+	var rbr = Rules.new(35)
+	rbr.weapons = {}
+	rbr.drop_item("bread", rbr.hero)
+	var got_bread := false
+	for ev in rbr.tick(0.05, Vector2.ZERO):
+		if ev.type == "bread":
+			got_bread = true
+	for i in 10:
+		rbr.tick(0.05, Vector2.RIGHT)
+	check(got_bread and rbr.tummy > 10.0 and rbr.puddles.size() >= 2, "썩은 빵을 먹으면 배탈: 지나간 자리에 설사 웅덩이")

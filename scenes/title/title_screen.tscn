@@ -68,7 +68,7 @@ offset_bottom = -40.0
 grow_horizontal = 2
 grow_vertical = 2
 alignment = 1
-theme_override_constants/separation = 40
+theme_override_constants/separation = 24
 
 [node name="TitleLabel" type="Label" parent="Center"]
 unique_name_in_owner = true

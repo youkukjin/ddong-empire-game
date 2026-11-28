@@ -8,6 +8,8 @@ const Cute := preload("res://scripts/art/cute.gd")
 const ScreenMode := preload("res://scripts/screen_mode.gd")
 const Rules := preload("res://scenes/survivor/survivor_rules.gd")
 const HeroModels := preload("res://scenes/survivor/hero_models.gd")
+## 캐릭터 칸에 보이는 짧은 무기 이름
+const SHORT := {"sword": "검", "chain": "철퇴", "fist": "주먹", "bomb": "폭탄", "flies": "파리", "beam": "광선", "boomerang": "부메랑", "cloud": "방귀", "lightning": "번개", "thorns": "가시", "puddle": "웅덩이", "ice": "얼음"}
 const SURVIVOR_SCENE := "res://scenes/survivor/survivor.tscn"
 const SELECT_SCENE := "res://scenes/title/chapter_select.tscn"
 const FONT := preload("res://assets/fonts/Jua-Regular.ttf")
@@ -168,8 +170,15 @@ class HeroRow extends Control:
 		draw_string(FONT, Vector2(x, 42), String(h.name), HORIZONTAL_ALIGNMENT_LEFT, -1, 34, name_col)
 		var wname: String = Rules.WEAPONS[h.weapon].name
 		draw_string(FONT, Vector2(x + 150, 40), "체력 %d   이동 %d%%" % [int(h.hp), int(float(h.speed) * 100.0)], HORIZONTAL_ALIGNMENT_LEFT, -1, 22, CREAM.darkened(0.2))
-		draw_string(FONT, Vector2(x, 78), "시작 무기: " + wname, HORIZONTAL_ALIGNMENT_LEFT, 360, 22, Color(1, 0.8, 0.45))
+		draw_string(FONT, Vector2(x, 78), "무기: %s · 각성: %s" % [wname, Rules.GOD_INFO[id].name], HORIZONTAL_ALIGNMENT_LEFT, 380, 20, Color(1, 0.8, 0.45))
 		draw_string(FONT, Vector2(x, 110), String(h.skill), HORIZONTAL_ALIGNMENT_LEFT, 360, 21, Color(0.7, 0.9, 0.85))
-		draw_string(FONT, Vector2(x, 138), String(h.desc), HORIZONTAL_ALIGNMENT_LEFT, 360, 20, CREAM.darkened(0.35))
+		# 레벨업에서 나오는 무기 (캐릭터마다 달라요)
+		if Rules.HERO_KITS.has(id):
+			var names: Array = []
+			for w in Rules.HERO_KITS[id]:
+				names.append(SHORT.get(w, w))
+			draw_string(FONT, Vector2(x, 138), "얻는 무기: " + " · ".join(names), HORIZONTAL_ALIGNMENT_LEFT, 380, 17, CREAM.darkened(0.3))
+		else:
+			draw_string(FONT, Vector2(x, 138), "얻는 무기: 12개 전부!", HORIZONTAL_ALIGNMENT_LEFT, -1, 19, Color(1, 0.85, 0.35))
 		if locked:
 			draw_string(FONT, Vector2(538, 50), "잠겨 있어요", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color(1, 0.6, 0.5))
