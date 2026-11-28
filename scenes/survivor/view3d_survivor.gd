@@ -28,6 +28,8 @@ var _balls: Array[Node3D] = []
 var _flies: Array[Node3D] = []
 var _bombs: Array[Node3D] = []
 var _shots: MultiMeshInstance3D
+var _boomers: MultiMeshInstance3D
+var _trail_acc := 0.0
 var _puddles: Array[MeshInstance3D] = []
 var _cloud: MeshInstance3D
 var _fx: Array = []             # {"node", "life", "max", "kind"}
@@ -60,6 +62,7 @@ func _ready() -> void:
 	_build_enemy_meshes()
 	_gems = _multimesh(SphereMesh.new(), _vertex_color_mat(true), false)
 	_shots = _multimesh(SphereMesh.new(), _vertex_color_mat(true), false)
+	_boomers = _multimesh(_boomerang_mesh(), _vertex_color_mat(), true)
 	# 방귀 구름 (반투명 초록 공)
 	_cloud = MeshInstance3D.new()
 	_cloud.mesh = SphereMesh.new()
@@ -485,6 +488,27 @@ func on_boom(pos: Vector2, radius: float) -> void:
 		comic(screen_of(pos), "펑!", Color(1, 0.6, 0.2), 0.6)
 
 
+## 부메랑 모양 (ㄱ자로 꺾인 두꺼운 날개, 크기 1)
+func _boomerang_mesh() -> ArrayMesh:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for arm in [-1.0, 1.0]:
+		var bm := BoxMesh.new()
+		bm.size = Vector3(1.0, 0.22, 0.32)
+		st.append_from(bm, 0, Transform3D(Basis(Vector3.UP, arm * 0.6), Vector3(0, 0, 0)).translated_local(Vector3(0.45, 0, 0)))
+	st.generate_normals()
+	return st.commit()
+
+
+## 부메랑이 적을 맞혔어요: 퍽!
+func on_bhit(pos: Vector2, evo: bool) -> void:
+	if _debris.size() < 90:
+		burst(to3(pos, 0.5), Color(1, 0.8, 0.3) if evo else Color(0.7, 0.45, 0.2), 5, 0.9)
+	if randf() < 0.18:
+		comic(screen_of(pos), "퍽!", Color(1, 0.75, 0.25), 0.55)
+	shake(0.03, 0.08)
+
+
 ## 보라 광선 (진화하면 무지개)
 func on_beam(from: Vector2, dir: Vector2, length: float, width: float, evo: bool) -> void:
 	var b := MeshInstance3D.new()
@@ -574,6 +598,8 @@ func _step_fx(delta: float) -> void:
 				continue
 			"bolt":
 				continue
+			"puff":
+				node.scale = Vector3.ONE * f.s * (1.0 - k * 0.7)
 			"ring_at":
 				var r3: float = f.r * (0.3 + k)
 				node.scale = Vector3(r3, 0.4, r3)
@@ -631,10 +657,34 @@ func sync(rules, delta: float) -> void:
 		var sh: Dictionary = rules.shots[i]
 		var r: float = sh.r * K
 		if sh.kind == "boomerang":
-			_put(sm, i, Basis(Vector3.UP, _t * 18.0) * Basis.from_scale(Vector3(r * 1.6, r * 0.35, r * 0.6)), to3(sh.pos, 0.5), Color(1, 0.75, 0.2) if rules.evolved.has("boomerang") else Color(0.6, 0.38, 0.15))
+			continue
 		else:
 			_put(sm, i, Basis.from_scale(Vector3.ONE * r * 0.8), to3(sh.pos, 0.5), Color(0.6, 0.95, 1.0))
 	sm.visible_instance_count = sn
+	# 부메랑: 빙글빙글 도는 ㄱ자 똥 부메랑 + 꼬리 바람
+	var bmm: MultiMesh = _boomers.multimesh
+	var bn := 0
+	_trail_acc += delta
+	var trail := _trail_acc > 0.04
+	if trail:
+		_trail_acc = 0.0
+	for sh in rules.shots:
+		if sh.kind != "boomerang" or bn >= bmm.instance_count:
+			continue
+		var br: float = sh.r * K * 1.7
+		var evo: bool = rules.evolved.has("boomerang")
+		var bp := to3(sh.pos, 0.55)
+		_put(bmm, bn, Basis(Vector3.UP, _t * 22.0 + bn) * Basis(Vector3.RIGHT, 0.25) * Basis.from_scale(Vector3.ONE * br), bp, Color(0.95, 0.62, 0.1) if evo else Color(0.62, 0.36, 0.13))
+		bn += 1
+		if trail and _fx.size() < 120:
+			var puff := MeshInstance3D.new()
+			puff.mesh = SphereMesh.new()
+			puff.material_override = Kit.mat(Color(1, 0.95, 0.7, 0.5) if evo else Color(1, 1, 1, 0.4), 0.0, 0.5, true, false)
+			puff.position = bp
+			puff.scale = Vector3.ONE * br * 0.35
+			add_child(puff)
+			_fx.append({"node": puff, "life": 0.25, "max": 0.25, "kind": "puff", "s": br * 0.35})
+	bmm.visible_instance_count = bn
 	# 똥 웅덩이
 	while _puddles.size() < rules.puddles.size():
 		var pm := MeshInstance3D.new()

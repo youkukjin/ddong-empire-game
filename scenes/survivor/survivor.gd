@@ -220,6 +220,12 @@ func _on_event(ev: Dictionary) -> void:
 				view3d.on_thorns(ev.radius)
 		"ice":
 			Sound.play("swing", 1.6, -12.0)
+		"bhit":
+			if _hit_sound_cd <= 0.0:
+				_hit_sound_cd = 0.07
+				Sound.play("clang" if ev.evolved else "hit", randf_range(0.6, 0.8), -5.0)
+			if view3d:
+				view3d.on_bhit(ev.pos, ev.evolved)
 		"heal":
 			Sound.play("power", 1.4, -6.0)
 		"gem":

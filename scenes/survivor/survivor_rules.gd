@@ -493,7 +493,7 @@ func _weapons(delta: float, ev: Array) -> void:
 			var dir := facing.rotated((k - (n - 1) / 2.0) * 0.45)
 			_next_id += 1
 			shots.append({"kind": "boomerang", "sid": _next_id, "dir": dir, "t": 0.0, "T": 1.4, "reach": (300.0 + lv * 25.0) * area,
-				"pos": hero, "r": (30.0 if not evo else 52.0) * area, "dmg": (12.0 + lv * 6.0) * (1.6 if evo else 1.0), "pierce": 999, "hit": {}})
+				"pos": hero, "r": (44.0 if not evo else 70.0) * area, "dmg": (12.0 + lv * 6.0) * (1.6 if evo else 1.0), "pierce": 999, "hit": {}})
 	# 방귀 구름: 둘레에 계속
 	lv = lv_of("cloud")
 	if lv > 0 and _ready_weapon("cloud", 0.5, delta):
@@ -579,7 +579,8 @@ func _move_shots(delta: float, ev: Array) -> void:
 				if sh.kind == "boomerang":
 					if not _hit_once(e, "b%d" % sh.sid, 0.4):
 						continue
-					damage(e, sh.dmg, ev, 20.0)
+					damage(e, sh.dmg, ev, 45.0)
+					ev.append({"type": "bhit", "pos": e.pos, "evolved": evolved.has("boomerang")})
 				elif not sh.hit.has(e.id):
 					sh.hit[e.id] = true
 					damage(e, sh.dmg, ev)
