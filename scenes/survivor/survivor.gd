@@ -10,6 +10,7 @@ extends "res://scripts/stage_base.gd"
 const Rules := preload("res://scenes/survivor/survivor_rules.gd")
 const View := preload("res://scenes/survivor/view3d_survivor.gd")
 const SkillCard := preload("res://scenes/survivor/skill_card.gd")
+const Ads := preload("res://scripts/ads.gd")
 const SELECT_SCENE := "res://scenes/title/chapter_select.tscn"
 const CENTER := Vector2(360, 640)    # 세로 화면 가운데
 const JOY_R := 90.0
@@ -20,6 +21,7 @@ var _touching := false
 var _origin := Vector2.ZERO
 var _finger := Vector2.ZERO
 var _hit_sound_cd := 0.0
+var _crit_cd := 0.0
 var _shown_level := 1
 
 var joy: Control
@@ -128,6 +130,8 @@ func _refresh_hud() -> void:
 		parts.append((Rules.WEAPONS[id].evo + "★") if rules.evolved.has(id) else "%s%d" % [Rules.WEAPONS[id].name, rules.weapons[id]])
 	for id in rules.passives:
 		parts.append("%s%d" % [Rules.PASSIVES[id].name, rules.passives[id]])
+	for id in rules.traits:
+		parts.append("%s×%d" % [Rules.TRAITS[id].name, rules.traits[id]])
 	skills_label.text = "  ".join(parts)
 	var ready: bool = rules.god_gauge >= 1.0 and rules.god_left <= 0.0
 	god_button.visible = phase == Phase.PLAY
@@ -180,6 +184,7 @@ func _on_play_started() -> void:
 
 func _play_process(delta: float) -> void:
 	_hit_sound_cd -= delta
+	_crit_cd -= delta
 	var keys := Vector2(
 		float(Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT)) - float(Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT)),
 		float(Input.is_key_pressed(KEY_S) or Input.is_key_pressed(KEY_DOWN)) - float(Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_UP)))
@@ -193,7 +198,10 @@ func _play_process(delta: float) -> void:
 	joy.set_state(_touching, _origin, _finger)
 	match rules.outcome():
 		Rules.Outcome.LOSE:
-			_finish(rules.boss_defeated)
+			if rules.can_revive():
+				_offer_revive()
+			else:
+				_finish(rules.boss_defeated)
 	if phase == Phase.PLAY and not rules.choices.is_empty() and not overlay_root.has_node("Cards"):
 		_show_cards()
 
@@ -206,6 +214,10 @@ func _on_event(ev: Dictionary) -> void:
 				Sound.play("hit", randf_range(0.9, 1.2), -9.0)
 			if ev.boss and view3d:
 				view3d.hit_boss(ev.enemy)
+			if ev.crit and _crit_cd <= 0.0 and view3d:
+				_crit_cd = 0.12
+				Sound.play("boom", randf_range(1.5, 1.8), -6.0)
+				view3d.on_crit(ev.enemy.pos, float(ev.dmg))
 		"kill":
 			if view3d:
 				view3d.on_kill(ev.enemy)
@@ -246,6 +258,12 @@ func _on_event(ev: Dictionary) -> void:
 				view3d.on_thorns(ev.radius)
 		"ice":
 			Sound.play("swing", 1.6, -12.0)
+		"ice_hit":
+			if _hit_sound_cd <= 0.0:
+				_hit_sound_cd = 0.07
+				Sound.play("coin", randf_range(1.7, 2.0), -8.0)
+			if view3d:
+				view3d.on_ice_hit(ev.pos, ev.evo)
 		"bhit":
 			if _hit_sound_cd <= 0.0:
 				_hit_sound_cd = 0.07
@@ -257,6 +275,9 @@ func _on_event(ev: Dictionary) -> void:
 			impact(CENTER + Vector2(0, -240), "무한 모드!", Color(1, 0.4, 0.35), 2.0)
 			if view3d:
 				view3d.comic(CENTER + Vector2(0, -100), "적이 점점 세져요!", Color(1, 0.85, 0.4), 0.7)
+		"surround":
+			Sound.play("roar", 1.2, -4.0)
+			impact(CENTER + Vector2(0, -260), "포위됐어요! 뚫고 나가요!", Color(1, 0.55, 0.35), 1.3)
 		"dash":
 			Sound.play("roar", 1.4, -8.0)
 		"heal":
@@ -276,7 +297,8 @@ func _on_event(ev: Dictionary) -> void:
 			Sound.play("power", 1.2, -3.0)
 		"boss":
 			Sound.play("roar", 1.0, 0.0)
-			impact(CENTER + Vector2(0, -260), ev.text, Color(1, 0.35, 0.35), 1.6)
+			if ev.text != "":
+				impact(CENTER + Vector2(0, -260), ev.text, Color(1, 0.35, 0.35), 1.6)
 
 
 ## 왕자 머리 위에 -2, +25 같은 숫자가 톡 튀어 올라요
@@ -353,6 +375,9 @@ func _show_cards() -> void:
 	overlay_root.add_child(dim)
 	var t := Label.new()
 	t.text = "레벨 업! (Lv %d) 하나 골라요" % rules.level
+	if String(rules.choices[0].kind) == "trait":
+		t.text = "보스를 물리쳤어요! 똥 특성을 골라요"
+		Sound.play("power", 0.8, 0.0)
 	t.position = Vector2(0, 150)
 	t.size = Vector2(720, 70)
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -393,6 +418,48 @@ func choose_card(i: int) -> void:
 
 # ------------------------------------------------------------------ 끝
 
+## 쓰러지면 한 번: 광고 보고 이어하기
+func _offer_revive() -> void:
+	phase = Phase.OUTRO
+	_touching = false
+	move = Vector2.ZERO
+	_refresh_pause_button()
+	god_button.visible = false
+	Sound.play("hurt", 0.7, 0.0)
+	show_panel("쓰러졌어요!", "광고를 보면 이 자리에서 한 번 더 일어날 수 있어요.\n(체력 절반, 주변 적을 날려 버려요)", [
+		["광고 보고 이어하기", _watch_revive_ad],
+		["그만하기", func() -> void: _finish(rules.boss_defeated)],
+	])
+
+
+func _watch_revive_ad() -> void:
+	clear_overlay()
+	Ads.show_rewarded(self, "revive", func(ok: bool) -> void:
+		if not ok:
+			_finish(rules.boss_defeated)
+			return
+		rules.revive()
+		phase = Phase.PLAY
+		_refresh_pause_button()
+		Sound.play("power", 0.9, 0.0)
+		impact(CENTER + Vector2(0, -160), "다시 일어났다!", Color(1, 0.85, 0.3), 1.6)
+		if view3d:
+			view3d.on_god_wave(420.0))
+
+
+## 끝난 뒤 광고 보고 똥전 2배
+func _watch_double_ad(earned: int) -> void:
+	clear_overlay()
+	Ads.show_rewarded(self, "double_coins", func(ok: bool) -> void:
+		if ok:
+			Save.record_survivor(earned, 0.0, false)
+			_doubled = true
+		_show_result())
+
+var _result := {}
+var _doubled := false
+
+
 func _finish(win: bool) -> void:
 	phase = Phase.RESULT
 	_touching = false
@@ -405,14 +472,27 @@ func _finish(win: bool) -> void:
 	Sound.jingle(win or place == 1)
 	if view3d:
 		view3d.sync(rules, 0.0)
-	var lines := "버틴 시간 %s   레벨 %d   물리친 적 %d\n똥전 +%d (모은 똥전 %d)" % [time_text(rules.time), rules.level, rules.kills, earned, Save.survivor_coins()]
+	_result = {"win": win, "earned": earned, "best": best, "place": place}
+	_show_result()
+
+
+func _show_result() -> void:
+	var win: bool = _result.win
+	var earned: int = _result.earned
+	var best: bool = _result.best
+	var place: int = _result.place
+	var got := earned * (2 if _doubled else 1)
+	var lines := "버틴 시간 %s   레벨 %d   물리친 적 %d\n똥전 +%d%s (모은 똥전 %d)" % [time_text(rules.time), rules.level, rules.kills, got, " (2배!)" if _doubled else "", Save.survivor_coins()]
 	if place > 0:
 		lines += "\n순위 %d위!%s" % [place, " 새 기록!" if best else ""]
 	lines += "\n\n" + rank_text(place)
 	var title := "무한 모드에서 쓰러졌어요!" if win else "쓰러졌어요!"
 	if not win:
 		lines += "\n팁: 멈추지 말고 빙글빙글 돌면서 구슬을 모아요"
-	show_panel(title, lines, [
+	var buttons: Array = []
+	if earned > 0 and not _doubled:
+		buttons.append(["광고 보고 똥전 2배", _watch_double_ad.bind(earned)])
+	show_panel(title, lines, buttons + [
 		["다시 하기", restart],
 		["장 고르기", go_select],
 		["처음으로", go_title],

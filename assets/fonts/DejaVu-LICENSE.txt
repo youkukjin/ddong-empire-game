@@ -1,0 +1,2 @@
+Symbols-DejaVuBold.ttf: DejaVu Sans Bold 글꼴에서 기호(•·×→∞ 등)만 뽑은 것. Jua에 없는 기호를 대신 보여줘요.
+DejaVu 글꼴 라이선스(Bitstream Vera 계열, 자유 사용·수정·배포 가능): https://dejavu-fonts.github.io/License.html

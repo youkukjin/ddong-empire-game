@@ -1,6 +1,7 @@
 extends "res://tests/test_base.gd"
 ## 서바이버 화면 자동 확인이에요: 장 고르기에서 들어가서 끌어 움직이고, 카드를 고르고, 끝까지 가요.
 ## 실행: godot --headless --path . -s tests/survivor_test.gd
+const Ads := preload("res://scripts/ads.gd")
 
 
 func _run() -> void:
@@ -75,7 +76,14 @@ func _run() -> void:
 	check(s.time_label.text.begins_with("∞"), "무한 모드 시간이 보여요")
 	s.rules.hp = 0.0
 	await frames(3)
-	check(s.phase == s.Phase.RESULT and s.find_overlay_button("다시 하기") != null, "무한 모드에서 쓰러지면 결과 창")
+	check(s.find_overlay_button("광고 보고 이어하기") != null, "쓰러지면 광고 보고 이어하기를 물어봐요")
+	s.find_overlay_button("광고 보고 이어하기").pressed.emit()
+	await create_timer(Ads.PRACTICE_SECONDS + 0.6).timeout
+	check(s.phase == s.Phase.PLAY and s.rules.hp > 0.0 and s.rules.revived, "광고를 다 보면 다시 일어나요")
+	s.rules.hp = 0.0
+	await frames(3)
+	check(s.phase == s.Phase.RESULT and s.find_overlay_button("다시 하기") != null, "이어하기는 한 번뿐, 다시 쓰러지면 결과 창")
+	check(s.find_overlay_button("광고 보고 똥전 2배") != null, "결과 창에 광고 보고 똥전 2배")
 	check(Save.survivor_coins() > 0 and Save.survivor_best() > 600.0 and Save.survivor_ranks().size() == 1, "똥전과 기록, 순위가 남아요")
 
 	# 다시 하기 → 지면 결과 창
@@ -87,6 +95,9 @@ func _run() -> void:
 	s.rules.hp = 0.5
 	s.rules.spawn_enemy("brute", s.rules.hero)
 	await create_timer(0.3).timeout
+	if s.find_overlay_button("그만하기"):
+		s.find_overlay_button("그만하기").pressed.emit()
+		await frames(2)
 	check(s.phase == s.Phase.RESULT and s.find_overlay_button("장 고르기") != null, "쓰러지면 결과 창과 장 고르기 버튼")
 	sel = await open_scene("res://scenes/title/chapter_select.tscn")
 	btn = sel.find_child("Btn_서바이버", true, false)

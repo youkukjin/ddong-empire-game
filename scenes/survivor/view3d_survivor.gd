@@ -34,6 +34,8 @@ var _puddles: Array[MeshInstance3D] = []
 var _cloud: MeshInstance3D
 var _cloud_ring: MeshInstance3D
 var _cloud_puffs: Array[MeshInstance3D] = []
+const CLOUD_RING := 16
+const CLOUD_TOP := 0
 var _items: Array[Node3D] = []
 var _item_kinds: Array[String] = []
 var _fx: Array = []             # {"node", "life", "max", "kind"}
@@ -70,7 +72,7 @@ func _ready() -> void:
 	# 방귀 구름 (반투명 초록 공)
 	_cloud = MeshInstance3D.new()
 	_cloud.mesh = SphereMesh.new()
-	_cloud.material_override = Kit.mat(Color(0.5, 0.78, 0.22, 0.34), 0.4, 0.5, true, false)
+	_cloud.material_override = Kit.mat(Color(0.62, 0.78, 0.35, 0.16), 0.2, 0.5, true, false)
 	_cloud.visible = false
 	add_child(_cloud)
 	# 방귀 구름 테두리(땅 위 초록 고리)와 둥실둥실 연기 뭉치
@@ -79,12 +81,15 @@ func _ready() -> void:
 	rt.inner_radius = 0.9
 	rt.outer_radius = 1.0
 	_cloud_ring.mesh = rt
-	_cloud_ring.material_override = Kit.mat(Color(0.55, 0.95, 0.2, 0.75), 1.2, 0.5, true, false)
+	_cloud_ring.material_override = Kit.mat(Color(0.6, 0.85, 0.3, 0.3), 0.3, 0.5, true, false)
 	_cloud_ring.visible = false
 	add_child(_cloud_ring)
-	for i in 8:
-		var puff := Kit.sphere(self, 1.0, Color(0.55, 0.8, 0.25), Vector3.ZERO, Vector3.ONE, 0.3, true)
+	# 뭉게구름: 둘레에 크고 작은 뭉치 16개가 빙글빙글 (만화 구름처럼 테두리 선)
+	for i in CLOUD_RING + CLOUD_TOP:
+		var shade := 0.0 if i % 3 else 0.06
+		var puff := Kit.sphere(self, 1.0, Color(0.56 - shade, 0.72 - shade, 0.3 - shade), Vector3.ZERO, Vector3.ONE, 0.0, true)
 		puff.visible = false
+		puff.transparency = 0.12
 		_cloud_puffs.append(puff)
 	for i in 3:
 		var b := Node3D.new()
@@ -316,6 +321,9 @@ func _sync_enemies(rules) -> void:
 			"brute":
 				col = Color(0.4, 0.22, 0.1)
 				hcol = Color(0.35, 0.35, 0.4)
+		if float(e.get("slow_until", 0.0)) > rules.time:
+			col = col.lerp(Color(0.62, 0.86, 1.0), 0.65)
+			hcol = hcol.lerp(Color(0.8, 0.95, 1.0), 0.6)
 		if e.flash > 0.0:
 			col = Color(1, 1, 1)
 			hcol = Color(1, 1, 1)
@@ -682,6 +690,42 @@ func _boomerang_mesh() -> ArrayMesh:
 
 
 ## 부메랑이 적을 맞혔어요: 퍽!
+## 크리티컬! 금빛 별 터짐 + 큰 숫자 + 살짝 번쩍
+func on_crit(pos: Vector2, dmg: float) -> void:
+	var p := to3(pos, 0.7)
+	burst(p, Color(1, 0.85, 0.2), 9, 1.3)
+	burst(p, Color(1, 0.35, 0.2), 5, 1.0)
+	var star := MeshInstance3D.new()
+	var tm := TorusMesh.new()
+	tm.inner_radius = 0.7
+	tm.outer_radius = 1.0
+	star.mesh = tm
+	star.material_override = Kit.mat(Color(1, 0.9, 0.35, 0.9), 3.0, 0.5, true, false)
+	star.position = to3(pos, 0.2)
+	add_child(star)
+	_fx.append({"node": star, "life": 0.2, "max": 0.2, "kind": "ring_at", "r": 60.0 * K})
+	comic(screen_of(pos) + Vector2(randf_range(-20, 20), -60), "크리티컬! %d" % int(dmg), Color(1, 0.82, 0.2), 0.8)
+	shake(0.06, 0.08)
+
+
+## 얼음똥이 맞았어요: 얼음 파편이 튀고 파란 고리가 퍼지고 "꽁!"
+func on_ice_hit(pos: Vector2, evo: bool) -> void:
+	if _debris.size() < 90:
+		burst(to3(pos, 0.6), Color(0.75, 0.95, 1.0), 7 if evo else 5, 0.8)
+	var ring := MeshInstance3D.new()
+	var tm := TorusMesh.new()
+	tm.inner_radius = 0.75
+	tm.outer_radius = 1.0
+	ring.mesh = tm
+	ring.material_override = Kit.mat(Color(0.65, 0.92, 1.0, 0.85), 2.0, 0.5, true, false)
+	ring.position = to3(pos, 0.15)
+	add_child(ring)
+	_fx.append({"node": ring, "life": 0.25, "max": 0.25, "kind": "ring_at", "r": (70.0 if evo else 50.0) * K})
+	if randf() < 0.22:
+		comic(screen_of(pos), "꽁!" if randf() < 0.6 else "얼음!", Color(0.6, 0.9, 1.0), 0.6)
+	shake(0.03, 0.06)
+
+
 func on_bhit(pos: Vector2, evo: bool) -> void:
 	if _debris.size() < 90:
 		burst(to3(pos, 0.5), Color(1, 0.8, 0.3) if evo else Color(0.7, 0.45, 0.2), 5, 0.9)
@@ -865,7 +909,9 @@ func sync(rules, delta: float) -> void:
 		if sh.kind == "boomerang":
 			continue
 		else:
-			_put(sm, i, Basis.from_scale(Vector3.ONE * r * 0.8), to3(sh.pos, 0.5), Color(0.6, 0.95, 1.0))
+			var v: Vector2 = sh.vel
+			var yaw := atan2(v.x, v.y)
+			_put(sm, i, Basis(Vector3.UP, yaw) * Basis.from_scale(Vector3(r * 0.6, r * 0.6, r * 1.9)), to3(sh.pos, 0.5), Color(0.75, 0.97, 1.0))
 	sm.visible_instance_count = sn
 	# 부메랑: 빙글빙글 도는 ㄱ자 똥 부메랑 + 꼬리 바람
 	var bmm: MultiMesh = _boomers.multimesh
@@ -921,11 +967,15 @@ func sync(rules, delta: float) -> void:
 		_cloud_ring.position = hero3 + Vector3(0, 0.06, 0)
 		_cloud_ring.scale = Vector3(cr, 0.6, cr)
 		for i in _cloud_puffs.size():
-			var a := _t * 0.9 + i * TAU / _cloud_puffs.size()
-			var rr := cr * (0.7 + sin(_t * 2.0 + i) * 0.12)
-			var ps := cr * 0.16 * (1.0 + sin(_t * 3.0 + i * 1.7) * 0.25)
-			_cloud_puffs[i].position = hero3 + Vector3(cos(a) * rr, 0.35 + sin(_t * 2.5 + i) * 0.12, sin(a) * rr)
-			_cloud_puffs[i].scale = Vector3(ps, ps * 0.8, ps)
+			var top := i >= CLOUD_RING
+			var j := i - CLOUD_RING if top else i
+			var cnt := CLOUD_TOP if top else CLOUD_RING
+			var a := _t * (0.35 if top else 0.25) * (-1.0 if top else 1.0) + j * TAU / cnt
+			var rr := cr * ((0.55 if top else 0.92) + sin(_t * 1.6 + i) * 0.04)
+			var ps := cr * (0.2 if top else (0.22 if j % 2 == 0 else 0.16)) * (1.0 + sin(_t * 2.2 + i * 1.7) * 0.1)
+			var y := (0.55 if top else 0.25) + sin(_t * 1.8 + i) * 0.06
+			_cloud_puffs[i].position = hero3 + Vector3(cos(a) * rr, y, sin(a) * rr)
+			_cloud_puffs[i].scale = Vector3(ps, ps * 0.75, ps)
 	_sync_items(rules)
 	# 똥폭탄 (날아가는 중)
 	while _bombs.size() < rules.bombs.size():

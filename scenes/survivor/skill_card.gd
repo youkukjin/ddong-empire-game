@@ -1,15 +1,35 @@
 extends Button
-## 레벨업 카드: 스킬북 한 쪽 (2026-11-28 사용자: "둔탁한 색감과 세련되게").
-## 먹빛 바탕 + 크레용 빗금 + 삐뚤빼뚤 크레용 테두리, 탁한 색 메달 안에 스킬 그림, 크림색 글자.
-## 그림은 그림 파일 없이 도형으로 그려요.
+## 레벨업 카드: 진짜 입체 스킬북 (2026-11-28 사용자: "스킬북은 3D 디자인으로").
+## 카드마다 작은 3D 무대에 펼친 책 한 권을 놓아요: 가죽 표지, 두툼한 종이 묶음, 금속 모서리, 책갈피 끈.
+## 왼쪽 쪽에는 스킬 그림, 오른쪽 쪽에는 이름, 레벨, 설명. 책이 살짝 숨 쉬듯 흔들리고, 누르면 들려요.
+## 그림은 그림 파일 없이 도형으로 그려요 (아래 draw_icon).
 
 const FONT := preload("res://assets/fonts/Jua-Regular.ttf")
+const Kit := preload("res://scripts/view3d/kit3d.gd")
 const INK := Color(0.16, 0.08, 0.06)
+const PAGE_INK := Color(0.24, 0.14, 0.1)
 
 var card: Dictionary = {}       # {kind, id, title, desc}
 var level := 0                  # 고르면 몇 레벨이 되는지
 var max_level := 5
 var _t := 0.0
+var _book: Node3D
+var _icon: IconCanvas
+var _glow: MeshInstance3D
+
+
+## 스킬 그림을 그리는 2D 캔버스 (책 왼쪽 쪽에 붙는 그림)
+class IconCanvas extends Node2D:
+	var id := ""
+	var t := 0.0
+	func _process(delta: float) -> void:
+		t += delta
+		queue_redraw()
+	func _draw() -> void:
+		var script: GDScript = load("res://scenes/survivor/skill_card.gd")
+		script.set("mute", 0.2)
+		script.call("draw_icon", self, id, Vector2(128, 136), 92.0, t)
+		script.set("mute", 0.0)
 
 
 func _init(c: Dictionary, lv: int, max_lv: int) -> void:
@@ -24,139 +44,214 @@ func _init(c: Dictionary, lv: int, max_lv: int) -> void:
 		add_theme_stylebox_override(st, StyleBoxEmpty.new())
 
 
-func _process(delta: float) -> void:
-	_t += delta
-	if card.kind == "evolve" or button_pressed or is_hovered():
-		queue_redraw()
+func _ready() -> void:
+	var box := SubViewportContainer.new()
+	box.stretch = true
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(box)
+	var vp := SubViewport.new()
+	vp.own_world_3d = true
+	vp.transparent_bg = true
+	vp.msaa_3d = Viewport.MSAA_4X
+	box.add_child(vp)
+	_build_scene(vp)
 
 
 func _kind_color() -> Color:
 	match card.kind:
 		"evolve":
-			return Color(0.85, 0.62, 0.18)    # 겨자
+			return Color(0.78, 0.56, 0.16)    # 겨자 금
 		"weapon":
-			return Color(0.72, 0.27, 0.2)     # 벽돌 빨강
+			return Color(0.55, 0.2, 0.15)     # 벽돌 가죽
 		"passive":
-			return Color(0.27, 0.5, 0.52)     # 탁한 청록
-	return Color(0.5, 0.58, 0.3)              # 올리브
+			return Color(0.2, 0.4, 0.43)      # 탁한 청록 가죽
+		"trait":
+			return Color(0.42, 0.26, 0.5)     # 자주 가죽
+	return Color(0.4, 0.46, 0.24)             # 올리브
 
 
-const CARD_BG := Color(0.17, 0.13, 0.17)       # 먹빛 자주
-const CREAM := Color(0.95, 0.89, 0.76)
+func _build_scene(vp: SubViewport) -> void:
+	var root := Node3D.new()
+	vp.add_child(root)
+	var env := WorldEnvironment.new()
+	env.environment = Environment.new()
+	env.environment.background_mode = Environment.BG_CLEAR_COLOR
+	env.environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	env.environment.ambient_light_color = Color(0.75, 0.7, 0.65)
+	env.environment.ambient_light_energy = 0.4
+	root.add_child(env)
+	var sun := DirectionalLight3D.new()
+	sun.rotation_degrees = Vector3(-55, -35, 0)
+	sun.light_energy = 0.75
+	sun.shadow_enabled = true
+	root.add_child(sun)
+	var cam := Camera3D.new()
+	cam.fov = 26.0
+	cam.keep_aspect = Camera3D.KEEP_WIDTH
+	cam.position = Vector3(0, 5.5, 4.0)
+	root.add_child(cam)
+	cam.look_at_from_position(cam.position, Vector3(0, 0, 0.12), Vector3.UP)
 
-
-## 크레용으로 그은 듯 살짝 삐뚤빼뚤한 네모 (같은 카드는 늘 같은 모양)
-func _rough_rect(r: Rect2, wob: float, seed_i: int) -> PackedVector2Array:
-	var pts := PackedVector2Array()
-	var corners := [r.position, Vector2(r.end.x, r.position.y), r.end, Vector2(r.position.x, r.end.y)]
-	for k in 4:
-		var a: Vector2 = corners[k]
-		var b: Vector2 = corners[(k + 1) % 4]
-		var steps := 10
-		for i in steps:
-			var p := a.lerp(b, float(i) / steps)
-			var h := sin((i + k * 13 + seed_i) * 12.9898) * 43758.5453
-			p += (b - a).orthogonal().normalized() * (h - floor(h) - 0.5) * wob
-			pts.append(p)
-	return pts
-
-
-func _stroke(pts: PackedVector2Array, col: Color, w: float) -> void:
-	var closed := pts.duplicate()
-	closed.append(pts[0])
-	draw_polyline(closed, col, w, true)
-
-
-func _draw() -> void:
-	var sz := size
-	var press := 4.0 if button_pressed else 0.0
-	var r := Rect2(Vector2(6, press + 2), sz - Vector2(12, 12))
 	var kc := _kind_color()
-	var seed_i := String(card.id).hash() % 97
-	# 그림자
-	draw_colored_polygon(_rough_rect(Rect2(r.position + Vector2(5, 9), r.size), 3.0, seed_i), Color(0, 0, 0, 0.45))
-	# 진화 카드는 겨자빛이 은은하게 숨 쉬어요
+	_book = Node3D.new()
+	root.add_child(_book)
+	# 진화 카드는 책 밑에서 금빛이 새어 나와요
 	if card.kind == "evolve":
-		var glow := 0.5 + 0.5 * sin(_t * 4.0)
-		_round(r.grow(5 + glow * 5), 18, Color(kc.r, kc.g, kc.b, 0.18 + glow * 0.2))
-	# 바탕: 먹빛 종이 + 크레용 빗금
-	var body := _rough_rect(r, 3.0, seed_i)
-	draw_colored_polygon(body, CARD_BG)
-	var hatch := Color(kc.r, kc.g, kc.b, 0.1)
-	var x := -r.size.y
-	while x < r.size.x:
-		var a := r.position + Vector2(x, r.size.y)
-		var b := r.position + Vector2(x + r.size.y, 0)
-		draw_line(a.clamp(r.position, r.end), b.clamp(r.position, r.end), hatch, 2.0)
-		x += 9.0
-	# 왼쪽 색 띠 (크레용 굵게 한 번 문지른 느낌)
-	var band := Rect2(r.position + Vector2(10, 12), Vector2(10, r.size.y - 24))
-	draw_colored_polygon(_rough_rect(band, 2.0, seed_i + 3), kc.darkened(0.1))
-	# 그림 메달
-	var mc := r.position + Vector2(40 + r.size.y * 0.32, r.size.y * 0.5)
-	var mr := r.size.y * 0.32
-	draw_circle(mc + Vector2(3, 5), mr + 4, Color(0, 0, 0, 0.4))
-	draw_circle(mc, mr + 4, kc.darkened(0.2))
-	draw_circle(mc, mr, kc.darkened(0.55))
-	draw_circle(mc + Vector2(-mr * 0.25, -mr * 0.3), mr * 0.55, Color(1, 1, 1, 0.07))
-	draw_arc(mc, mr + 4, 0, TAU, 48, CREAM.darkened(0.15), 2.5, true)
-	draw_arc(mc, mr - 6, 0.3, TAU - 0.3, 40, Color(CREAM.r, CREAM.g, CREAM.b, 0.25), 1.5, true)
-	mute = 0.35
-	draw_icon(self, String(card.id), mc, mr * 0.78, _t)
-	mute = 0.0
-	# 글자
-	var tx := mc.x + mr + 26
-	var right := r.end.x - 20
-	var tag: String = {"evolve": "진화", "weapon": "새 무기" if level <= 1 else "무기 강화", "passive": "능력치", "coins": "보너스"}.get(card.kind, "")
-	draw_string(FONT, Vector2(tx, r.position.y + 46), "◆ " + tag, HORIZONTAL_ALIGNMENT_LEFT, -1, 22, kc.lightened(0.25))
+		_glow = MeshInstance3D.new()
+		var pm := PlaneMesh.new()
+		pm.size = Vector2(2.95, 1.2)
+		_glow.mesh = pm
+		var gm := StandardMaterial3D.new()
+		gm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		gm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		var g := GradientTexture2D.new()
+		g.fill = GradientTexture2D.FILL_RADIAL
+		g.fill_from = Vector2(0.5, 0.5)
+		g.fill_to = Vector2(1.0, 0.5)
+		g.gradient = Gradient.new()
+		g.gradient.set_color(0, Color(1, 0.8, 0.3, 0.7))
+		g.gradient.set_color(1, Color(1, 0.8, 0.3, 0.0))
+		gm.albedo_texture = g
+		_glow.material_override = gm
+		_glow.position.y = -0.1
+		_book.add_child(_glow)
+	for side in [-1.0, 1.0]:
+		var half := Node3D.new()
+		half.rotation.z = side * -0.07          # 책이 가운데로 살짝 접혀 V자
+		_book.add_child(half)
+		var x: float = side * 0.68
+		# 가죽 표지 (종이보다 조금 커요)
+		Kit.box(half, Vector3(1.38, 0.05, 1.1), kc, Vector3(x, -0.03, 0))
+		# 금속 모서리
+		for cz in [-1.0, 1.0]:
+			Kit.box(half, Vector3(0.14, 0.06, 0.14), Color(0.72, 0.6, 0.35), Vector3(x + side * 0.63, -0.02, cz * 0.49), 0.2)
+		# 종이 묶음 (두툼하게, 옆면에 종이 결)
+		Kit.box(half, Vector3(1.28, 0.1, 1.0), Color(0.86, 0.78, 0.62), Vector3(x, 0.05, 0))
+		for k in 3:
+			Kit.box(half, Vector3(1.29, 0.006, 1.01), Color(0.8, 0.73, 0.6), Vector3(x, 0.02 + k * 0.025, 0), 0.0, false)
+		# 위쪽 쪽 (바로 이 면에 그림과 글자를 올려요)
+		var page := Node3D.new()
+		page.position = Vector3(x, 0.102, 0)
+		half.add_child(page)
+		if side < 0.0:
+			_left_page(page, kc)
+		else:
+			_right_page(page, kc)
+	# 가운데 책등 홈
+	Kit.box(_book, Vector3(0.05, 0.06, 1.0), Color(0.7, 0.62, 0.5), Vector3(0, 0.08, 0), 0.0, false)
+	# 책갈피 끈
+	Kit.box(_book, Vector3(0.07, 0.015, 0.45), kc.lightened(0.15), Vector3(0.12, 0.11, 0.6), 0.0, false)
+	Kit.box(_book, Vector3(0.07, 0.015, 0.06), kc.lightened(0.15), Vector3(0.12, 0.1, 0.84), 0.0, false).rotation.z = 0.3
+
+
+func _flat_label(parent: Node3D, txt: String, pos: Vector3, fs: int, col: Color, width_px := 0.0, outline := 0) -> Label3D:
+	var l := Label3D.new()
+	l.text = txt
+	l.font = FONT
+	l.font_size = fs
+	l.pixel_size = 0.0032
+	l.modulate = col
+	l.outline_size = outline
+	l.outline_modulate = Color(0.98, 0.94, 0.84)
+	l.shaded = false
+	l.double_sided = false
+	l.position = pos
+	l.rotation.x = -PI / 2
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	l.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+	if width_px > 0.0:
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		l.width = width_px
+	parent.add_child(l)
+	return l
+
+
+func _left_page(page: Node3D, kc: Color) -> void:
+	# 둥근 그림 칸 (가죽색 테 + 안쪽 바탕) 위에 스킬 그림
+	var frame := MeshInstance3D.new()
+	var cm := CylinderMesh.new()
+	cm.top_radius = 0.37
+	cm.bottom_radius = 0.37
+	cm.height = 0.03
+	frame.mesh = cm
+	frame.material_override = Kit.mat(kc.darkened(0.1), 0.0, 0.6, false, false)
+	frame.position = Vector3(0.02, 0.012, -0.08)
+	page.add_child(frame)
+	var inner := MeshInstance3D.new()
+	var cm2 := CylinderMesh.new()
+	cm2.top_radius = 0.32
+	cm2.bottom_radius = 0.32
+	cm2.height = 0.032
+	inner.mesh = cm2
+	inner.material_override = Kit.mat(Color(0.9, 0.84, 0.7), 0.0, 0.9, false, false)
+	inner.position = Vector3(0.02, 0.014, -0.08)
+	page.add_child(inner)
+	var ivp := SubViewport.new()
+	ivp.size = Vector2i(256, 256)
+	ivp.transparent_bg = true
+	ivp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	add_child(ivp)
+	_icon = IconCanvas.new()
+	_icon.id = String(card.id)
+	ivp.add_child(_icon)
+	var q := MeshInstance3D.new()
+	var qm := PlaneMesh.new()
+	qm.size = Vector2(0.68, 0.68)
+	q.mesh = qm
+	var m := StandardMaterial3D.new()
+	m.albedo_texture = ivp.get_texture()
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	q.material_override = m
+	q.position = Vector3(0.02, 0.035, -0.08)
+	page.add_child(q)
+	# 종류 글씨 (그림 아래 가운데)
+	var tag: String = {"evolve": "진화", "weapon": "새 무기" if level <= 1 else "무기 강화", "passive": "능력치", "trait": "똥 특성", "coins": "보너스"}.get(card.kind, "")
+	var tl := _flat_label(page, tag, Vector3(0.02, 0.04, 0.33), 40, kc.darkened(0.2))
+	tl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+
+
+func _right_page(page: Node3D, kc: Color) -> void:
+	var left := -0.56
 	var title_text := String(card.get("name", card.title))
-	draw_string_outline(FONT, Vector2(tx, r.position.y + 94), title_text, HORIZONTAL_ALIGNMENT_LEFT, right - tx, 40, 8, Color(0.08, 0.05, 0.07))
-	draw_string(FONT, Vector2(tx, r.position.y + 94), title_text, HORIZONTAL_ALIGNMENT_LEFT, right - tx, 40, CREAM)
-	# 레벨 칸: 마름모
+	_flat_label(page, title_text, Vector3(left, 0.01, -0.44), 76 if title_text.length() <= 6 else 62, PAGE_INK, 0.0, 6)
+	# 레벨 보석 (가진 칸은 색 보석, 빈 칸은 움푹)
 	if card.kind == "weapon" or card.kind == "passive":
 		for i in max_level:
-			var c := Vector2(tx + 10 + i * 30, r.position.y + 122)
-			var dia := PackedVector2Array([c + Vector2(0, -10), c + Vector2(10, 0), c + Vector2(0, 10), c + Vector2(-10, 0)])
-			if i < level:
-				draw_colored_polygon(dia, kc.lightened(0.1) if i == level - 1 else kc.darkened(0.15))
-				if i == level - 1:
-					draw_circle(c, 3, Color(1, 1, 1, 0.5 + 0.4 * sin(_t * 6.0)))
-			_stroke(dia, CREAM.darkened(0.25), 2.0)
-	elif card.kind == "evolve":
-		draw_string(FONT, Vector2(tx, r.position.y + 132), "★ ★ ★", HORIZONTAL_ALIGNMENT_LEFT, -1, 24, kc)
-	# 가는 구분선
-	draw_line(Vector2(tx, r.position.y + 146), Vector2(right, r.position.y + 147), Color(CREAM.r, CREAM.g, CREAM.b, 0.18), 2.0)
-	# 설명 (두 줄까지)
-	var lines := _wrap(String(card.desc), right - tx, 24)
-	for i in mini(lines.size(), 2):
-		draw_string(FONT, Vector2(tx, r.position.y + 180 + i * 30), lines[i], HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Color(CREAM.r, CREAM.g, CREAM.b, 0.78))
-	# 테두리: 크림색 크레용 두 번 그은 선
-	_stroke(body, CREAM.darkened(0.3), 3.0)
-	_stroke(_rough_rect(r.grow(-6), 2.5, seed_i + 7), Color(kc.r, kc.g, kc.b, 0.55), 2.0)
-	if button_pressed or is_hovered():
-		_stroke(body, Color(CREAM.r, CREAM.g, CREAM.b, 0.9), 5.0)
+			var gem := MeshInstance3D.new()
+			var sm := SphereMesh.new()
+			sm.radius = 0.055
+			sm.height = 0.06 if i < level else 0.02
+			gem.mesh = sm
+			var col := kc.lightened(0.1) if i < level else Color(0.7, 0.62, 0.5)
+			gem.material_override = Kit.mat(col, 0.6 if i == level - 1 else 0.0, 0.3, false, false)
+			gem.position = Vector3(left + 0.07 + i * 0.15, 0.02, -0.08)
+			gem.scale = Vector3(1, 1, 1)
+			page.add_child(gem)
+			if i == level - 1:
+				gem.set_meta("pulse", true)
+	elif card.kind == "evolve" or card.kind == "trait":
+		_flat_label(page, "★ ★ ★", Vector3(left, 0.01, -0.15), 44, kc.darkened(0.1))
+	# 줄
+	Kit.box(page, Vector3(1.1, 0.002, 0.008), Color(0.75, 0.66, 0.52), Vector3(0.0, 0.003, 0.03), 0.0, false)
+	_flat_label(page, String(card.desc), Vector3(left, 0.01, 0.08), 38, PAGE_INK.lightened(0.15), 1.12 / 0.0032)
 
 
-func _wrap(s: String, width: float, fs: int) -> Array:
-	var out: Array = []
-	var line := ""
-	for word in s.split(" "):
-		var t := word if line == "" else line + " " + word
-		if FONT.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > width and line != "":
-			out.append(line)
-			line = word
-		else:
-			line = t
-	if line != "":
-		out.append(line)
-	return out
-
-
-func _round(r: Rect2, radius: int, col: Color) -> void:
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = col
-	sb.set_corner_radius_all(radius)
-	draw_style_box(sb, r)
+func _process(delta: float) -> void:
+	_t += delta
+	if _book == null:
+		return
+	var lift := 0.0
+	if button_pressed:
+		lift = 1.0
+	elif is_hovered():
+		lift = 0.5
+	_book.position.y = lerpf(_book.position.y, lift * 0.18, minf(delta * 12.0, 1.0))
+	_book.rotation.x = sin(_t * 1.3 + float(get_index())) * 0.03 - lift * 0.06
+	_book.rotation.y = sin(_t * 0.9 + float(get_index()) * 2.0) * 0.025
+	if _glow:
+		(_glow.mesh as PlaneMesh).size = Vector2(3.0, 1.45) * (1.0 + sin(_t * 4.0) * 0.04)
 
 
 # ------------------------------------------------------------------ 스킬 그림
@@ -313,6 +408,21 @@ static func draw_icon(ci: CanvasItem, id: String, c: Vector2, s: float, t := 0.0
 			_poly(ci, PackedVector2Array([c + Vector2(-0.85, -0.55) * s, c + Vector2(0, -0.4) * s, c + Vector2(0, 0.75) * s, c + Vector2(-0.85, 0.6) * s]), Color(0.95, 0.9, 0.75))
 			_poly(ci, PackedVector2Array([c + Vector2(0.85, -0.55) * s, c + Vector2(0, -0.4) * s, c + Vector2(0, 0.75) * s, c + Vector2(0.85, 0.6) * s]), Color(0.95, 0.9, 0.75))
 			Cute_spark(ci, c + Vector2(0, -0.75) * s, s * 0.22, t)
+		"trait_hp":
+			# 튼튼한 똥: 갑옷 두른 똥 + 하트
+			_poop(ci, c + Vector2(0, 0.35) * s, s * 0.62, Color(0.56, 0.33, 0.15))
+			_poly(ci, PackedVector2Array([c + Vector2(-0.55, 0.15) * s, c + Vector2(0.55, 0.15) * s, c + Vector2(0.45, 0.7) * s, c + Vector2(-0.45, 0.7) * s]), Color(0.7, 0.72, 0.78))
+			var hc := c + Vector2(0.5, -0.55) * s
+			_dot(ci, hc + Vector2(-0.12, 0) * s, s * 0.16, Color(0.9, 0.25, 0.3))
+			_dot(ci, hc + Vector2(0.12, 0) * s, s * 0.16, Color(0.9, 0.25, 0.3))
+			_poly(ci, PackedVector2Array([hc + Vector2(-0.27, 0.05) * s, hc + Vector2(0.27, 0.05) * s, hc + Vector2(0, 0.38) * s]), Color(0.9, 0.25, 0.3))
+		"trait_atk":
+			# 매운 똥: 불꽃을 뿜는 빨간 똥
+			_poly(ci, PackedVector2Array([c + Vector2(-0.5, -0.1) * s, c + Vector2(-0.3, -0.95) * s, c + Vector2(0, -0.45) * s, c + Vector2(0.25, -1.0) * s, c + Vector2(0.5, -0.1) * s]), Color(1, 0.55, 0.15))
+			_poop(ci, c + Vector2(0, 0.4) * s, s * 0.62, Color(0.75, 0.25, 0.15))
+		"coins":
+			for k in 3:
+				_dot(ci, c + Vector2(-0.35 + k * 0.35, 0.3 - k * 0.25) * s, s * 0.3, Color(0.95, 0.75, 0.25))
 		_:
 			_poop(ci, c + Vector2(0, 0.3) * s, s * 0.7, Color(0.75, 0.5, 0.25))
 

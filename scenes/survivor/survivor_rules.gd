@@ -7,20 +7,21 @@ extends RefCounted
 
 const ARENA := 4000.0                 # 마당 한 변 (가운데가 0,0). 둘레는 성벽이에요
 const HERO_SPEED := 240.0
-const HERO_HP := 120.0
+const HERO_HP := 100.0
 const HERO_RADIUS := 26.0
 const HURT_INVULN := 0.8
-const REGEN := 0.6                    # 1초에 체력 회복
+const REGEN := 0.3                    # 1초에 체력 회복
 const MAGNET := 140.0                 # 구슬을 끌어오는 거리
 const ENEMY_CAP := 150
-const MID_BOSS_TIME := 240.0          # 똥 무사 대장 (예전 이름 그대로 둬요)
+const MID_BOSS_TIME := 360.0          # 똥 무사 대장 (예전 이름 그대로 둬요)
 const BOSS_TIME := 600.0
 ## 중간 보스 4마리 (2026-11-28 사용자: 중간 보스 3마리 더)
+## 중간 보스는 3분마다 (2026-11-28 사용자: "중간보스 타임을 3분으로"). 9분에는 둘이 한꺼번에!
 const MID_BOSSES := [
-	[120.0, "bat", "똥 박쥐 왕이 날아왔어요!"],
-	[240.0, "captain", "똥 무사 대장이 나타났어요!"],
-	[360.0, "golem", "바위 똥 골렘이 쿵쿵 걸어와요!"],
-	[480.0, "wyrm", "꼬마 보라 드래곤이 돌진해요!"],
+	[180.0, "bat", "똥 박쥐 왕이 날아왔어요!"],
+	[360.0, "captain", "똥 무사 대장이 나타났어요!"],
+	[540.0, "golem", "바위 똥 골렘과 보라 드래곤이 함께 왔어요!"],
+	[540.0, "wyrm", ""],
 ]
 const BOSS_NAMES := {"bat": "똥 박쥐 왕", "captain": "똥 무사 대장", "golem": "바위 똥 골렘", "wyrm": "꼬마 보라 드래곤", "demon": "똥 대마왕"}
 const ENDLESS_EVERY := 75.0           # 무한 모드에서 중간 보스가 다시 오는 간격
@@ -79,7 +80,8 @@ var passives := {}                   # 이름 -> 단계
 var enemies: Array = []              # {id, kind, pos, hp, max_hp, speed, dmg, radius, boss, hit_cd: {}}
 var gems: Array = []                 # {pos, value}
 var items: Array = []                # {kind: "heal"|"magnet", pos, age}
-var vacuum := 0.0                    # 자석 똥을 먹으면 잠깐 모든 구슬이 날아와요
+var vacuum := 0.0
+var _ring_t := 0.0                    # 자석 똥을 먹으면 잠깐 모든 구슬이 날아와요
 const ITEM_HEAL := 30.0
 var bombs: Array = []                # {pos, target, t}
 var shots: Array = []                # 날아가는 것 {kind, pos, vel, life, r, dmg, pierce, hit}
@@ -113,6 +115,28 @@ func _init(seed_value := -1) -> void:
 
 # ------------------------------------------------------------------ 밖에서 부르는 곳
 
+## 광고 보고 이어하기 (한 판에 한 번): 체력 절반으로 일어나 주변 적을 밀어내요
+var revived := false
+
+
+func can_revive() -> bool:
+	return hp <= 0.0 and not revived
+
+
+func revive() -> void:
+	revived = true
+	hp = max_hp * 0.5
+	invuln = 3.0
+	for e in enemies:
+		var to: Vector2 = e.pos - hero
+		if to.length() < 420.0:
+			if e.boss:
+				e.pos = hero + to.normalized() * 420.0
+			else:
+				e.hp = 0.0
+	vacuum = 2.0
+
+
 func outcome() -> int:
 	if hp <= 0.0:
 		return Outcome.LOSE
@@ -127,7 +151,7 @@ func power_mult() -> float:
 
 
 func xp_needed() -> int:
-	return 5 + (level - 1) * 3 + int(pow(level - 1, 1.2))
+	return 5 + (level - 1) * 4 + int(pow(level - 1, 1.4))
 
 
 func minute() -> int:
@@ -181,6 +205,8 @@ func choose(i: int) -> void:
 			_apply_passive(c.id)
 		"coins":
 			coins += 20
+		"trait":
+			_apply_trait(c.id)
 	choices = []
 	if xp >= xp_needed():
 		_level_up()
@@ -223,47 +249,47 @@ func spawn_enemy(kind: String, pos: Vector2) -> Dictionary:
 	_next_id += 1
 	match kind:
 		"warrior":
-			e.hp = 9.0 + m * 3.5
-			e.speed = 70.0 + m * 6.0
-			e.dmg = 4.0 + m * 0.5
+			e.hp = 12.0 + m * 6.0 + m * m * 0.4
+			e.speed = 74.0 + m * 6.5
+			e.dmg = 5.0 + m * 0.7
 			e.radius = 22.0
 		"runner":
-			e.hp = 6.0 + m * 3.0
-			e.speed = 125.0 + m * 6.0
-			e.dmg = 3.0 + m * 0.4
+			e.hp = 8.0 + m * 5.0 + m * m * 0.3
+			e.speed = 130.0 + m * 6.5
+			e.dmg = 4.0 + m * 0.5
 			e.radius = 18.0
 		"brute":
-			e.hp = 45.0 + m * 14.0
-			e.speed = 55.0 + m * 3.0
-			e.dmg = 8.0 + m * 0.8
+			e.hp = 60.0 + m * 24.0 + m * m * 2.0
+			e.speed = 58.0 + m * 3.5
+			e.dmg = 10.0 + m * 1.0
 			e.radius = 34.0
 		"bat":
-			e.hp = 520.0
+			e.hp = 700.0
 			e.speed = 125.0
 			e.dmg = 9.0
 			e.radius = 42.0
 			e.boss = true
 		"captain":
-			e.hp = 900.0
+			e.hp = 1300.0
 			e.speed = 80.0
 			e.dmg = 12.0
 			e.radius = 48.0
 			e.boss = true
 		"golem":
-			e.hp = 2000.0
+			e.hp = 2400.0
 			e.speed = 50.0
 			e.dmg = 18.0
 			e.radius = 62.0
 			e.boss = true
 		"wyrm":
-			e.hp = 1500.0
+			e.hp = 1800.0
 			e.speed = 85.0
 			e.dmg = 14.0
 			e.radius = 52.0
 			e.boss = true
 			e.dash = 3.0
 		"demon":
-			e.hp = 4000.0
+			e.hp = 5500.0
 			e.speed = 75.0
 			e.dmg = 16.0
 			e.radius = 64.0
@@ -306,8 +332,19 @@ func _spawn(delta: float, ev: Array) -> void:
 			ev.append({"type": "boss", "enemy": c2, "text": "더 센 " + mb2[2]})
 	elif boss_spawned:
 		return
-	# 1분마다 조금씩 더 많이 (처음 1초에 1.2마리 → 9분에 약 6마리)
-	var rate := 0.9 + time / 60.0 * 0.45
+	# 포위 공격: 1분 30초부터 1분마다 똥 무사들이 빙 둘러싸요 (도망만 다니면 갇혀요)
+	_ring_t += delta
+	if time >= 90.0 and _ring_t >= 60.0:
+		_ring_t = 0.0
+		var cnt := mini(18 + minute() * 3, 48)
+		for i in cnt:
+			if enemies.size() >= ENEMY_CAP:
+				break
+			var kind := "brute" if (i % 6 == 0 and time > 240.0) else "warrior"
+			spawn_enemy(kind, hero + Vector2.from_angle(TAU * i / cnt) * 620.0)
+		ev.append({"type": "surround"})
+	# 1분마다 더 많이 (처음 1초에 1.3마리 → 9분에 약 8마리)
+	var rate := 1.3 + time / 60.0 * 0.75
 	_spawn_acc += rate * delta
 	while _spawn_acc >= 1.0:
 		_spawn_acc -= 1.0
@@ -316,9 +353,9 @@ func _spawn(delta: float, ev: Array) -> void:
 			break
 		var kind := "warrior"
 		var r := rng.randf()
-		if time > 60.0 and r < 0.25:
+		if time > 45.0 and r < 0.28:
 			kind = "runner"
-		elif time > 150.0 and r > 0.92:
+		elif time > 120.0 and r > 0.9:
 			kind = "brute"
 		spawn_enemy(kind, _edge_point())
 
@@ -400,12 +437,24 @@ func damage(e: Dictionary, amount: float, ev: Array, knock := 0.0) -> void:
 	if e.hp <= 0.0:
 		return
 	var dmg := amount * damage_mult()
+	# 크리티컬: 가끔 2.5배로 아프게! (행운, 매운 똥 특성이면 더 자주)
+	var crit := rng.randf() < crit_chance()
+	if crit:
+		dmg *= CRIT_MULT
+		knock = maxf(knock, 30.0)
 	e.hp -= dmg
 	e.flash = 0.12
 	if knock > 0.0 and not e.boss:
 		var dir: Vector2 = (e.pos - hero).normalized()
 		e.pos += dir * knock
-	ev.append({"type": "hit", "enemy": e, "dmg": dmg, "boss": e.boss})
+	ev.append({"type": "hit", "enemy": e, "dmg": dmg, "boss": e.boss, "crit": crit})
+
+
+const CRIT_MULT := 2.5
+
+
+func crit_chance() -> float:
+	return 0.08 + (bonus.luck - 1.0) * 0.1 + int(traits.get("trait_atk", 0)) * 0.05
 
 
 func _on_kill(e: Dictionary, ev: Array) -> void:
@@ -425,12 +474,14 @@ func _on_kill(e: Dictionary, ev: Array) -> void:
 	if not e.boss and value == 1 and rng.randf() < 0.03 * (bonus.luck - 1.0):
 		gems[gems.size() - 1].value = 5
 	# 가끔 아이템 똥이 떨어져요: 생명력 똥(체력 30), 자석 똥(구슬을 몽땅 끌어와요)
-	if e.boss or rng.randf() < 0.015 * bonus.luck:
+	if e.boss or rng.randf() < 0.005 * bonus.luck:
 		drop_item("heal", e.pos + Vector2(18, 0))
-	if e.boss or rng.randf() < 0.004 * bonus.luck:
+	if (e.boss and e.kind != "bat") or rng.randf() < 0.0015 * bonus.luck:
 		drop_item("magnet", e.pos + Vector2(-18, 0))
 	if e.boss:
 		coins += 200 if e.kind == "demon" else 50
+		if e.kind != "demon":
+			pending_traits += 1
 	if e.kind == "demon" and not boss_defeated:
 		boss_defeated = true
 		endless = true
@@ -676,6 +727,7 @@ func _move_shots(delta: float, ev: Array) -> void:
 					sh.hit[e.id] = true
 					damage(e, sh.dmg, ev)
 					_slow(e, sh.freeze, 1.5)
+					ev.append({"type": "ice_hit", "pos": e.pos, "evo": evolved.has("ice")})
 					sh.pierce -= 1
 					if sh.pierce <= 0:
 						shots.erase(sh)
@@ -747,6 +799,37 @@ func _enemy_by_id(id: int) -> Dictionary:
 
 # ------------------------------------------------------------------ 구슬과 레벨업
 
+## 똥 특성 (중간 보스를 물리치면 둘 중 하나): 체력형 "튼튼한 똥", 공격형 "매운 똥". 겹쳐서 쌓여요.
+const TRAITS := {
+	"trait_hp": {"name": "튼튼한 똥", "desc": "최대 체력 +40, 방어 +6%, 회복 조금 더"},
+	"trait_atk": {"name": "매운 똥", "desc": "공격 +25%, 크리티컬 +5%, 무기 8% 빨리"},
+}
+var traits := {}
+var pending_traits := 0
+
+
+func trait_choices() -> Array:
+	var out: Array = []
+	for id in TRAITS:
+		var n := int(traits.get(id, 0)) + 1
+		out.append({"kind": "trait", "id": id, "name": TRAITS[id].name, "level": n,
+			"title": TRAITS[id].name + ("" if n == 1 else " ×%d" % n), "desc": TRAITS[id].desc})
+	return out
+
+
+func _apply_trait(id: String) -> void:
+	traits[id] = int(traits.get(id, 0)) + 1
+	if id == "trait_hp":
+		max_hp += 40.0
+		hp += 40.0
+		bonus.armor += 0.06
+		bonus.regen += 0.3
+	else:
+		bonus.dmg += 0.25
+		bonus.cool = maxf(bonus.cool - 0.08, 0.45)
+		bonus.area += 0.08
+
+
 ## 아이템 똥: "heal"(생명력 똥) 또는 "magnet"(자석 똥). 땅에 떨어져 있다가 주우면 효과가 나요.
 func drop_item(kind: String, pos: Vector2) -> void:
 	if items.size() < 12:
@@ -780,7 +863,11 @@ func _collect(delta: float, ev: Array) -> void:
 			xp += int(xp_frac)
 			xp_frac -= int(xp_frac)
 			ev.append({"type": "gem"})
-	if xp >= xp_needed() and choices.is_empty():
+	if pending_traits > 0 and choices.is_empty():
+		pending_traits -= 1
+		choices = trait_choices()
+		ev.append({"type": "trait"})
+	elif xp >= xp_needed() and choices.is_empty():
 		_level_up()
 		ev.append({"type": "levelup", "level": level})
 
