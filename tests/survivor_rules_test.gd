@@ -114,11 +114,11 @@ func _run() -> void:
 	for ev in r6.tick(0.1, Vector2.ZERO):
 		if ev.type == "boss":
 			texts.append(ev.text)
-	check(texts.size() >= 1 and r6.mid_spawned, "4분에 똥 무사 대장이 나와요")
+	check(texts.size() >= 1 and r6.mid_spawned, "4분에 중간 보스가 나와요")
 	r6.time = Rules.BOSS_TIME - 0.05
 	r6.tick(0.1, Vector2.ZERO)
 	var boss: Dictionary = r6.boss()
-	check(not boss.is_empty(), "10분에 대마왕이 나와요")
+	check(not boss.is_empty(), "6분에 대마왕이 나와요")
 	boss.hp = 1.0
 	boss.pos = r6.hero + Vector2(60, 0)
 	r6.hp = 9999.0

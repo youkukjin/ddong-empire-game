@@ -9,6 +9,7 @@ const Cute := preload("res://scripts/art/cute.gd")
 const ScreenMode := preload("res://scripts/screen_mode.gd")
 const Rules := preload("res://scenes/survivor/survivor_rules.gd")
 const SkillCard := preload("res://scenes/survivor/skill_card.gd")
+const Icon3D := preload("res://scenes/survivor/icon3d.gd")
 const SURVIVOR_SCENE := "res://scenes/survivor/survivor.tscn"
 const SELECT_SCENE := "res://scenes/title/chapter_select.tscn"
 const FONT := preload("res://assets/fonts/Jua-Regular.ttf")
@@ -72,6 +73,9 @@ func _row(id: String, pos: Vector2) -> void:
 	row.position = pos
 	row.size = Vector2(680, 100)
 	add_child(row)
+	var icon := Icon3D.make_view(id, Vector2(110, 110), 0.5)
+	icon.position = Vector2(54, 50) - icon.size / 2.0
+	row.add_child(icon)
 	var b := Cute.button("", Vector2(170, 76), 26, GOLD)
 	b.name = "Buy_" + id
 	b.position = Vector2(500, 12)
@@ -140,9 +144,6 @@ class ForgeRow extends Control:
 		draw_circle(c + Vector2(2, 4), 40, Color(0, 0, 0, 0.35))
 		draw_circle(c, 40, GOLD.darkened(0.3))
 		draw_circle(c, 35, Color(0.9, 0.84, 0.7))
-		SkillCard.mute = 0.25
-		SkillCard.draw_icon(self, id, c, 26.0, 0.0)
-		SkillCard.mute = 0.0
 		var info: Dictionary = Rules.FORGE[id]
 		draw_string_outline(FONT, Vector2(112, 40), String(info.name), HORIZONTAL_ALIGNMENT_LEFT, -1, 32, 6, Color(0.08, 0.05, 0.05))
 		draw_string(FONT, Vector2(112, 40), String(info.name), HORIZONTAL_ALIGNMENT_LEFT, -1, 32, CREAM)

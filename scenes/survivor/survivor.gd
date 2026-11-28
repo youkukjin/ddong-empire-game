@@ -1,6 +1,6 @@
 extends "res://scripts/stage_base.gd"
 ## 똥제국 서바이버 (제안: 원작에 없는 놀이 방식, 장르만 따르고 특정 게임을 베끼지 않아요).
-## 첫 무대: 5장 성 안 마당. 위에서 내려다보며 10분 버티고 똥 대마왕을 물리쳐요.
+## 첫 무대: 5장 성 안 마당. 위에서 내려다보며 6분 버티고 똥 대마왕을 물리쳐요.
 ##
 ## 조작: 화면 아무 데나 손가락을 대고 끌면 그쪽으로 걸어요 (컴퓨터에서는 WASD나 화살표).
 ## 공격은 알아서 해요. 레벨업하면 카드 3장 중 하나를 골라요.
@@ -54,7 +54,7 @@ func _setup() -> void:
 
 func _intro_pages() -> Array:
 	return [
-		"똥제국 서바이버\n\n성 안 마당에 똥 무사들이 끝없이 몰려와요!\n10분을 버티면 똥 대마왕이 나타나요.",
+		"똥제국 서바이버\n\n성 안 마당에 똥 무사들이 끝없이 몰려와요!\n2분마다 중간 보스, 6분을 버티면 똥 대마왕이 나타나요.",
 		"어떻게 할까요?\n\n• 손가락으로 화면을 끌면 그쪽으로 걸어요\n• 공격은 똥 왕자가 알아서 해요\n• 적이 떨어뜨린 똥 구슬을 모으면 레벨 업!\n  카드 3장 중 하나를 골라 강해져요\n• 빨간 생명력 똥은 체력, 파란 자석 똥은 구슬을 몽땅 끌어와요\n• 게이지가 차면 '각성!' 버튼: 10초 동안 똥의 신\n  공격력 3배, 공격 속도 2배, 이동 속도 UP, 안 아파요!",
 	]
 
@@ -249,8 +249,7 @@ func _on_event(ev: Dictionary) -> void:
 			if view3d:
 				view3d.on_boom(ev.pos, ev.radius)
 		"beam":
-			Sound.play("fire", randf_range(0.8, 0.95), -4.0)
-			Sound.play("flash", randf_range(0.9, 1.1), -8.0)
+			Sound.play("laser", randf_range(0.92, 1.08), -10.0)
 			if view3d:
 				view3d.on_beam(ev.from, ev.dir, ev.length, ev.width, ev.evolved, ev.hits)
 		"bolt":

@@ -13,15 +13,16 @@ const HURT_INVULN := 0.8
 const REGEN := 0.3                    # 1초에 체력 회복
 const MAGNET := 140.0                 # 구슬을 끌어오는 거리
 const ENEMY_CAP := 150
-const MID_BOSS_TIME := 360.0          # 똥 무사 대장 (예전 이름 그대로 둬요)
-const BOSS_TIME := 600.0
+const MID_BOSS_TIME := 240.0          # 똥 무사 대장 (예전 이름 그대로 둬요)
+const BOSS_TIME := 360.0
 ## 중간 보스 4마리 (2026-11-28 사용자: 중간 보스 3마리 더)
-## 중간 보스는 3분마다 (2026-11-28 사용자: "중간보스 타임을 3분으로"). 9분에는 둘이 한꺼번에!
+## 한 판 6분, 중간 보스는 2분마다 (2026-11-28 사용자: "전체 6분으로 하고 2분마다 중간 보스").
+## 2분 박쥐 왕, 4분 골렘과 드래곤이 한꺼번에, 6분 대마왕은 무사 대장을 데리고 와요.
 const MID_BOSSES := [
-	[180.0, "bat", "똥 박쥐 왕이 날아왔어요!"],
-	[360.0, "captain", "똥 무사 대장이 나타났어요!"],
-	[540.0, "golem", "바위 똥 골렘과 보라 드래곤이 함께 왔어요!"],
-	[540.0, "wyrm", ""],
+	[120.0, "bat", "똥 박쥐 왕이 날아왔어요!"],
+	[240.0, "golem", "바위 똥 골렘과 보라 드래곤이 함께 왔어요!"],
+	[240.0, "wyrm", ""],
+	[360.0, "captain", ""],
 ]
 const BOSS_NAMES := {"bat": "똥 박쥐 왕", "captain": "똥 무사 대장", "golem": "바위 똥 골렘", "wyrm": "꼬마 보라 드래곤", "demon": "똥 대마왕"}
 const ENDLESS_EVERY := 75.0           # 무한 모드에서 중간 보스가 다시 오는 간격
@@ -158,6 +159,11 @@ func minute() -> int:
 	return int(time / 60.0)
 
 
+## 난이도 시계: 예전 10분 흐름을 6분에 담아요 (1분 = 난이도 1.67분)
+func pace() -> float:
+	return minf(time, BOSS_TIME) / BOSS_TIME * 10.0
+
+
 func damage_mult() -> float:
 	return bonus.dmg * (GOD_DMG if god_left > 0.0 else 1.0)
 
@@ -244,7 +250,7 @@ func tick(delta: float, move: Vector2) -> Array:
 # ------------------------------------------------------------------ 적
 
 func spawn_enemy(kind: String, pos: Vector2) -> Dictionary:
-	var m := minute()
+	var m := int(pace())
 	var e := {"id": _next_id, "kind": kind, "pos": pos, "boss": false, "hit_cd": {}, "flash": 0.0}
 	_next_id += 1
 	match kind:
@@ -315,8 +321,7 @@ func _spawn(delta: float, ev: Array) -> void:
 	while _mid_index < MID_BOSSES.size() and time >= MID_BOSSES[_mid_index][0]:
 		var mb: Array = MID_BOSSES[_mid_index]
 		_mid_index += 1
-		if mb[1] == "captain":
-			mid_spawned = true
+		mid_spawned = true
 		var c := spawn_enemy(mb[1], _edge_point())
 		ev.append({"type": "boss", "enemy": c, "text": mb[2]})
 	if not boss_spawned and time >= BOSS_TIME:
@@ -334,17 +339,17 @@ func _spawn(delta: float, ev: Array) -> void:
 		return
 	# 포위 공격: 1분 30초부터 1분마다 똥 무사들이 빙 둘러싸요 (도망만 다니면 갇혀요)
 	_ring_t += delta
-	if time >= 90.0 and _ring_t >= 60.0:
+	if time >= 60.0 and _ring_t >= 45.0:
 		_ring_t = 0.0
-		var cnt := mini(18 + minute() * 3, 48)
+		var cnt := mini(18 + int(pace()) * 3, 48)
 		for i in cnt:
 			if enemies.size() >= ENEMY_CAP:
 				break
-			var kind := "brute" if (i % 6 == 0 and time > 240.0) else "warrior"
+			var kind := "brute" if (i % 6 == 0 and pace() > 4.0) else "warrior"
 			spawn_enemy(kind, hero + Vector2.from_angle(TAU * i / cnt) * 620.0)
 		ev.append({"type": "surround"})
 	# 1분마다 더 많이 (처음 1초에 1.3마리 → 9분에 약 8마리)
-	var rate := 1.3 + time / 60.0 * 0.75
+	var rate := 1.3 + pace() * 0.75
 	_spawn_acc += rate * delta
 	while _spawn_acc >= 1.0:
 		_spawn_acc -= 1.0
@@ -353,9 +358,9 @@ func _spawn(delta: float, ev: Array) -> void:
 			break
 		var kind := "warrior"
 		var r := rng.randf()
-		if time > 45.0 and r < 0.28:
+		if time > 30.0 and r < 0.28:
 			kind = "runner"
-		elif time > 120.0 and r > 0.9:
+		elif time > 75.0 and r > 0.9:
 			kind = "brute"
 		spawn_enemy(kind, _edge_point())
 
