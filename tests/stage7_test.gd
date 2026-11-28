@@ -33,7 +33,9 @@ func _run() -> void:
 	check(d.state == "dead", "똥의 신은 언제든 때려서 드래곤을 완전히 물리쳐요")
 	stage._play_process(0.01)
 	check(stage.phase == stage.Phase.OUTRO, "끝 연출이 나와요")
-	await create_timer(2.0).timeout
+	await create_timer(4.0).timeout
+	check(stage.transformed and stage.prince.deity and stage.prince.scale.x > 1.4, "드래곤을 물리치면 똥 왕자가 똥의 신으로 변신해요 (뿔, 망토, 커진 몸)")
+	await create_timer(2.4).timeout
 	check(stage.find_overlay_button("다음 이야기") != null and Save.is_unlocked(8), "결과 창, 8장이 열려요")
 
 	# 처음부터 자동 플레이 (게이지가 차면 각성)

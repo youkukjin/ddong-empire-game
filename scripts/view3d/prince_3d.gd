@@ -31,6 +31,21 @@ var arm_level := 0:
 	set(v):
 		arm_level = v
 		_apply_arms()
+## 똥의 신 (7장 끝 변신): 원작의 빨간 초승달 뿔 큰 인물을 바탕으로 한 모습이에요 (제안: 작가 확인 전).
+## 검붉은 몸, 빨간 초승달 뿔, 보라 망토, 금빛 후광, 빛나는 눈. 왕관은 벗겨져 떨어져요.
+const DEITY_BODY := Color(0.48, 0.07, 0.08)
+const DEITY_HORN := Color(0.95, 0.12, 0.1)
+const DEITY_CAPE := Color(0.42, 0.12, 0.62)
+
+var deity := false:
+	set(v):
+		if v != deity:
+			deity = v
+			_apply_deity()
+var _crown: Node3D
+var _deity_parts: Node3D
+var _halo: MeshInstance3D
+var _cape: MeshInstance3D
 var god := false:
 	set(v):
 		if v != god:
@@ -75,6 +90,7 @@ func _ready() -> void:
 	var crown := Node3D.new()
 	crown.position = Vector3(0, 1.78, 0)
 	_body.add_child(crown)
+	_crown = crown
 	Kit.cylinder(crown, 0.32, 0.3, 0.18, GOLD, Vector3.ZERO, 0.2)
 	for i in 5:
 		var a := TAU * i / 5.0
@@ -126,6 +142,7 @@ func sync_from(p: Node2D) -> void:
 	if arm_level != int(p.arm_level):
 		arm_level = int(p.arm_level)
 	god = p.god
+	deity = bool(p.get("deity"))
 
 
 func _apply_arms() -> void:
@@ -137,8 +154,11 @@ func _apply_arms() -> void:
 func _apply_god() -> void:
 	if not _body:
 		return
-	for t in _tiers:
-		t.material_override = Kit.mat(GOD_BODY if god else BODY, 0.45 if god else 0.0)
+	if deity:
+		_apply_deity()
+	else:
+		for t in _tiers:
+			t.material_override = Kit.mat(GOD_BODY if god else BODY, 0.45 if god else 0.0)
 	if god and not _aura:
 		_aura = Kit.sphere(self, 1.7, Color(1, 0.85, 0.3, 0.22), Vector3(0, 1.0, 0), Vector3.ONE, 1.5)
 		_rays = Node3D.new()
@@ -149,8 +169,81 @@ func _apply_god() -> void:
 			var r := Kit.box(_rays, Vector3(0.08, 1.2, 0.02), Color(1, 0.9, 0.35), Vector3(cos(a) * 1.6, sin(a) * 1.6, 0), 2.5, false)
 			r.rotation.z = a - PI / 2.0
 	if _aura:
-		_aura.visible = god
-		_rays.visible = god
+		_aura.visible = god and not deity
+		_rays.visible = god and not deity
+
+
+func _apply_deity() -> void:
+	if not _body:
+		return
+	if deity and not _deity_parts:
+		_build_deity()
+	if _deity_parts:
+		_deity_parts.visible = deity
+	_crown.visible = not deity
+	if _aura:
+		_aura.visible = god and not deity
+		_rays.visible = god and not deity
+	var col := DEITY_BODY if deity else (GOD_BODY if god else BODY)
+	for t in _tiers:
+		t.material_override = Kit.mat(col, 0.08 if deity else (0.45 if god else 0.0))
+	for a in _arm_meshes:
+		a.material_override = Kit.mat(col, 0.08) if deity else null
+	if deity:
+		_apply_arms()
+		for a in _arm_meshes:
+			a.scale *= Vector3(1.5, 1.2, 1.5)
+
+
+func _build_deity() -> void:
+	_deity_parts = Node3D.new()
+	_body.add_child(_deity_parts)
+	# 빨간 초승달 뿔 (원작 그림)
+	for sx in [-1.0, 1.0]:
+		var horn := Node3D.new()
+		horn.position = Vector3(sx * 0.28, 1.6, 0)
+		_deity_parts.add_child(horn)
+		# 바깥으로 뻗었다가 안쪽으로 휘는 초승달
+		for i in 16:
+			var t := i / 15.0
+			var a := t * 2.4
+			Kit.sphere(horn, 0.22 * (1.0 - t * 0.85), DEITY_HORN, Vector3(sx * sin(a) * 0.7, (1.0 - cos(a)) * 0.45, 0), Vector3.ONE, 0.25, i % 3 == 0)
+	# 빛나는 금빛 눈 (원래 눈 위에 덮어요)
+	for sx in [-0.22, 0.22]:
+		Kit.sphere(_deity_parts, 0.13, Color(1, 0.9, 0.3), Vector3(sx, 1.05, 0.62), Vector3(1.2, 0.7, 0.4), 3.0, false)
+		var b := Kit.brow(_deity_parts, Vector3(sx, 1.22, 0.66), 0.34, 0.55 if sx > 0 else -0.55)
+		b.scale = Vector3(1.2, 1.6, 1.0)
+	# 보라 망토 (원작 대마왕·큰 인물의 보라 자락에서 따왔어요)
+	_cape = Kit.sphere(_deity_parts, 1.0, DEITY_CAPE, Vector3(0, 0.85, -0.55), Vector3(1.35, 1.1, 0.22))
+	for sx in [-1.0, 1.0]:
+		Kit.spike(_deity_parts, 0.24, 0.8, DEITY_CAPE, Vector3(sx * 0.9, 1.35, -0.4), Vector3(sx * 0.9, 0.8, -0.2))
+	# 금빛 후광 고리
+	_halo = Kit.torus(_deity_parts, 0.62, 0.74, Color(1, 0.85, 0.25), Vector3(0, 2.75, -0.1), 3.0, false)
+	_halo.rotation.x = 0.3
+	# 몸을 감싸는 붉은 기운
+	var glow := Kit.sphere(_deity_parts, 1.55, Color(1, 0.25, 0.1, 0.08), Vector3(0, 1.0, 0), Vector3(1, 1.25, 1), 1.0)
+	glow.name = "Glow"
+	var l := Kit.light(_deity_parts, Vector3(0, 1.4, 1.2), Color(1, 0.75, 0.45), 1.0, 4.0)
+	l.name = "DeityLight"
+
+
+## 왕관이 벗겨져 땅에 떨어져요 (원작 그림: 바닥에 왕관). 3D 무대 쪽에 떨어진 왕관을 남겨요.
+func drop_crown() -> void:
+	if not _crown or not get_parent():
+		return
+	var c := Node3D.new()
+	get_parent().add_child(c)
+	c.global_transform = _crown.global_transform
+	for ch in _crown.get_children():
+		var m := ch.duplicate()
+		c.add_child(m)
+	var land := Vector3(c.global_position.x + 0.9 * facing * scale.x, global_position.y + 0.12 * scale.x, c.global_position.z + 0.6 * scale.x)
+	var tw := c.create_tween().set_parallel()
+	tw.tween_property(c, "global_position:y", c.global_position.y + 0.8 * scale.x, 0.25).set_ease(Tween.EASE_OUT)
+	tw.tween_property(c, "global_position:x", land.x, 0.8)
+	tw.tween_property(c, "global_position:z", land.z, 0.8)
+	tw.tween_property(c, "rotation:z", -1.3 * facing, 0.8)
+	tw.chain().tween_property(c, "global_position:y", land.y, 0.55).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
 
 
 func _process(delta: float) -> void:
@@ -202,6 +295,12 @@ func _process(delta: float) -> void:
 				_chain_arm.rotation.z = sin(_t * 2.0 + 1.0) * 0.08
 	if pose != Pose.CHARGE and pose != Pose.ROLL and pose != Pose.IDLE and pose != Pose.CHEER:
 		_body.scale = Vector3.ONE
+	if deity and _deity_parts:
+		_halo.rotation.z = _t * 1.5
+		_halo.position.y = 2.75 + sin(_t * 2.0) * 0.05
+		_cape.rotation.x = -sin(_t * 3.0) * 0.06
+		var g: Node3D = _deity_parts.get_node("Glow")
+		g.scale = Vector3(1, 1.25, 1) * (1.0 + sin(_t * 4.0) * 0.07)
 	if _aura:
 		_aura.scale = Vector3.ONE * (1.0 + sin(_t * 5.0) * 0.06)
 		_rays.rotation.z = _t * 0.8
