@@ -27,6 +27,9 @@ var _gems: MultiMeshInstance3D
 var _balls: Array[Node3D] = []
 var _flies: Array[Node3D] = []
 var _bombs: Array[Node3D] = []
+var _shots: MultiMeshInstance3D
+var _puddles: Array[MeshInstance3D] = []
+var _cloud: MeshInstance3D
 var _fx: Array = []             # {"node", "life", "max", "kind"}
 var _swing_left := 0.0
 var _ground: MeshInstance3D
@@ -34,7 +37,7 @@ var _t := 0.0
 
 
 func _init() -> void:
-	pitch_deg = 70.0
+	pitch_deg = 54.0   # 너무 위에서 보면 얼굴이 안 보여요 (2026-11-28 사용자)
 	fov_deg = 40.0
 
 
@@ -44,6 +47,11 @@ func _ready() -> void:
 	sun.directional_shadow_max_distance = 30.0
 	env.background_mode = Environment.BG_COLOR
 	env.background_color = Color(0.12, 0.06, 0.1)
+	# 멀리 위쪽은 어둑한 안개로 (적이 갑자기 나타나 보이지 않게)
+	env.fog_enabled = true
+	env.fog_light_color = Color(0.14, 0.07, 0.12)
+	env.fog_density = 0.045
+	env.fog_sky_affect = 0.0
 	_build_yard()
 	prince3d = Prince3D.new()
 	prince3d.turn_deg = 0.0
@@ -51,6 +59,13 @@ func _ready() -> void:
 	add_child(prince3d)
 	_build_enemy_meshes()
 	_gems = _multimesh(SphereMesh.new(), _vertex_color_mat(true), false)
+	_shots = _multimesh(SphereMesh.new(), _vertex_color_mat(true), false)
+	# 방귀 구름 (반투명 초록 공)
+	_cloud = MeshInstance3D.new()
+	_cloud.mesh = SphereMesh.new()
+	_cloud.material_override = Kit.mat(Color(0.55, 0.8, 0.3, 0.22), 0.0, 0.5, true, false)
+	_cloud.visible = false
+	add_child(_cloud)
 	for i in 3:
 		var b := Node3D.new()
 		Kit.sphere(b, 0.26, Color(0.25, 0.7, 0.25))
@@ -122,7 +137,7 @@ void fragment() {
 	vec2 f = fract(row);
 	float edge = min(min(f.x, 1.0 - f.x), min(f.y, 1.0 - f.y));
 	float tone = 0.8 + h21(cell) * 0.35;
-	vec2 s = FRAGCOORD.xy * (720.0 / min(VIEWPORT_SIZE.x, VIEWPORT_SIZE.y));
+	vec2 s = wp.xz * 90.0;
 	float grain = h21(vec2(floor((s.x * 0.8 + s.y * 0.6) / 2.6), floor((s.y * 0.8 - s.x * 0.6) / 30.0))) - 0.5;
 	vec3 c = stone * tone * (1.0 + grain * 0.25);
 	c = mix(vec3(0.12, 0.08, 0.1), c, smoothstep(0.02, 0.07, edge));
@@ -470,6 +485,60 @@ func on_boom(pos: Vector2, radius: float) -> void:
 		comic(screen_of(pos), "펑!", Color(1, 0.6, 0.2), 0.6)
 
 
+## 보라 광선 (진화하면 무지개)
+func on_beam(from: Vector2, dir: Vector2, length: float, width: float, evo: bool) -> void:
+	var b := MeshInstance3D.new()
+	b.mesh = BoxMesh.new()
+	var col := Color(0.75, 0.35, 1.0, 0.85)
+	if evo:
+		col = Color.from_hsv(fmod(_t * 0.7 + randf(), 1.0), 0.7, 1.0, 0.85)
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.albedo_color = col
+	b.material_override = m
+	var a := to3(from, 0.6)
+	var c := to3(from + dir * length, 0.6)
+	b.position = (a + c) * 0.5
+	b.rotation.y = atan2(dir.x, dir.y)
+	b.scale = Vector3(width * 2.0 * K, 0.15, length * K)
+	add_child(b)
+	_fx.append({"node": b, "life": 0.25, "max": 0.25, "kind": "beam", "mat": m, "w": width * 2.0 * K})
+
+
+## 번개 (하늘에서 쾅)
+func on_bolt(pos: Vector2, radius: float) -> void:
+	var p := to3(pos)
+	var bolt := Node3D.new()
+	add_child(bolt)
+	var y := 0.0
+	var x := 0.0
+	for i in 6:
+		var seg := Kit.box(bolt, Vector3(0.12, 1.1, 0.12), Color(1, 0.95, 0.4), Vector3(x, y + 0.55, 0), 3.0, false)
+		seg.rotation.z = randf_range(-0.5, 0.5)
+		y += 1.0
+		x += randf_range(-0.3, 0.3)
+	bolt.position = p
+	_fx.append({"node": bolt, "life": 0.18, "max": 0.18, "kind": "bolt"})
+	var ring := MeshInstance3D.new()
+	var tm := TorusMesh.new()
+	tm.inner_radius = 0.8
+	tm.outer_radius = 1.0
+	ring.mesh = tm
+	ring.material_override = Kit.mat(Color(1, 0.95, 0.4, 0.8), 2.0, 0.5, true, false)
+	ring.position = p + Vector3(0, 0.1, 0)
+	add_child(ring)
+	_fx.append({"node": ring, "life": 0.25, "max": 0.25, "kind": "ring_at", "r": radius * K})
+
+
+## 가시가 사방으로
+func on_thorns(radius: float) -> void:
+	for i in 12:
+		var d := Vector3.FORWARD.rotated(Vector3.UP, TAU * i / 12.0)
+		var sp := Kit.spike(self, 0.06, 0.5, Color(0.75, 0.75, 0.85), hero3 + Vector3(0, 0.5, 0), d)
+		_fx.append({"node": sp, "life": 0.3, "max": 0.3, "kind": "thorn", "dir": d, "r": radius * K})
+
+
 func on_kill(e: Dictionary) -> void:
 	if _debris.size() < 70:
 		burst(to3(e.pos, 0.4), Color(0.55, 0.3, 0.12), 4, 0.7)
@@ -499,6 +568,18 @@ func _step_fx(delta: float) -> void:
 			"boom":
 				var r2: float = f.r * (0.3 + k * 0.8)
 				node.scale = Vector3.ONE * r2
+			"beam":
+				node.scale.x = f.w * (1.0 - k * 0.8)
+				f.mat.albedo_color.a = 0.85 * (1.0 - k)
+				continue
+			"bolt":
+				continue
+			"ring_at":
+				var r3: float = f.r * (0.3 + k)
+				node.scale = Vector3(r3, 0.4, r3)
+			"thorn":
+				node.position = hero3 + Vector3(0, 0.5, 0) + f.dir * f.r * k
+				continue
 		var gi := node as GeometryInstance3D
 		if gi:
 			gi.transparency = k
@@ -543,6 +624,41 @@ func sync(rules, delta: float) -> void:
 		_flies[i].visible = i < rules.flies.size()
 		if i < rules.flies.size():
 			_flies[i].position = to3(rules.flies[i].pos, 0.7 + sin(_t * 20.0 + i) * 0.05)
+	# 부메랑과 얼음 조각
+	var sm: MultiMesh = _shots.multimesh
+	var sn := mini(rules.shots.size(), sm.instance_count)
+	for i in sn:
+		var sh: Dictionary = rules.shots[i]
+		var r: float = sh.r * K
+		if sh.kind == "boomerang":
+			_put(sm, i, Basis(Vector3.UP, _t * 18.0) * Basis.from_scale(Vector3(r * 1.6, r * 0.35, r * 0.6)), to3(sh.pos, 0.5), Color(1, 0.75, 0.2) if rules.evolved.has("boomerang") else Color(0.6, 0.38, 0.15))
+		else:
+			_put(sm, i, Basis.from_scale(Vector3.ONE * r * 0.8), to3(sh.pos, 0.5), Color(0.6, 0.95, 1.0))
+	sm.visible_instance_count = sn
+	# 똥 웅덩이
+	while _puddles.size() < rules.puddles.size():
+		var pm := MeshInstance3D.new()
+		var cm := CylinderMesh.new()
+		cm.top_radius = 1.0
+		cm.bottom_radius = 1.0
+		cm.height = 0.04
+		pm.mesh = cm
+		pm.material_override = Kit.mat(Color(0.35, 0.45, 0.12, 0.7), 0.0, 0.5, true, false)
+		add_child(pm)
+		_puddles.append(pm)
+	for i in _puddles.size():
+		_puddles[i].visible = i < rules.puddles.size()
+		if i < rules.puddles.size():
+			var pd: Dictionary = rules.puddles[i]
+			var pr: float = pd.r * K * (1.0 + sin(_t * 3.0 + i) * 0.03)
+			_puddles[i].position = to3(pd.pos, 0.03)
+			_puddles[i].scale = Vector3(pr, 1, pr)
+	# 방귀 구름
+	var cr: float = rules.cloud_radius() * K
+	_cloud.visible = cr > 0.0
+	if cr > 0.0:
+		_cloud.position = hero3 + Vector3(0, 0.2, 0)
+		_cloud.scale = Vector3(cr, cr * 0.35, cr) * (1.0 + sin(_t * 4.0) * 0.05)
 	# 똥폭탄 (날아가는 중)
 	while _bombs.size() < rules.bombs.size():
 		var b := Node3D.new()

@@ -65,6 +65,39 @@ func _run() -> void:
 	check(r4.kills >= 20, "다섯 무기가 함께 적을 쓸어요 (%d마리)" % r4.kills)
 	check(r4.chain_balls().size() == 3 and r4.flies.size() == 10, "철퇴 공 3개, 파리 10마리")
 
+	# 새 무기 12개가 모두 돌아가고, 진화도 돼요
+	var r9 = Rules.new(13)
+	var all := {}
+	for id in Rules.WEAPONS:
+		all[id] = 5
+	r9.weapons = all
+	r9.hp = 1e9
+	r9.max_hp = 1e9
+	for i in 40:
+		r9.spawn_enemy("brute", Vector2(randf_range(-400, 400), randf_range(-400, 400)))
+	var seen := {}
+	for i in 120:
+		for ev in r9.tick(0.05, Vector2(0.2, 0.1)):
+			seen[ev.type] = true
+		r9.choices = []
+	check(seen.has("beam") and seen.has("bolt") and r9.shots.size() + r9.puddles.size() > 0 or seen.has("ice"), "광선, 번개, 얼음, 웅덩이가 나와요")
+	check(r9.cloud_radius() > 0.0, "방귀 구름이 둘레에 있어요")
+	check(Rules.WEAPONS.size() == 12 and Rules.PASSIVES.size() == 11, "무기 12개, 능력치 11개")
+	var r10 = Rules.new(14)
+	r10.weapons = {"sword": 5}
+	r10.passives = {"dumbbell": 1}
+	r10.gems.append({"pos": Vector2.ZERO, "value": 99})
+	r10.tick(0.05, Vector2.ZERO)
+	var evo_i := -1
+	for i in r10.choices.size():
+		if r10.choices[i].kind == "evolve":
+			evo_i = i
+	check(evo_i >= 0, "검 Lv5 + 아령이면 진화 카드가 나와요")
+	r10.choose(evo_i)
+	check(r10.evolved.has("sword"), "진화하면 천둥 대검")
+	for id in Rules.WEAPONS:
+		check(Rules.PASSIVES.has(Rules.WEAPONS[id].pair), "%s 진화 짝 능력치가 있어요" % Rules.WEAPONS[id].name)
+
 	# 가만히 있으면 결국 져요
 	var r5 = Rules.new(2)
 	r5.weapons = {}

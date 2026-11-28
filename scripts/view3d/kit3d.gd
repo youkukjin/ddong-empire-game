@@ -27,10 +27,16 @@ uniform float grain = 0.3;
 uniform float rim_amount = 0.3;
 
 float h21(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+varying vec3 wp;
+
+void vertex() {
+	wp = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+}
 
 void fragment() {
-	// 화면 크기와 상관없이 같은 굵기의 크레용 결 (720줄 기준)
-	vec2 s = FRAGCOORD.xy * (720.0 / min(VIEWPORT_SIZE.x, VIEWPORT_SIZE.y));
+	// 크레용 결은 물건(세상)에 붙어 있어요. 화면에 붙어 있으면 움직일 때 어지러워요.
+	// (2026-11-28 사용자: 바닥 무늬가 고정이라 어지럽다)
+	vec2 s = vec2(wp.x + wp.z * 0.55, wp.y - wp.z * 0.8) * 80.0;
 	float stroke = h21(vec2(floor((s.x * 0.8 + s.y * 0.6) / 2.6), floor((s.y * 0.8 - s.x * 0.6) / 30.0)));
 	float stroke2 = h21(vec2(floor((s.x * 0.5 - s.y * 0.86) / 3.4), floor((s.y * 0.5 + s.x * 0.86) / 22.0)) + 7.0);
 	float paper = h21(floor(s / 1.6));

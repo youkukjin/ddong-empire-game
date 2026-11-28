@@ -29,6 +29,7 @@ var info_label: Label
 var god_button: Button
 var boss_bar: ProgressBar
 var boss_label: Label
+var skills_label: Label
 
 
 func _init() -> void:
@@ -69,6 +70,10 @@ func _build_hud() -> void:
 	god_button.position = Vector2(520, 1150)
 	god_button.pressed.connect(_on_awaken)
 	hud_root.add_child(god_button)
+	skills_label = hud_label(Vector2(20, 1150), 22)
+	skills_label.size = Vector2(480, 110)
+	skills_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	skills_label.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
 	joy = Joystick.new()
 	joy.set_anchors_preset(Control.PRESET_FULL_RECT)
 	joy.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -102,6 +107,12 @@ func _refresh_hud() -> void:
 	var left: float = maxf(Rules.BOSS_TIME - rules.time, 0.0)
 	time_label.text = time_text(left) if not rules.boss_spawned else "보스!"
 	info_label.text = "Lv %d   물리친 적 %d" % [rules.level, rules.kills]
+	var parts: Array = []
+	for id in rules.weapons:
+		parts.append((Rules.WEAPONS[id].evo + "★") if rules.evolved.has(id) else "%s%d" % [Rules.WEAPONS[id].name, rules.weapons[id]])
+	for id in rules.passives:
+		parts.append("%s%d" % [Rules.PASSIVES[id].name, rules.passives[id]])
+	skills_label.text = "  ".join(parts)
 	var ready: bool = rules.god_gauge >= 1.0 and rules.god_left <= 0.0
 	god_button.visible = phase == Phase.PLAY
 	god_button.disabled = not ready
@@ -195,6 +206,22 @@ func _on_event(ev: Dictionary) -> void:
 			Sound.play("boom", randf_range(0.9, 1.15), -6.0)
 			if view3d:
 				view3d.on_boom(ev.pos, ev.radius)
+		"beam":
+			Sound.play("flash", randf_range(1.1, 1.3), -10.0)
+			if view3d:
+				view3d.on_beam(ev.from, ev.dir, ev.length, ev.width, ev.evolved)
+		"bolt":
+			Sound.play("boom", randf_range(1.3, 1.6), -10.0)
+			if view3d:
+				view3d.on_bolt(ev.pos, ev.radius)
+		"thorns":
+			Sound.play("clang", 1.0, -6.0)
+			if view3d:
+				view3d.on_thorns(ev.radius)
+		"ice":
+			Sound.play("swing", 1.6, -12.0)
+		"heal":
+			Sound.play("power", 1.4, -6.0)
 		"gem":
 			Sound.play("coin", randf_range(1.0, 1.3), -14.0)
 		"hurt":
@@ -275,7 +302,10 @@ func _show_cards() -> void:
 	var colors := [Cute.MINT, Cute.PEACH, Cute.SKY]
 	for i in rules.choices.size():
 		var c: Dictionary = rules.choices[i]
-		var b := make_button("%s\n%s" % [c.title, c.desc], Vector2(620, 240), 34, colors[i % 3])
+		var col: Color = colors[i % 3]
+		if c.kind == "evolve":
+			col = Color(1, 0.78, 0.2)
+		var b := make_button("%s\n%s" % [c.title, c.desc], Vector2(620, 240), 34, col)
 		b.name = "Card%d" % i
 		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		b.pressed.connect(choose_card.bind(i))
