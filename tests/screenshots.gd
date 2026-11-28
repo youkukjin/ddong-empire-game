@@ -94,6 +94,21 @@ func _main() -> void:
 	s7.impact(Vector2(500, 400), "번쩍!!", Color(1, 0.85, 0.2), 2.4)
 	await _frames(2)
 	await _save("7장-각성")
+	# 7장 끝: 드래곤을 물리치면 똥의 신으로 변신
+	s7 = await _open(Chapters.scene(7), 5)
+	s7.skip_intro()
+	await _frames(5)
+	s7.battle.hero_x = 420.0
+	await _frames(5)
+	var boss: Dictionary = s7.battle.boss()
+	boss.hp = 0
+	boss.state = "dead"
+	await create_timer(2.4).timeout
+	await _save("7장-변신1-금빛기둥")
+	await create_timer(0.75).timeout
+	await _save("7장-변신2-번쩍")
+	await create_timer(1.5).timeout
+	await _save("7장-변신3-똥의신")
 	# 결과 창
 	var st := current_scene
 	if st.has_method("finish_win"):

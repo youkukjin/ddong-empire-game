@@ -1,6 +1,7 @@
 extends RefCounted
 ## 기기에 남는 기록이에요: 장마다 최고 별, 다음 장 열림, 어려움 모드 열림.
-## 키 이름: chapterN_best_stars, chapterN_unlocked (1장은 처음부터 열려 있어요)
+## 키 이름: chapterN_best_stars, chapterN_unlocked (1장은 처음부터 열려 있어요),
+## last_chapter (이어하기로 갈 장), [session] 중간 저장 (앱을 껐다 켜도 남아요)
 
 static var path := "user://save.cfg"
 
@@ -63,3 +64,26 @@ static func record_chapter_win(n: int, stars: int) -> Dictionary:
 		set_value("chapter%d_best_stars" % n, stars)
 	set_value(next_key, true)
 	return result
+
+
+## 이어하기: 마지막으로 하던 장 (없으면 0)
+static func last_chapter() -> int:
+	return int(get_value("last_chapter", 0))
+
+
+static func set_last_chapter(n: int) -> void:
+	if n != last_chapter():
+		set_value("last_chapter", n)
+
+
+## 이어할 기록이 있는지 (한 번이라도 장을 시작했거나 2장이 열렸으면)
+static func has_progress() -> bool:
+	return last_chapter() > 0 or is_unlocked(2)
+
+
+## 이어하기로 갈 장: 열린 장 중 가장 뒤 장 (지금까지 간 곳)
+static func continue_chapter(count: int) -> int:
+	for i in range(count, 0, -1):
+		if is_unlocked(i):
+			return i
+	return 1

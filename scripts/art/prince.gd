@@ -18,6 +18,7 @@ var arm_level := 0           # 근육 팔 단계 0~3 (6장: 힘 20·30·40)
 var sword_level := 0         # 검 강화 0~5 (모습만)
 var charge := 0.0            # 사슬 모으기 0~1
 var god := false             # 7장 똥의 신 각성
+var deity := false           # 7장 끝: 똥의 신으로 완전히 변신 (제안 모습)
 var blink := 0.0             # 맞은 뒤 깜빡임 시간
 var show_chain := true
 var _t := 0.0
@@ -52,6 +53,12 @@ func _draw() -> void:
 	var squash := 0.75 if pose == Pose.ROLL else 1.0
 	var body := BROWN if not god else Color(0.95, 0.72, 0.25)
 	var dark := BROWN_DARK if not god else Color(0.75, 0.5, 0.1)
+	if deity:
+		body = Color(0.62, 0.1, 0.1)
+		dark = Color(0.4, 0.05, 0.06)
+		# 빨간 초승달 뿔 (2D 화면용)
+		for sx in [-1.0, 1.0]:
+			draw_arc(Vector2(sx * 40, -120), 34, PI if sx < 0 else -PI * 0.5, (PI * 1.5) if sx < 0 else 0.0, 12, Color(0.95, 0.12, 0.1), 12)
 	if god:
 		var pulse := 0.5 + 0.5 * sin(_t * 5.0)
 		draw_circle(Vector2(0, -70), 110 + pulse * 14, Color(1, 0.9, 0.4, 0.25))

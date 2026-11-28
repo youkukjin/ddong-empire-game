@@ -31,6 +31,7 @@ func _make_battle() -> Battle:
 func _battle_setup() -> void:
 	from_checkpoint = Session.chapter_checkpoint.get(5, "") == "boss"
 	Session.chapter_checkpoint.erase(5)
+	Session.persist()
 	wave = 2 if from_checkpoint else 0
 
 
@@ -52,6 +53,7 @@ func _spawn_wave() -> void:
 		battle.spawn(s[0], s[1])
 	if wave == 2:
 		Session.chapter_checkpoint[5] = "boss_reached"
+		Session.persist()
 		float_text(Vector2(440, 250), "똥 대마왕이 나타났어요!", Color(1, 0.7, 0.6), 44)
 	else:
 		float_text(Vector2(500, 250), "똥 무사들 %d/2" % (wave + 1), Color(1, 0.9, 0.7), 40)
@@ -87,6 +89,7 @@ func _win() -> void:
 	phase = Phase.OUTRO
 	_refresh_pause_button()
 	Session.chapter_checkpoint.erase(5)
+	Session.persist()
 	float_text(Vector2(420, 260), "똥 대마왕을 물리쳤어요!", Color(1, 0.95, 0.6), 46)
 	var tw := create_tween()
 	tw.tween_interval(1.4)
@@ -104,11 +107,13 @@ func _on_hero_down() -> void:
 
 func _restart_boss() -> void:
 	Session.chapter_checkpoint[5] = "boss"
+	Session.persist()
 	change_scene(scene_file_path)
 
 
 func _before_restart() -> void:
 	Session.chapter_checkpoint.erase(5)
+	Session.persist()
 
 
 func _outro_pages() -> Array:
