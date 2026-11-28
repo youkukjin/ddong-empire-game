@@ -194,21 +194,17 @@ void fragment() {
 		for i in range(-2, 3):
 			var tp := Vector3(i * half * 0.45, 2.2, pos.z + sgn * -0.7) if horizontal else Vector3(pos.x + sgn * -0.7, 2.2, i * half * 0.45)
 			Kit.torch(self, tp, 1.3)
-	# 마당 꾸밈: 나무통, 깃발, 우물, 돌기둥 (부딪히지는 않아요)
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 55
-	for i in 46:
-		var p := Vector3(rng.randf_range(-half + 1.5, half - 1.5), 0, rng.randf_range(-half + 1.5, half - 1.5))
-		if p.length() < 3.0:
-			continue
-		match i % 4:
+	# 마당 꾸밈: 나무통, 깃발, 돌기둥, 우물 (자리와 크기는 규칙의 장애물 목록, 부딪히면 막혀요)
+	for o in Rules.obstacles():
+		var p := to3(o.pos)
+		match int(o.kind):
 			0:
 				Kit.cylinder(self, 0.32, 0.36, 0.8, Color(0.32, 0.2, 0.12), p + Vector3(0, 0.4, 0))
 				Kit.torus(self, 0.32, 0.4, Color(0.3, 0.3, 0.32), p + Vector3(0, 0.6, 0))
 			1:
 				Kit.cylinder(self, 0.05, 0.05, 2.6, Color(0.35, 0.22, 0.12), p + Vector3(0, 1.3, 0))
-				var flag := Kit.box(self, Vector3(0.9, 0.55, 0.04), Color(0.85, 0.12, 0.12) if i % 8 == 1 else CAPE, p + Vector3(0.47, 2.25, 0))
-				flag.rotation.y = rng.randf() * TAU
+				var flag := Kit.box(self, Vector3(0.9, 0.55, 0.04), Color(0.85, 0.12, 0.12) if o.red else CAPE, p + Vector3(0.47, 2.25, 0))
+				flag.rotation.y = o.rot
 			2:
 				Kit.cylinder(self, 0.4, 0.5, 1.6, STONE, p + Vector3(0, 0.8, 0))
 				Kit.box(self, Vector3(1.1, 0.25, 1.1), STONE.darkened(0.2), p + Vector3(0, 1.7, 0))

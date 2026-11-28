@@ -160,6 +160,19 @@ func _run() -> void:
 		wave_seen = wave_seen or ev.type == "god_wave"
 	check(wave_seen and r7._cool(1.0) < 0.6, "각성하면 충격파가 터지고 무기가 2배 빨라져요")
 
+	# 우물·통 같은 장애물은 통과할 수 없어요
+	var ro = Rules.new(5)
+	ro.weapons = {}
+	var well: Dictionary = {}
+	for o in Rules.obstacles():
+		if o.kind == 3:
+			well = o
+			break
+	ro.hero = well.pos + Vector2(-300, 0)
+	for i in 120:
+		ro.tick(1.0 / 30.0, Vector2.RIGHT)
+	check(ro.hero.distance_to(well.pos) >= well.r + Rules.HERO_RADIUS - 1.0, "우물에 부딪히면 막혀요")
+
 	# 똥 대장간
 	Save.set_value("coins", 100, "survivor")
 	check(Save.buy_forge("heart", Rules.forge_cost("heart", 0)) and Save.forge_level("heart") == 1 and Save.survivor_coins() == 40, "대장간에서 똥전으로 튼튼 심장을 사요")

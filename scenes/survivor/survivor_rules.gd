@@ -13,7 +13,7 @@ const HURT_INVULN := 0.8
 const REGEN := 0.3                    # 1초에 체력 회복
 const MAGNET := 140.0                 # 구슬을 끌어오는 거리
 const ENEMY_CAP := 150
-const MID_BOSS_TIME := 240.0          # 똥 무사 대장 (예전 이름 그대로 둬요)
+const MID_BOSS_TIME := 240.0          # 두 번째 중간 보스 시간
 const BOSS_TIME := 360.0
 ## 중간 보스 4마리 (2026-11-28 사용자: 중간 보스 3마리 더)
 ## 한 판 6분, 중간 보스는 2분마다 (2026-11-28 사용자: "전체 6분으로 하고 2분마다 중간 보스").
@@ -58,7 +58,7 @@ const PASSIVES := {
 	"cape": {"name": "왕 망토", "desc": "공격 범위 +12%", "max": 5},
 	"crown": {"name": "금왕관", "desc": "던지고 쏘는 개수 +1", "max": 3},
 	"armor": {"name": "갑옷", "desc": "방어력 +8%", "max": 5},
-	"luck": {"name": "행운 네잎", "desc": "큰 구슬과 똥빵이 더 자주", "max": 5},
+	"luck": {"name": "행운 네잎", "desc": "큰 구슬, 아이템 똥, 크리티컬이 더 자주", "max": 5},
 	"milk": {"name": "똥우유", "desc": "체력이 더 빨리 차요", "max": 5},
 	"book": {"name": "지혜의 책", "desc": "구슬 경험치 +12%", "max": 5},
 }
@@ -159,7 +159,7 @@ func minute() -> int:
 	return int(time / 60.0)
 
 
-## 난이도 시계: 예전 10분 흐름을 6분에 담아요 (1분 = 난이도 1.67분)
+## 난이도 시계: 10단계 흐름을 6분에 담아요 (1분 = 난이도 1.67)
 func pace() -> float:
 	return minf(time, BOSS_TIME) / BOSS_TIME * 10.0
 
@@ -234,6 +234,7 @@ func tick(delta: float, move: Vector2) -> Array:
 		facing = m.normalized()
 		var half := ARENA / 2.0 - 40.0
 		hero = hero.clamp(Vector2(-half, -half), Vector2(half, half))
+		hero = push_out(hero, HERO_RADIUS)
 	if _god_wave:
 		_god_burst(ev)
 	_spawn(delta, ev)
@@ -365,6 +366,40 @@ func _spawn(delta: float, ev: Array) -> void:
 		spawn_enemy(kind, _edge_point())
 
 
+## 마당 장애물: 나무통, 깃대, 돌기둥, 우물. 왕자도 적도 지나가지 못해요 (2026-11-28 사용자: "우물 안 걸리고 통과").
+## 3D 화면(view3d_survivor)도 이 목록을 보고 같은 자리에 그려요. kind: 0 나무통, 1 깃대, 2 돌기둥, 3 우물
+const OBSTACLE_R := [40.0, 10.0, 52.0, 92.0]
+static var _obstacles: Array = []
+
+
+static func obstacles() -> Array:
+	if not _obstacles.is_empty():
+		return _obstacles
+	var r := RandomNumberGenerator.new()
+	r.seed = 55
+	var half := ARENA / 2.0 - 150.0
+	for i in 46:
+		var p := Vector2(r.randf_range(-half, half), r.randf_range(-half, half))
+		if p.length() < 300.0:
+			continue
+		var o := {"kind": i % 4, "pos": p, "r": OBSTACLE_R[i % 4], "red": i % 8 == 1, "rot": 0.0}
+		if i % 4 == 1:
+			o.rot = r.randf() * TAU
+		_obstacles.append(o)
+	return _obstacles
+
+
+## 장애물 안에 들어갔으면 밖으로 밀어내요
+static func push_out(pos: Vector2, radius: float) -> Vector2:
+	for o in obstacles():
+		var d: Vector2 = pos - o.pos
+		var minimum: float = o.r + radius
+		var l := d.length()
+		if l < minimum:
+			pos = o.pos + (d / l if l > 0.01 else Vector2.RIGHT) * minimum
+	return pos
+
+
 ## 화면 바로 밖: 왕자 둘레의 네모 테두리 (세로 화면 3D 카메라가 보는 곳보다 조금 넓어요.
 ## 카메라가 비스듬해서 위쪽이 더 멀리 보여요)
 const SPAWN_MIN := Vector2(-760.0, -1500.0)
@@ -412,6 +447,14 @@ func _move_enemies(delta: float, ev: Array) -> void:
 			to = to.rotated(sin(time * 3.0 + e.id) * 0.9)
 		if d > 1.0:
 			e.pos += to / d * spd * delta
+			# 장애물에 막히면 옆으로 미끄러져 돌아가요
+			for o in obstacles():
+				var od: Vector2 = e.pos - o.pos
+				var mn: float = o.r + e.radius * 0.8
+				if od.length_squared() < mn * mn:
+					var l := od.length()
+					var n := od / l if l > 0.01 else Vector2.RIGHT
+					e.pos = o.pos + n * mn + n.orthogonal() * signf(n.orthogonal().dot(to)) * spd * delta
 		# 너무 멀리 떨어진 적은 앞쪽으로 다시 데려와요
 		if d > 1500.0 and not e.boss:
 			e.pos = _edge_point()
